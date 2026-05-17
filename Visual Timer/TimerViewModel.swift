@@ -65,7 +65,9 @@ final class TimerViewModel: ObservableObject {
         switch state {
         case .notStarted, .paused:
             state = .running
+#if !os(watchOS)
             UIApplication.shared.isIdleTimerDisabled = true
+#endif
             beginCountdown()
         case .running, .finished:
             break
@@ -77,7 +79,9 @@ final class TimerViewModel: ObservableObject {
     func pause() {
         guard case .running = state else { return }
         state = .paused
+#if !os(watchOS)
         UIApplication.shared.isIdleTimerDisabled = false
+#endif
         endCountdown()
     }
 
@@ -86,7 +90,9 @@ final class TimerViewModel: ObservableObject {
     func reset() {
         guard case .paused = state else { return }
         state = .notStarted
+#if !os(watchOS)
         UIApplication.shared.isIdleTimerDisabled = false
+#endif
         timeRemaining = totalDuration
     }
 
@@ -128,7 +134,9 @@ final class TimerViewModel: ObservableObject {
 
         if timeRemaining == 0 {
             endCountdown()
+#if !os(watchOS)
             UIApplication.shared.isIdleTimerDisabled = false
+#endif
             state = .finished
             onFinish?()
             timeRemaining = totalDuration
