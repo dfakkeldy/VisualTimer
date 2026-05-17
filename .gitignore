@@ -1,0 +1,49 @@
+# ── Xcode ──────────────────────────────────────────────
+*.xcuserstate
+*.xcuserdata
+*.xcworkspace/xcuserdata
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcbkptlist
+IDEWorkspaceChecks.plist
+
+# ── Build artifacts ───────────────────────────────────
+build/
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcconfig
+
+# ── Swift Package Manager ─────────────────────────────
+.build/
+.swiftpm/
+Package.resolved
+
+# ── CocoaPods ─────────────────────────────────────────
+Pods/
+
+# ── Carthage ──────────────────────────────────────────
+Carthage/
+
+# ── macOS metadata ────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# ── Xcode playground ──────────────────────────────────
+timeline.xctimeline
+playground.xcworkspace
+
+# ── Fastlane ──────────────────────────────────────────
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ── Misc ──────────────────────────────────────────────
+*.moved-aside
+*.xcodeproj/xcuserdata
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+Thumbs.db
