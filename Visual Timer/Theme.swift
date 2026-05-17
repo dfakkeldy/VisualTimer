@@ -20,7 +20,7 @@ enum Theme {
     // MARK: - Dimensions
 
     enum Dimension {
-        static let circleHorizontalPadding: CGFloat = 40
+        static let circleHorizontalPadding: CGFloat = 8
         static let controlButtonSize: CGFloat = 72
         static let timePillHorizontalPadding: CGFloat = 28
         static let timePillVerticalPadding: CGFloat = 12
@@ -45,7 +45,7 @@ enum Theme {
     enum TimerMechanic {
         static let durationStep: Int = 5
         static let minimumDuration: Int = 5
-        static let defaultDuration: Int = 60
+        static let defaultDuration: Int = 25
         static let timerTickInterval: TimeInterval = 1.0
     }
 

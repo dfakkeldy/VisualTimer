@@ -19,20 +19,8 @@ struct ContentView: View {
             Theme.ColorValue.appBackground.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                ControlRingView(
-                    state: viewModel.state,
-                    totalDuration: viewModel.totalDuration,
-                    onDecrement: { viewModel.setDuration(
-                        max(Theme.TimerMechanic.minimumDuration,
-                            viewModel.totalDuration - Theme.TimerMechanic.durationStep)
-                    ) },
-                    onIncrement: { viewModel.setDuration(
-                        viewModel.totalDuration + Theme.TimerMechanic.durationStep
-                    ) },
-                    onPlay: { viewModel.play() },
-                    onPause: { viewModel.pause() },
-                    onReset: { viewModel.reset() }
-                )
+                durationStepper
+                    .opacity(viewModel.state == .notStarted ? 1 : 0)
 
                 Spacer()
 
@@ -45,6 +33,14 @@ struct ContentView: View {
                     .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
                 Spacer()
+
+                ControlRingView(
+                    state: viewModel.state,
+                    onPlay: { viewModel.play() },
+                    onPause: { viewModel.pause() },
+                    onReset: { viewModel.reset() }
+                )
+                .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
             }
             .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
 
@@ -61,6 +57,42 @@ struct ContentView: View {
             viewModel.onFinish = { [weak soundManager] in
                 soundManager?.playFinishSound()
             }
+        }
+    }
+
+    // MARK: - Duration Stepper
+
+    private var durationStepper: some View {
+        HStack(spacing: Theme.Dimension.durationStepperSpacing) {
+            Button {
+                viewModel.setDuration(
+                    max(Theme.TimerMechanic.minimumDuration,
+                        viewModel.totalDuration - Theme.TimerMechanic.durationStep)
+                )
+            } label: {
+                Image(systemName: Theme.Symbol.decrement)
+                    .font(.title3)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            .disabled(viewModel.state != .notStarted)
+            .accessibilityLabel(Theme.Label.decrementDuration)
+
+            Text("\(viewModel.totalDuration / 60)m \(viewModel.totalDuration % 60)s")
+                .font(.title3.weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+
+            Button {
+                viewModel.setDuration(
+                    viewModel.totalDuration + Theme.TimerMechanic.durationStep
+                )
+            } label: {
+                Image(systemName: Theme.Symbol.increment)
+                    .font(.title3)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            .disabled(viewModel.state != .notStarted)
+            .accessibilityLabel(Theme.Label.incrementDuration)
         }
     }
 

@@ -1,62 +1,16 @@
 import SwiftUI
 
-/// The duration stepper (only visible before the timer starts) and
-/// the state-dependent circular Play / Pause / Unpause+Reset buttons.
+/// The state-dependent circular Play / Pause / Unpause+Reset buttons
+/// shown at the bottom of the screen.
 struct ControlRingView: View {
 
     let state: TimerState
-    let totalDuration: Int
 
-    var onDecrement: () -> Void
-    var onIncrement: () -> Void
     var onPlay: () -> Void
     var onPause: () -> Void
     var onReset: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            durationStepper
-                .opacity(state == .notStarted ? 1 : 0)
-
-            actionButtons
-                .padding(.top, Theme.Dimension.sectionSpacingLarge)
-        }
-    }
-
-    // MARK: - Duration Stepper
-
-    private var durationStepper: some View {
-        HStack(spacing: Theme.Dimension.durationStepperSpacing) {
-            Button {
-                onDecrement()
-            } label: {
-                Image(systemName: Theme.Symbol.decrement)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-            .disabled(state != .notStarted)
-            .accessibilityLabel(Theme.Label.decrementDuration)
-
-            Text("\(totalDuration / 60)m \(totalDuration % 60)s")
-                .font(.title3.weight(.medium))
-                .monospacedDigit()
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-
-            Button {
-                onIncrement()
-            } label: {
-                Image(systemName: Theme.Symbol.increment)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-            .disabled(state != .notStarted)
-            .accessibilityLabel(Theme.Label.incrementDuration)
-        }
-    }
-
-    // MARK: - Action Buttons
-
-    private var actionButtons: some View {
         HStack(spacing: Theme.Dimension.controlButtonSpacing) {
             switch state {
             case .notStarted:

@@ -71,7 +71,7 @@ final class SoundManager: ObservableObject {
         static let beepInterval: TimeInterval = 0.35
         static let volume: Float = 1.0
         static let sampleRate: Double = 44100
-        static let amplitude: Double = 0.6
+        static let amplitude: Double = 1.0
     }
 
     private enum WAVHeader {

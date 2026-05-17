@@ -36,6 +36,12 @@ final class TimerViewModel: ObservableObject {
     /// before the automatic reset to `.notStarted`.
     var onFinish: (() -> Void)?
 
+    // MARK: - Persistence
+
+    /// Persists the chosen duration across app launches.
+    /// Defaults to 25 seconds when no previous value exists.
+    @AppStorage("savedTimerDuration") private var savedDuration: Int = 25
+
     // MARK: - Private
 
     private var timerSubscription: AnyCancellable?
@@ -44,7 +50,9 @@ final class TimerViewModel: ObservableObject {
 
     // MARK: - Lifecycle
 
-    init(duration: Int = Theme.TimerMechanic.defaultDuration) {
+    init() {
+        let stored = UserDefaults.standard.integer(forKey: "savedTimerDuration")
+        let duration = stored > 0 ? stored : 25
         self.totalDuration = duration
         self.timeRemaining = duration
     }
@@ -82,12 +90,14 @@ final class TimerViewModel: ObservableObject {
         timeRemaining = totalDuration
     }
 
-    /// Adjusts the timer duration. Only permitted before the timer starts,
-    /// so the running or paused timer is never disrupted.
+    /// Adjusts the timer duration and persists the new value so it
+    /// becomes the default for future launches. Only permitted before
+    /// the timer starts, so the running or paused timer is never disrupted.
     func setDuration(_ duration: Int) {
         guard case .notStarted = state else { return }
         totalDuration = duration
         timeRemaining = duration
+        savedDuration = duration
     }
 
     // MARK: - Countdown Engine
