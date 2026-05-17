@@ -46,7 +46,7 @@ final class TimerViewModel: ObservableObject {
 
     private var timerSubscription: AnyCancellable?
 
-    private let tickInterval: TimeInterval = Theme.TimerMechanic.timerTickInterval
+    private let tickInterval: TimeInterval = 1.0
 
     // MARK: - Lifecycle
 
@@ -102,7 +102,9 @@ final class TimerViewModel: ObservableObject {
 
     // MARK: - Countdown Engine
 
-    /// Fires a Combine timer every `tickInterval` seconds on the main runloop.
+    /// Fires a 1 Hz timer on the main runloop. Each tick decrements
+    /// `timeRemaining` by one. When it reaches zero the timer finishes,
+    /// the sound callback fires, and the state machine auto-resets.
     private func beginCountdown() {
         timerSubscription = Timer
             .publish(every: tickInterval, on: .main, in: .common)
@@ -117,10 +119,6 @@ final class TimerViewModel: ObservableObject {
         timerSubscription = nil
     }
 
-    /// Decrements `timeRemaining` by one second. When it reaches zero the
-    /// timer stops, the finish callback fires, and the state machine
-    /// auto-resets to `.notStarted` with the full duration restored so the
-    /// next round can begin immediately.
     private func handleTimerTick() {
         guard case .running = state else { return }
 

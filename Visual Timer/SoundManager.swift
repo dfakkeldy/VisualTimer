@@ -71,7 +71,7 @@ final class SoundManager: ObservableObject {
         static let beepInterval: TimeInterval = 0.35
         static let volume: Float = 1.0
         static let sampleRate: Double = 44100
-        static let amplitude: Double = 1.0
+        static let amplitude: Double = 4.0
     }
 
     private enum WAVHeader {
@@ -140,6 +140,8 @@ final class SoundManager: ObservableObject {
     ///
     /// The tone is a mono 16-bit PCM sine wave with a linear fade envelope
     /// that ramps from full amplitude to silence over the tone's duration.
+    /// Amplitude is pushed beyond unity and hard-clamped to Int16 range,
+    /// acting as a soft limiter for maximum perceived loudness.
     private func generateWAV(for sound: TimerSound) -> URL? {
         let sampleRate = Playback.sampleRate
         let duration = sound.toneDuration
@@ -173,7 +175,9 @@ final class SoundManager: ObservableObject {
             let t = Double(i) / sampleRate
             let envelope = 1.0 - (t / duration)            // linear fade to zero
             let raw = sin(2 * .pi * frequency * t)
-            let sample = Int16(raw * 32767 * Playback.amplitude * envelope)
+            let value = raw * 32767 * Playback.amplitude * envelope
+            let clamped = max(-32768, min(32767, value))
+            let sample = Int16(clamped)
             data.append(littleEndian: sample)
         }
 

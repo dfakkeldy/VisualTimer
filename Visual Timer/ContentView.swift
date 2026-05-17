@@ -3,8 +3,8 @@ import SwiftUI
 /// Root view that composes the timer sub-views, wires the ViewModel
 /// and SoundManager together, and presents the settings sheet.
 ///
-/// The view itself owns no layout logic — it delegates to
-/// `TimerVisualView`, `TimeDisplayView`, and `ControlRingView`.
+/// The timer circle itself is the Play/Pause button. The Reset button
+/// appears bottom-right when paused. The duration stepper sits at the top.
 struct ContentView: View {
 
     @StateObject private var viewModel = TimerViewModel()
@@ -24,23 +24,15 @@ struct ContentView: View {
 
                 Spacer()
 
-                TimerVisualView(
-                    elapsedFraction: elapsedFraction,
-                    animatingValue: viewModel.timeRemaining
-                )
+                timerCircleButton
 
                 TimeDisplayView(timeRemaining: viewModel.timeRemaining)
                     .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
                 Spacer()
 
-                ControlRingView(
-                    state: viewModel.state,
-                    onPlay: { viewModel.play() },
-                    onPause: { viewModel.pause() },
-                    onReset: { viewModel.reset() }
-                )
-                .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
+                resetButton
+                    .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
             }
             .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
 
@@ -96,9 +88,82 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Timer Circle Button
+
+    /// The entire timer circle acts as the Play/Pause button.
+    private var timerCircleButton: some View {
+        ZStack {
+            TimerVisualView(
+                elapsedFraction: elapsedFraction
+            )
+
+            if let icon = centerIcon {
+                Image(systemName: icon)
+                    .font(.system(size: 64, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+        }
+        .contentShape(Circle())
+        .onTapGesture {
+            handleCircleTap()
+        }
+    }
+
+    /// Which SF Symbol to show centered in the circle, if any.
+    private var centerIcon: String? {
+        switch viewModel.state {
+        case .notStarted, .paused:
+            return Theme.Symbol.play
+        case .running:
+            return Theme.Symbol.pause
+        case .finished:
+            return nil
+        }
+    }
+
+    private func handleCircleTap() {
+        switch viewModel.state {
+        case .notStarted, .paused:
+            viewModel.play()
+        case .running:
+            viewModel.pause()
+        case .finished:
+            break
+        }
+    }
+
+    // MARK: - Reset Button
+
+    /// Always reserves space at the bottom-right so the layout
+    /// doesn't shift when the Reset button appears or disappears.
+    private var resetButton: some View {
+        HStack {
+            Spacer()
+            Button {
+                viewModel.reset()
+            } label: {
+                Circle()
+                    .fill(Theme.ColorValue.buttonFill)
+                    .frame(
+                        width: Theme.Dimension.controlButtonSize,
+                        height: Theme.Dimension.controlButtonSize
+                    )
+                    .overlay {
+                        Image(systemName: Theme.Symbol.reset)
+                            .font(.title2.weight(.medium))
+                            .foregroundStyle(Theme.ColorValue.textPrimary)
+                    }
+            }
+            .accessibilityLabel(Theme.Label.reset)
+        }
+        .opacity(viewModel.state == .paused ? 1 : 0)
+    }
+
     // MARK: - Derived Values
 
     /// 0.0 when the timer is full, 1.0 when fully depleted.
+    /// Computed from the discrete `timeRemaining` so the circle
+    /// updates instantly on each tick with no animation lag.
     private var elapsedFraction: Double {
         guard viewModel.totalDuration > 0 else { return 0 }
         return Double(viewModel.totalDuration - viewModel.timeRemaining)

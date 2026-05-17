@@ -2,13 +2,13 @@ import SwiftUI
 
 /// The circular countdown visual — a dark base circle overlaid with
 /// a red ring that depletes clockwise from 12 o'clock as time elapses.
+///
+/// A short animation smooths the 1-second discrete ticks without
+/// introducing perceptible lag.
 struct TimerVisualView: View {
 
     /// 0.0 = full red circle, 1.0 = fully depleted.
     let elapsedFraction: Double
-
-    /// Drives the animation so each tick interpolates smoothly.
-    let animatingValue: Int
 
     var body: some View {
         Circle()
@@ -28,9 +28,6 @@ struct TimerVisualView: View {
             }
             .aspectRatio(1, contentMode: .fit)
             .padding(.horizontal, Theme.Dimension.circleHorizontalPadding)
-            .animation(
-                .linear(duration: Theme.AnimationValue.timerTickDuration),
-                value: animatingValue
-            )
+            .animation(.easeInOut(duration: 0.3), value: elapsedFraction)
     }
 }
