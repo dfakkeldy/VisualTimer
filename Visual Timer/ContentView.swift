@@ -94,7 +94,8 @@ struct ContentView: View {
     private var timerCircleButton: some View {
         ZStack {
             TimerVisualView(
-                elapsedFraction: elapsedFraction
+                elapsedFraction: elapsedFraction,
+                fillColor: viewModel.timerColor
             )
 
             if let icon = centerIcon {
@@ -162,12 +163,14 @@ struct ContentView: View {
     // MARK: - Derived Values
 
     /// 0.0 when the timer is full, 1.0 when fully depleted.
-    /// Computed from the discrete `timeRemaining` so the circle
-    /// updates instantly on each tick with no animation lag.
+    /// Once the timer leaves `.notStarted` the pie jumps one notch
+    /// ahead so the depletion is visible immediately on start.
     private var elapsedFraction: Double {
         guard viewModel.totalDuration > 0 else { return 0 }
-        return Double(viewModel.totalDuration - viewModel.timeRemaining)
+        let notch = viewModel.state == .notStarted ? 0 : 1
+        let raw = Double(viewModel.totalDuration - viewModel.timeRemaining + notch)
             / Double(viewModel.totalDuration)
+        return min(raw, 1.0)
     }
 
     // MARK: - Settings Gear

@@ -97,7 +97,7 @@ struct WatchTimerView: View {
 
             Circle()
                 .trim(from: elapsed, to: 1.0)
-                .stroke(.red, lineWidth: 14)
+                .stroke(viewModel.timerColor, lineWidth: 14)
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.3), value: elapsed)
         }

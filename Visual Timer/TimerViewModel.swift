@@ -32,6 +32,17 @@ final class TimerViewModel: ObservableObject {
     @Published var timeRemaining: Int
     @Published var totalDuration: Int
 
+    /// Index into `Theme.ColorValue.timerPalette`. Advances each time
+    /// the timer finishes so the pie replenishes with a fresh color.
+    @Published var timerColorIndex: Int = 0
+
+    /// The current pie fill color from the cycling palette.
+    var timerColor: Color {
+        let palette = Theme.ColorValue.timerPalette
+        guard !palette.isEmpty else { return .red }
+        return palette[timerColorIndex % palette.count]
+    }
+
     /// Called exactly once when the timer transitions to `.finished`,
     /// before the automatic reset to `.notStarted`.
     var onFinish: (() -> Void)?
@@ -138,6 +149,7 @@ final class TimerViewModel: ObservableObject {
             UIApplication.shared.isIdleTimerDisabled = false
 #endif
             state = .finished
+            timerColorIndex += 1
             onFinish?()
             timeRemaining = totalDuration
             state = .notStarted

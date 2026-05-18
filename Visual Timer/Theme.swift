@@ -9,10 +9,20 @@ enum Theme {
     enum ColorValue {
         static let appBackground = Color.black
         static let circleBackground = Color(white: 0.12)
-        static let timerFill = Color.red
         static let buttonFill = Color(white: 0.18)
         static let pillBackground = Color.white.opacity(0.1)
         static let textPrimary = Color.white
+
+        /// 16-color palette cycled through each time the timer finishes.
+        static let timerPalette: [Color] = [
+            .red, .orange, .yellow, .green,
+            .mint, .teal, .cyan, .blue,
+            .indigo, .purple, .pink, .brown,
+            Color(red: 1.0, green: 0.3, blue: 0.0),       // deep orange
+            Color(red: 0.3, green: 0.8, blue: 0.3),       // lime green
+            Color(red: 0.9, green: 0.2, blue: 0.5),       // hot pink
+            Color(red: 0.4, green: 0.4, blue: 1.0),       // royal blue
+        ]
         static let textSecondary = Color.gray
         static let selectionAccent = Color.blue
     }
