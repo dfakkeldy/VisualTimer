@@ -81,7 +81,7 @@ enum Theme {
         static let addPlayer = "person.badge.plus"
         static let activeToggle = "circle.fill"
         static let inactiveToggle = "circle"
-        static let starPaused = "hand.raised.fill"
+        static let startPaused = "hand.raised.fill"
         static let endGame = "flag.checkered"
     }
 
