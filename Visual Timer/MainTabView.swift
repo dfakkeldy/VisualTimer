@@ -12,7 +12,10 @@ struct MainTabView: View {
 
     init() {
         let tvm = TimerViewModel()
-        _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm))
+        let sm = SoundManager()
+        _soundManager = StateObject(wrappedValue: sm)
+        _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm, soundManager: sm))
+        _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel())
     }
 
     var body: some View {

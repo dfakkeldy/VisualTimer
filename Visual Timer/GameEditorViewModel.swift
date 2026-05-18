@@ -5,7 +5,10 @@ final class GameEditorViewModel: ObservableObject {
 
     @Published var gameTitle: String = "New Game"
     @Published var rounds: [Round] = []
+    @Published var roundCount: Int = 1
     @Published var expandedRoundId: UUID?
+
+    @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
 
     private let parser = GameFileParser()
 
@@ -31,6 +34,7 @@ final class GameEditorViewModel: ObservableObject {
 
     func toggleActive(id: UUID) {
         guard let index = rounds.firstIndex(where: { $0.id == id }) else { return }
+        objectWillChange.send()
         rounds[index].isActive.toggle()
     }
 
@@ -44,6 +48,11 @@ final class GameEditorViewModel: ObservableObject {
     }
 
     // MARK: - Round Property Updates
+    //
+    // These mutate array elements in-place without triggering @Published.
+    // PlayerEditView tracks changes locally via @State, so it stays open
+    // while editing. When the user taps Done, expandedRoundId = nil triggers
+    // the re-render that updates the collapsed PlayerRowView.
 
     func updateName(id: UUID, name: String) {
         guard let index = rounds.firstIndex(where: { $0.id == id }) else { return }
@@ -78,7 +87,7 @@ final class GameEditorViewModel: ObservableObject {
     // MARK: - Build Sequence
 
     func buildGameSequence() -> GameSequence {
-        var game = GameSequence(title: gameTitle, rounds: rounds)
+        var game = GameSequence(title: gameTitle, rounds: rounds, roundCount: roundCount)
         game.reindexRounds()
         return game
     }
@@ -99,7 +108,29 @@ final class GameEditorViewModel: ObservableObject {
     func saveToDocuments() -> (Bool, [ParseError]) {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent("\(gameTitle).vtgame")
-        return save(to: url)
+        let result = save(to: url)
+        if result.0 {
+            lastGameFileName = "\(gameTitle).vtgame"
+        }
+        return result
+    }
+
+    /// Saves silently — no alert. Called automatically when tapping Play.
+    func autoSave() {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let url = docs.appendingPathComponent("\(gameTitle).vtgame")
+        _ = save(to: url)
+        lastGameFileName = "\(gameTitle).vtgame"
+    }
+
+    /// Tries to load the most recently saved game. Returns true if successful.
+    func loadLastGame() -> Bool {
+        guard !lastGameFileName.isEmpty else { return false }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let url = docs.appendingPathComponent(lastGameFileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        let (_, errors) = load(from: url)
+        return errors.isEmpty
     }
 
     func load(from url: URL) -> (Bool, [ParseError]) {
@@ -108,6 +139,7 @@ final class GameEditorViewModel: ObservableObject {
             let (game, errors) = parser.parse(content)
             self.gameTitle = game.title
             self.rounds = game.rounds
+            self.roundCount = game.roundCount
             return (errors.isEmpty, errors)
         } catch {
             return (false, [ParseError("Failed to load: \(error.localizedDescription)")])

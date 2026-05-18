@@ -34,9 +34,10 @@ struct GamePlaybackView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(soundManager: soundManager)
         }
-        .onChange(of: timerViewModel.state) { newState in
-            if newState == .finished {
-                soundManager.playFinishSound()
+        .onAppear {
+            timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
+                soundManager?.playFinishSound()
+                gameViewModel?.handleTimerFinished()
             }
         }
     }
@@ -46,7 +47,6 @@ struct GamePlaybackView: View {
     private var quickTimerContent: some View {
         VStack(spacing: 0) {
             durationStepper
-                .opacity(timerViewModel.state == .notStarted ? 1 : 0)
 
             Spacer()
 
@@ -81,15 +81,6 @@ struct GamePlaybackView: View {
             TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
-            if let round = gameViewModel.currentRound, round.startPaused,
-               timerViewModel.state == .notStarted {
-                Button("Tap to start") {
-                    gameViewModel.startCurrentRound()
-                }
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(round.color.swiftUIColor)
-            }
-
             Spacer()
 
             if gameViewModel.gamePhase == .playing {
@@ -111,13 +102,10 @@ struct GamePlaybackView: View {
             if let round = gameViewModel.currentRound {
                 if !round.emoji.isEmpty {
                     Text(round.emoji)
-                        .font(.largeTitle)
+                        .font(.system(size: 56))
                 }
                 Text(round.name)
-                    .font(.system(
-                        size: Theme.GamePlayback.roundBannerFontSize,
-                        weight: .semibold
-                    ))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(round.color.swiftUIColor)
             }
         }
@@ -127,9 +115,17 @@ struct GamePlaybackView: View {
     // MARK: - Round Progress Footer
 
     private var roundProgressFooter: some View {
-        Text("Round \(gameViewModel.currentRoundNumber) of \(gameViewModel.totalRounds)")
-            .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
-            .foregroundStyle(Theme.ColorValue.textSecondary)
+        VStack(spacing: 4) {
+            Text("Player \(gameViewModel.currentRoundNumber) of \(gameViewModel.totalRounds)")
+                .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+
+            if gameViewModel.totalRoundCount > 1 {
+                Text("Round \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
+                    .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+        }
     }
 
     // MARK: - Game Over
@@ -190,12 +186,10 @@ struct GamePlaybackView: View {
 
     private var centerIcon: String? {
         switch timerViewModel.state {
-        case .notStarted, .paused:
+        case .notStarted, .paused, .finished:
             return Theme.Symbol.play
         case .running:
             return Theme.Symbol.pause
-        case .finished:
-            return nil
         }
     }
 
@@ -276,9 +270,9 @@ struct GamePlaybackView: View {
                             .foregroundStyle(Theme.ColorValue.textPrimary)
                     }
             }
+            .disabled(timerViewModel.state != .paused)
             .accessibilityLabel(Theme.Label.reset)
         }
-        .opacity(timerViewModel.state == .paused ? 1 : 0)
     }
 
     private var settingsGear: some View {

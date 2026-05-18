@@ -24,9 +24,14 @@ final class GameViewModel: ObservableObject {
     @Published var gameSequence: GameSequence?
     @Published var currentRoundIndex: Int = 0
     @Published var currentRound: Round?
+    @Published var currentOverallRound: Int = 1
+    @Published var totalRoundCount: Int = 1
 
     /// The timer view model that does the actual countdown.
     let timerViewModel: TimerViewModel
+
+    /// Plays the finish sound when rounds complete.
+    weak var soundManager: SoundManager?
 
     // MARK: - Computed
 
@@ -48,8 +53,9 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(timerViewModel: TimerViewModel) {
+    init(timerViewModel: TimerViewModel, soundManager: SoundManager? = nil) {
         self.timerViewModel = timerViewModel
+        self.soundManager = soundManager
     }
 
     // MARK: - Game Lifecycle
@@ -67,6 +73,8 @@ final class GameViewModel: ObservableObject {
               !game.activeRounds.isEmpty else { return }
         gamePhase = .playing
         currentRoundIndex = 0
+        currentOverallRound = 1
+        totalRoundCount = game.roundCount
         configureTimerForCurrentRound(autoStart: true)
     }
 
@@ -74,9 +82,9 @@ final class GameViewModel: ObservableObject {
         timerViewModel.pause()
         timerViewModel.reset()
         timerViewModel.timerColorOverride = nil
-        timerViewModel.onFinish = nil
         gamePhase = .idle
         currentRoundIndex = 0
+        currentOverallRound = 1
         currentRound = nil
         if clearState {
             gameSequence = nil
@@ -85,13 +93,22 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - Round Advancement
 
-    /// Called by `onFinish` when the current round's timer hits zero.
+    /// Called by the unified onFinish handler when a round's timer hits zero.
+    func handleTimerFinished() {
+        guard gamePhase == .playing else { return }
+        advanceToNextRound()
+    }
+
     private func advanceToNextRound() {
         let rounds = activeRounds
         let nextIndex = currentRoundIndex + 1
 
         if nextIndex < rounds.count {
             currentRoundIndex = nextIndex
+            configureTimerForCurrentRound(autoStart: true)
+        } else if currentOverallRound < totalRoundCount {
+            currentOverallRound += 1
+            currentRoundIndex = 0
             configureTimerForCurrentRound(autoStart: true)
         } else {
             gamePhase = .gameOver
@@ -123,23 +140,14 @@ final class GameViewModel: ObservableObject {
         let round = rounds[currentRoundIndex]
         currentRound = round
 
-        // Use the bypass method — the state-machine guard methods
-        // (pause/reset) don't work from .finished, and onFinish fires
-        // synchronously during handleTimerTick while state is .finished.
         timerViewModel.reconfigureForRound(
             duration: round.durationSeconds,
             color: round.color.swiftUIColor
         )
 
-        // Wire the finish callback — advance to next round.
-        timerViewModel.onFinish = { [weak self] in
-            self?.advanceToNextRound()
-        }
-
         if autoStart && !round.startPaused {
             timerViewModel.play()
         }
-        // If startPaused, the timer stays in .notStarted — user taps to begin.
     }
 
     /// User taps the play button on a paused-start round.

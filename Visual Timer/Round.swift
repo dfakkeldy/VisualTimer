@@ -66,6 +66,7 @@ struct GameSequence: Identifiable, Equatable, Codable {
     var id: UUID = UUID()
     var title: String
     var rounds: [Round] = []
+    var roundCount: Int = 1
     var createdAt: Date = Date()
     var modifiedAt: Date = Date()
 

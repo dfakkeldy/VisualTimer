@@ -9,10 +9,16 @@ struct GameEditorView: View {
     @State private var saveAlertMessage = ""
     @FocusState private var titleFocused: Bool
 
+    private var editingRound: Round? {
+        guard let id = editor.expandedRoundId else { return nil }
+        return editor.rounds.first(where: { $0.id == id })
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 titleField
+                roundCountStepper
                 roundsList
             }
             .background(Theme.ColorValue.appBackground)
@@ -21,16 +27,37 @@ struct GameEditorView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Play") {
+                        editor.autoSave()
                         let game = editor.buildGameSequence()
                         onPlayGame(game)
                     }
                     .disabled(editor.rounds.isEmpty)
                 }
             }
+            .onAppear {
+                if editor.rounds.isEmpty {
+                    _ = editor.loadLastGame()
+                }
+            }
             .alert("Save Status", isPresented: $showSaveAlert) {
                 Button("OK") {}
             } message: {
                 Text(saveAlertMessage)
+            }
+            .sheet(item: Binding(
+                get: { editingRound },
+                set: { _ in editor.expandedRoundId = nil }
+            )) { round in
+                PlayerEditSheet(
+                    round: round,
+                    onUpdateName: { editor.updateName(id: round.id, name: $0) },
+                    onUpdateColor: { editor.updateColor(id: round.id, color: $0) },
+                    onUpdateSound: { editor.updateSound(id: round.id, sound: $0) },
+                    onUpdateEmoji: { editor.updateEmoji(id: round.id, emoji: $0) },
+                    onUpdateDuration: { editor.updateDuration(id: round.id, duration: $0) },
+                    onToggleStartPaused: { editor.toggleStartPaused(id: round.id) },
+                    onDismiss: { editor.expandedRoundId = nil }
+                )
             }
         }
     }
@@ -55,27 +82,45 @@ struct GameEditorView: View {
         .padding(.vertical, 12)
     }
 
+    // MARK: - Round Count Stepper
+
+    private var roundCountStepper: some View {
+        HStack {
+            Text("Number of Rounds")
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+            Spacer()
+            Button {
+                editor.roundCount = max(1, editor.roundCount - 1)
+            } label: {
+                Image(systemName: Theme.Symbol.decrement)
+            }
+            Text("\(editor.roundCount)")
+                .monospacedDigit()
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+                .frame(minWidth: 24)
+            Button {
+                editor.roundCount += 1
+            } label: {
+                Image(systemName: Theme.Symbol.increment)
+            }
+        }
+        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Rounds List
 
     private var roundsList: some View {
         List {
             Section {
                 ForEach(editor.rounds) { round in
-                    if editor.expandedRoundId == round.id {
-                        PlayerEditView(
-                            round: binding(for: round),
-                            onDismiss: { editor.expandedRoundId = nil }
-                        )
-                        .listRowBackground(Theme.ColorValue.circleBackground)
-                    } else {
-                        PlayerRowView(
-                            round: round,
-                            onTap: { editor.toggleExpanded(id: round.id) },
-                            onToggleActive: { editor.toggleActive(id: round.id) },
-                            onDelete: { editor.deleteRound(id: round.id) }
-                        )
-                        .listRowBackground(Theme.ColorValue.circleBackground)
-                    }
+                    PlayerRowView(
+                        round: round,
+                        onTap: { editor.expandedRoundId = round.id },
+                        onToggleActive: { editor.toggleActive(id: round.id) },
+                        onDelete: { editor.deleteRound(id: round.id) }
+                    )
+                    .listRowBackground(Theme.ColorValue.circleBackground)
                 }
                 .onMove(perform: editor.moveRounds)
 
@@ -83,11 +128,11 @@ struct GameEditorView: View {
                 Button {
                     editor.addRound()
                 } label: {
-                    Label(Theme.Label.addRound, systemImage: Theme.Symbol.increment)
+                    Label(Theme.Label.addPlayer, systemImage: Theme.Symbol.addPlayer)
                 }
                 .listRowBackground(Theme.ColorValue.circleBackground)
             } header: {
-                Text("Rounds (\(editor.rounds.count))")
+                Text("Players (\(editor.rounds.count))")
                     .font(.system(size: Theme.Editor.sectionHeaderFontSize))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
@@ -98,17 +143,6 @@ struct GameEditorView: View {
 
     // MARK: - Helpers
 
-    private func binding(for round: Round) -> Binding<Round> {
-        Binding(
-            get: { editor.rounds.first(where: { $0.id == round.id }) ?? round },
-            set: { newValue in
-                if let index = editor.rounds.firstIndex(where: { $0.id == round.id }) {
-                    editor.rounds[index] = newValue
-                }
-            }
-        )
-    }
-
     private func saveGame() {
         let (success, errors) = editor.saveToDocuments()
         if success {
@@ -117,5 +151,188 @@ struct GameEditorView: View {
             saveAlertMessage = errors.map(\.message).joined(separator: "\n")
         }
         showSaveAlert = true
+    }
+}
+
+// MARK: - Player Edit Sheet
+
+private struct PlayerEditSheet: View {
+    let round: Round
+    let onUpdateName: (String) -> Void
+    let onUpdateColor: (RoundColor) -> Void
+    let onUpdateSound: (TimerSound) -> Void
+    let onUpdateEmoji: (String) -> Void
+    let onUpdateDuration: (Int) -> Void
+    let onToggleStartPaused: () -> Void
+    let onDismiss: () -> Void
+
+    @State private var nameText: String
+    @State private var emojiText: String
+    @State private var selectedSound: TimerSound
+    @State private var startPaused: Bool
+    @State private var selectedColorIndex: Int
+    @State private var localDuration: Int
+
+    init(
+        round: Round,
+        onUpdateName: @escaping (String) -> Void,
+        onUpdateColor: @escaping (RoundColor) -> Void,
+        onUpdateSound: @escaping (TimerSound) -> Void,
+        onUpdateEmoji: @escaping (String) -> Void,
+        onUpdateDuration: @escaping (Int) -> Void,
+        onToggleStartPaused: @escaping () -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.round = round
+        self.onUpdateName = onUpdateName
+        self.onUpdateColor = onUpdateColor
+        self.onUpdateSound = onUpdateSound
+        self.onUpdateEmoji = onUpdateEmoji
+        self.onUpdateDuration = onUpdateDuration
+        self.onToggleStartPaused = onToggleStartPaused
+        self.onDismiss = onDismiss
+        _nameText = State(initialValue: round.name)
+        _emojiText = State(initialValue: round.emoji)
+        _selectedSound = State(initialValue: round.sound)
+        _startPaused = State(initialValue: round.startPaused)
+        if case .palette(let index) = round.color {
+            _selectedColorIndex = State(initialValue: index)
+        } else {
+            _selectedColorIndex = State(initialValue: 0)
+        }
+        _localDuration = State(initialValue: round.durationSeconds)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Name field
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Name")
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        TextField("Player name", text: $nameText)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: nameText) { newValue in
+                                onUpdateName(newValue)
+                            }
+                    }
+
+                    // Color picker
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Color")
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Editor.colorSwatchSpacing), count: 8), spacing: Theme.Editor.colorSwatchSpacing) {
+                            ForEach(0..<Theme.ColorValue.timerPalette.count, id: \.self) { index in
+                                let color = Theme.ColorValue.timerPalette[index]
+                                Circle()
+                                    .fill(color)
+                                    .frame(width: Theme.Editor.colorSwatchSize, height: Theme.Editor.colorSwatchSize)
+                                    .overlay {
+                                        if selectedColorIndex == index {
+                                            Circle()
+                                                .strokeBorder(.white, lineWidth: 3)
+                                        }
+                                    }
+                                    .onTapGesture {
+                                        selectedColorIndex = index
+                                        onUpdateColor(.palette(index: index))
+                                    }
+                            }
+                        }
+                    }
+
+                    // Sound picker
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Sound")
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        Picker("Sound", selection: $selectedSound) {
+                            ForEach(TimerSound.allCases, id: \.self) { sound in
+                                Text(sound.displayName).tag(sound)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: selectedSound) { newValue in
+                            onUpdateSound(newValue)
+                        }
+                    }
+
+                    // Emoji field
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Emoji")
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        TextField("🎮", text: $emojiText)
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: emojiText) { newValue in
+                                onUpdateEmoji(newValue)
+                            }
+                    }
+
+                    // Duration stepper
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Time")
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        HStack(spacing: 16) {
+                            Button {
+                                let newDuration = max(Theme.TimerMechanic.minimumDuration,
+                                    localDuration - Theme.TimerMechanic.durationStep)
+                                localDuration = newDuration
+                                onUpdateDuration(newDuration)
+                            } label: {
+                                Image(systemName: Theme.Symbol.decrement)
+                                    .font(.title3)
+                            }
+
+                            Text(durationDisplay)
+                                .font(.title3.monospacedDigit())
+                                .foregroundStyle(Theme.ColorValue.textPrimary)
+                                .frame(minWidth: 80)
+
+                            Button {
+                                let newDuration = localDuration + Theme.TimerMechanic.durationStep
+                                localDuration = newDuration
+                                onUpdateDuration(newDuration)
+                            } label: {
+                                Image(systemName: Theme.Symbol.increment)
+                                    .font(.title3)
+                            }
+                        }
+                    }
+
+                    // Start paused toggle
+                    Toggle(isOn: $startPaused) {
+                        Label(Theme.Label.startPaused, systemImage: Theme.Symbol.startPaused)
+                    }
+                    .toggleStyle(.switch)
+                    .onChange(of: startPaused) { _ in
+                        onToggleStartPaused()
+                    }
+                }
+                .padding()
+            }
+            .background(Theme.ColorValue.appBackground)
+            .navigationTitle(round.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { onDismiss() }
+                        .font(.body.weight(.medium))
+                }
+            }
+        }
+    }
+
+    private var durationDisplay: String {
+        if localDuration >= 60 {
+            let m = localDuration / 60
+            let s = localDuration % 60
+            return s > 0 ? "\(m)m \(s)s" : "\(m)m"
+        }
+        return "\(localDuration)s"
     }
 }

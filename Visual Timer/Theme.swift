@@ -96,7 +96,7 @@ enum Theme {
         static let settings = "Settings"
         static let decrementDuration = "Decrease duration"
         static let incrementDuration = "Increase duration"
-        static let addRound = "Add round"
+        static let addPlayer = "Add player"
         static let endGame = "End game"
         static let startPaused = "Start paused"
         static let roundActive = "Round active"

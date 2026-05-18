@@ -23,6 +23,7 @@ struct GameFileParser {
     func parse(_ input: String) -> (GameSequence, [ParseError]) {
         var errors: [ParseError] = []
         var title = "Untitled Game"
+        var roundCount = 1
         var rounds: [Round] = []
         var currentRound: RoundBuilder?
         var metadataDone = false
@@ -57,6 +58,7 @@ struct GameFileParser {
                     let key = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
                     let value = parts[1].trimmingCharacters(in: .whitespaces)
                     if key == "title" { title = value }
+                    else if key == "rounds", let count = Int(value) { roundCount = max(1, count) }
                 }
             } else if let builder = currentRound {
                 currentRound = parseRoundField(line: line, builder: builder, lineNumber: index, errors: &errors)
@@ -65,7 +67,7 @@ struct GameFileParser {
 
         finalizeCurrentRound(lineNumber: lines.count)
 
-        var game = GameSequence(title: title, rounds: rounds)
+        var game = GameSequence(title: title, rounds: rounds, roundCount: roundCount)
         game.reindexRounds()
         return (game, errors)
     }
@@ -75,6 +77,7 @@ struct GameFileParser {
     func serialize(_ game: GameSequence) -> String {
         var output = ""
         output += "title: \(game.title)\n"
+        output += "rounds: \(game.roundCount)\n"
         output += "\n"
 
         for round in game.rounds.sorted(by: { $0.orderIndex < $1.orderIndex }) {
