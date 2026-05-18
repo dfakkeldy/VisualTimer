@@ -11,7 +11,7 @@ struct PlayerRowView: View {
     var body: some View {
         HStack(spacing: 12) {
             // Drag handle
-            Image(systemName: "line.horizontal.3")
+            Image(systemName: Theme.Symbol.dragHandle)
                 .font(.caption)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
@@ -54,5 +54,12 @@ struct PlayerRowView: View {
         .opacity(round.isActive ? 1 : 0.4)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: Theme.Symbol.delete)
+            }
+        }
     }
 }

@@ -83,6 +83,7 @@ enum Theme {
         static let inactiveToggle = "circle"
         static let startPaused = "hand.raised.fill"
         static let endGame = "flag.checkered"
+    static let dragHandle = "line.horizontal.3"
     }
 
     // MARK: - Accessibility Labels

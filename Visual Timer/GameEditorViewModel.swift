@@ -96,6 +96,12 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    func saveToDocuments() -> (Bool, [ParseError]) {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let url = docs.appendingPathComponent("\(gameTitle).vtgame")
+        return save(to: url)
+    }
+
     func load(from url: URL) -> (Bool, [ParseError]) {
         do {
             let content = try String(contentsOf: url, encoding: .utf8)

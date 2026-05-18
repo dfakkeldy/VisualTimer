@@ -110,9 +110,7 @@ struct GameEditorView: View {
     }
 
     private func saveGame() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = docs.appendingPathComponent("\(editor.gameTitle).vtgame")
-        let (success, errors) = editor.save(to: url)
+        let (success, errors) = editor.saveToDocuments()
         if success {
             saveAlertMessage = "Saved to Documents."
         } else {
