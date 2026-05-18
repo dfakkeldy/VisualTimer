@@ -4,7 +4,7 @@ import SwiftUI
 
 // MARK: - Timer Sound
 
-enum TimerSound: String, CaseIterable {
+enum TimerSound: String, CaseIterable, Codable {
     case chime
     case bright
     case deep
