@@ -2,15 +2,16 @@ import SwiftUI
 
 struct MainTabView: View {
 
-    @StateObject private var timerViewModel = TimerViewModel()
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var soundManager = SoundManager()
+    @StateObject private var gameEditorViewModel = GameEditorViewModel()
 
     @State private var selectedTab = 0
 
+    private var timerViewModel: TimerViewModel { gameViewModel.timerViewModel }
+
     init() {
         let tvm = TimerViewModel()
-        _timerViewModel = StateObject(wrappedValue: tvm)
         _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm))
     }
 
@@ -27,7 +28,7 @@ struct MainTabView: View {
             .tag(0)
 
             GameEditorView(
-                editor: GameEditorViewModel(),
+                editor: gameEditorViewModel,
                 onPlayGame: { game in
                     gameViewModel.loadGame(game)
                     gameViewModel.startGame()
