@@ -76,6 +76,13 @@ enum Theme {
         static let increment = "plus.circle.fill"
         static let decrement = "minus.circle.fill"
         static let checkmark = "checkmark"
+        static let edit = "pencil"
+        static let delete = "trash"
+        static let addPlayer = "person.badge.plus"
+        static let activeToggle = "circle.fill"
+        static let inactiveToggle = "circle"
+        static let starPaused = "hand.raised.fill"
+        static let endGame = "flag.checkered"
     }
 
     // MARK: - Accessibility Labels
@@ -88,5 +95,39 @@ enum Theme {
         static let settings = "Settings"
         static let decrementDuration = "Decrease duration"
         static let incrementDuration = "Increase duration"
+        static let addRound = "Add round"
+        static let endGame = "End game"
+        static let startPaused = "Start paused"
+        static let roundActive = "Round active"
+        static let gameOver = "Game over"
+    }
+
+    // MARK: - Tab Bar
+
+    enum Tab {
+        static let timerTabSymbol = "timer"
+        static let timerTabTitle = "Timer"
+        static let editorTabSymbol = "list.bullet"
+        static let editorTabTitle = "Editor"
+    }
+
+    // MARK: - Editor
+
+    enum Editor {
+        static let rowHeight: CGFloat = 56
+        static let expandedRowHeight: CGFloat = 200
+        static let colorSwatchSize: CGFloat = 32
+        static let colorSwatchSpacing: CGFloat = 8
+        static let emojiFieldWidth: CGFloat = 48
+        static let sectionHeaderFontSize: CGFloat = 13
+    }
+
+    // MARK: - Game Playback
+
+    enum GamePlayback {
+        static let roundBannerFontSize: CGFloat = 16
+        static let roundProgressFontSize: CGFloat = 13
+        static let gameOverFontSize: CGFloat = 28
+        static let playbackSpacing: CGFloat = 12
     }
 }
