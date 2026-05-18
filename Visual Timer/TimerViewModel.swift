@@ -170,6 +170,10 @@ final class TimerViewModel: ObservableObject {
             state = .finished
             timerColorIndex += 1
             onFinish?()
+            // If the callback already reconfigured the timer for the next
+            // round (e.g. GameViewModel.advanceToNextRound called play()),
+            // don't overwrite the new state.
+            guard state == .finished else { return }
             timeRemaining = totalDuration
             state = .notStarted
         }

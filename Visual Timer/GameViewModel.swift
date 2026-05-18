@@ -62,7 +62,9 @@ final class GameViewModel: ObservableObject {
     }
 
     func startGame() {
-        guard let game = gameSequence, gamePhase == .ready else { return }
+        guard let game = gameSequence,
+              gamePhase == .ready,
+              !game.activeRounds.isEmpty else { return }
         gamePhase = .playing
         currentRoundIndex = 0
         configureTimerForCurrentRound(autoStart: true)
