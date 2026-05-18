@@ -20,15 +20,18 @@ enum RoundColor: Equatable, Codable {
     var displayName: String {
         switch self {
         case .palette(let index):
-            let names = ["Red", "Orange", "Yellow", "Green", "Mint", "Teal",
-                         "Cyan", "Blue", "Indigo", "Purple", "Pink", "Brown",
-                         "Deep Orange", "Lime Green", "Hot Pink", "Royal Blue"]
-            guard index >= 0, index < names.count else { return "Unknown" }
-            return names[index]
+            guard index >= 0, index < Self.paletteNames.count else { return "Unknown" }
+            return Self.paletteNames[index]
         case .custom(let hex):
             return hex
         }
     }
+
+    static let paletteNames = [
+        "Red", "Orange", "Yellow", "Green", "Mint", "Teal",
+        "Cyan", "Blue", "Indigo", "Purple", "Pink", "Brown",
+        "Deep Orange", "Lime Green", "Hot Pink", "Royal Blue",
+    ]
 
     static let `default`: RoundColor = .palette(index: 0)
 }

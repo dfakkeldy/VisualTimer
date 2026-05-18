@@ -147,7 +147,7 @@ struct GameFileParser {
             if let seconds = Int(value) {
                 builder.durationSeconds = max(Theme.TimerMechanic.minimumDuration, seconds)
             } else {
-                errors.append(ParseError("Invalid time value '\(value)'"))
+                errors.append(ParseError("Line \(lineNumber): Invalid time value '\(value)'"))
             }
         case "paused":
             builder.startPaused = value.lowercased() == "true"
@@ -161,15 +161,11 @@ struct GameFileParser {
     }
 
     private func parseColor(_ value: String) -> RoundColor {
-        // Hex color
         if value.hasPrefix("#") {
             return .custom(hex: value)
         }
-        // Named palette colors
         let lower = value.lowercased()
-        let names = ["red", "orange", "yellow", "green", "mint", "teal",
-                     "cyan", "blue", "indigo", "purple", "pink", "brown",
-                     "deep orange", "lime green", "hot pink", "royal blue"]
+        let names = RoundColor.paletteNames.map { $0.lowercased() }
         if let index = names.firstIndex(of: lower) {
             return .palette(index: index)
         }
@@ -179,9 +175,7 @@ struct GameFileParser {
     private func serializeColor(_ color: RoundColor) -> String {
         switch color {
         case .palette(let index):
-            let names = ["red", "orange", "yellow", "green", "mint", "teal",
-                         "cyan", "blue", "indigo", "purple", "pink", "brown",
-                         "deep orange", "lime green", "hot pink", "royal blue"]
+            let names = RoundColor.paletteNames.map { $0.lowercased() }
             guard index >= 0, index < names.count else { return "red" }
             return names[index]
         case .custom(let hex):
