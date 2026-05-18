@@ -11,7 +11,7 @@ import SwiftUI
 struct Visual_TimerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
     }
 }
