@@ -36,8 +36,16 @@ final class TimerViewModel: ObservableObject {
     /// the timer finishes so the pie replenishes with a fresh color.
     @Published var timerColorIndex: Int = 0
 
-    /// The current pie fill color from the cycling palette.
+    /// When non-nil, overrides the palette-cycled color. Set by `GameViewModel`
+    /// so each round controls its own pie color.
+    var timerColorOverride: Color? = nil
+
+    /// The current pie fill color from the cycling palette,
+    /// or the override color when set.
     var timerColor: Color {
+        if let override = timerColorOverride {
+            return override
+        }
         let palette = Theme.ColorValue.timerPalette
         guard !palette.isEmpty else { return .red }
         return palette[timerColorIndex % palette.count]
@@ -105,6 +113,17 @@ final class TimerViewModel: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = false
 #endif
         timeRemaining = totalDuration
+    }
+
+    /// Reconfigures the timer in-place for a new game round.
+    /// Bypasses state-machine guards — only call from `GameViewModel`
+    /// when transitioning between rounds.
+    func reconfigureForRound(duration: Int, color: Color?) {
+        endCountdown()
+        timerColorOverride = color
+        totalDuration = duration
+        timeRemaining = duration
+        state = .notStarted
     }
 
     /// Adjusts the timer duration and persists the new value so it
