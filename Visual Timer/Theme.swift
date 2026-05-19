@@ -84,6 +84,11 @@ enum Theme {
         static let startPaused = "hand.raised.fill"
         static let endGame = "flag.checkered"
     static let dragHandle = "line.horizontal.3"
+        static let doOver = "arrow.uturn.backward"
+        static let skip = "forward.end.fill"
+        static let restart = "arrow.counterclockwise.circle"
+        static let history = "clock.arrow.circlepath"
+        static let nextPlayer = "arrow.right"
     }
 
     // MARK: - Accessibility Labels
@@ -101,6 +106,13 @@ enum Theme {
         static let startPaused = "Start paused"
         static let roundActive = "Round active"
         static let gameOver = "Game over"
+        static let doOver = "Do-over"
+        static let skip = "Skip"
+        static let restart = "Restart"
+        static let nextPlayer = "Next"
+        static let gameDuration = "Game time"
+        static let export = "Export"
+        static let delete = "Delete"
     }
 
     // MARK: - Tab Bar
@@ -110,6 +122,8 @@ enum Theme {
         static let timerTabTitle = "Timer"
         static let editorTabSymbol = "list.bullet"
         static let editorTabTitle = "Editor"
+        static let historyTabSymbol = "clock.arrow.circlepath"
+        static let historyTabTitle = "History"
     }
 
     // MARK: - Editor
