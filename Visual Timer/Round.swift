@@ -49,6 +49,10 @@ struct Round: Identifiable, Equatable, Codable {
     var isActive: Bool = true
     var orderIndex: Int = 0
 
+    /// When false, this round is excluded from the next-player indicator
+    /// and the counting-player progress display. Use for timeout timers.
+    var countsAsPlayer: Bool = true
+
     /// Display string for duration (e.g., "30s" or "1m 30s").
     var durationDisplay: String {
         if durationSeconds >= 60 {
