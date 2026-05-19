@@ -103,14 +103,21 @@ struct HistoryStore {
         try? FileManager.default.removeItem(at: url)
     }
 
-    func exportURL(for record: GameRecord) -> URL {
+    func exportURL(for record: GameRecord) -> URL? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
+        guard let data = try? encoder.encode(record) else {
+            print("HistoryStore: failed to encode record for export \(record.id)")
+            return nil
+        }
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(record.gameTitle).vtlog")
-        if let data = try? encoder.encode(record) {
-            try? data.write(to: tempURL)
+        do {
+            try data.write(to: tempURL)
+            return tempURL
+        } catch {
+            print("HistoryStore: failed to write export file: \(error)")
+            return nil
         }
-        return tempURL
     }
 }

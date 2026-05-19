@@ -20,7 +20,7 @@ final class HistoryViewModel: ObservableObject {
         records.removeAll { $0.id == id }
     }
 
-    func exportURL(for record: GameRecord) -> URL {
+    func exportURL(for record: GameRecord) -> URL? {
         store.exportURL(for: record)
     }
 }

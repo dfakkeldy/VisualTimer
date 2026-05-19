@@ -51,7 +51,9 @@ struct SessionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    showExporter = true
+                    if history.exportURL(for: record) != nil {
+                        showExporter = true
+                    }
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                 }
@@ -73,8 +75,9 @@ struct SessionDetailView: View {
             Text("Delete \"\(record.gameTitle)\" from history?")
         }
         .sheet(isPresented: $showExporter) {
-            let url = history.exportURL(for: record)
-            ShareSheet(items: [url])
+            if let url = history.exportURL(for: record) {
+                ShareSheet(items: [url])
+            }
         }
     }
 
@@ -178,7 +181,20 @@ private struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        if let popover = vc.popoverPresentationController {
+            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let rootView = windowScene?.windows.first?.rootViewController?.view
+            popover.sourceView = rootView
+            popover.sourceRect = CGRect(
+                x: UIScreen.main.bounds.midX,
+                y: UIScreen.main.bounds.midY,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
+        return vc
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
