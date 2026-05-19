@@ -4,6 +4,10 @@ struct HistoryView: View {
 
     @ObservedObject var history: HistoryViewModel
 
+    init(history: HistoryViewModel) {
+        self.history = history
+    }
+
     @State private var deleteTarget: GameRecord?
     @State private var showDeleteConfirmation = false
 

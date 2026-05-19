@@ -5,6 +5,7 @@ struct MainTabView: View {
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var soundManager = SoundManager()
     @StateObject private var gameEditorViewModel = GameEditorViewModel()
+    @StateObject private var historyViewModel: HistoryViewModel
 
     @State private var selectedTab = 0
 
@@ -16,6 +17,7 @@ struct MainTabView: View {
         _soundManager = StateObject(wrappedValue: sm)
         _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm, soundManager: sm))
         _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel())
+        _historyViewModel = StateObject(wrappedValue: HistoryViewModel())
     }
 
     var body: some View {
@@ -42,6 +44,12 @@ struct MainTabView: View {
                 Label(Theme.Tab.editorTabTitle, systemImage: Theme.Tab.editorTabSymbol)
             }
             .tag(1)
+
+            HistoryView(history: historyViewModel)
+                .tabItem {
+                    Label(Theme.Tab.historyTabTitle, systemImage: Theme.Tab.historyTabSymbol)
+                }
+                .tag(2)
         }
     }
 }
