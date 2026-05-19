@@ -90,6 +90,7 @@ final class GameViewModel: ObservableObject {
     /// 1-based index of the current round among counting players only.
     var countingPlayerIndex: Int {
         let rounds = activeRounds
+        guard !rounds.isEmpty else { return 0 }
         var count = 0
         for i in 0...min(currentRoundIndex, rounds.count - 1) {
             if rounds[i].countsAsPlayer {
@@ -134,7 +135,11 @@ final class GameViewModel: ObservableObject {
     func endGame(clearState: Bool = false) {
         sessionEvents.append(.gameEnded(timestamp: Date()))
         stopElapsedTimer()
-        saveGameRecord()
+        // Only persist a record if a game was actually played.
+        if gameStartDate != nil {
+            saveGameRecord()
+        }
+        gameStartDate = nil
         timerViewModel.pause()
         timerViewModel.reset()
         timerViewModel.timerColorOverride = nil
@@ -234,6 +239,7 @@ final class GameViewModel: ObservableObject {
     // MARK: - Elapsed Timer
 
     private func startElapsedTimer() {
+        stopElapsedTimer()
         elapsedTimer = Timer
             .publish(every: 1.0, on: .main, in: .common)
             .autoconnect()
