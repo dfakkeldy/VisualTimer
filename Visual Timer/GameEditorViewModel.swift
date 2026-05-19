@@ -84,6 +84,11 @@ final class GameEditorViewModel: ObservableObject {
         rounds[index].startPaused.toggle()
     }
 
+    func updateCountsAsPlayer(id: UUID, countsAsPlayer: Bool) {
+        guard let index = rounds.firstIndex(where: { $0.id == id }) else { return }
+        rounds[index].countsAsPlayer = countsAsPlayer
+    }
+
     // MARK: - Build Sequence
 
     func buildGameSequence() -> GameSequence {
