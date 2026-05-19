@@ -10,6 +10,21 @@ final class GameEditorViewModel: ObservableObject {
 
     @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
 
+    func populateSampleData() {
+        gameTitle = "Game Night"
+        let sampleRounds: [(String, RoundColor, String, Int)] = [
+            ("Alice", .palette(index: 0), "🎮", 60),
+            ("Bob", .palette(index: 1), "🎯", 45),
+            ("Charlie", .palette(index: 2), "🎲", 30),
+            ("Diana", .palette(index: 3), "♟️", 90),
+            ("Timeout", .palette(index: 4), "⏳", 120),
+        ]
+        rounds = sampleRounds.enumerated().map { i, r in
+            Round(name: r.0, color: r.1, sound: .chime, emoji: r.2, durationSeconds: r.3, orderIndex: i)
+        }
+        roundCount = rounds.count
+    }
+
     private let parser = GameFileParser()
 
     var isExpanded: Bool { expandedRoundId != nil }
