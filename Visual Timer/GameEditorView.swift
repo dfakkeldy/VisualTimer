@@ -56,6 +56,7 @@ struct GameEditorView: View {
                     onUpdateEmoji: { editor.updateEmoji(id: round.id, emoji: $0) },
                     onUpdateDuration: { editor.updateDuration(id: round.id, duration: $0) },
                     onToggleStartPaused: { editor.toggleStartPaused(id: round.id) },
+                    onUpdateCountsAsPlayer: { editor.updateCountsAsPlayer(id: round.id, countsAsPlayer: $0) },
                     onDismiss: { editor.expandedRoundId = nil }
                 )
             }
@@ -164,12 +165,14 @@ private struct PlayerEditSheet: View {
     let onUpdateEmoji: (String) -> Void
     let onUpdateDuration: (Int) -> Void
     let onToggleStartPaused: () -> Void
+    let onUpdateCountsAsPlayer: (Bool) -> Void
     let onDismiss: () -> Void
 
     @State private var nameText: String
     @State private var emojiText: String
     @State private var selectedSound: TimerSound
     @State private var startPaused: Bool
+    @State private var countsAsPlayer: Bool
     @State private var selectedColorIndex: Int
     @State private var localDuration: Int
 
@@ -181,6 +184,7 @@ private struct PlayerEditSheet: View {
         onUpdateEmoji: @escaping (String) -> Void,
         onUpdateDuration: @escaping (Int) -> Void,
         onToggleStartPaused: @escaping () -> Void,
+        onUpdateCountsAsPlayer: @escaping (Bool) -> Void,
         onDismiss: @escaping () -> Void
     ) {
         self.round = round
@@ -190,6 +194,7 @@ private struct PlayerEditSheet: View {
         self.onUpdateEmoji = onUpdateEmoji
         self.onUpdateDuration = onUpdateDuration
         self.onToggleStartPaused = onToggleStartPaused
+        self.onUpdateCountsAsPlayer = onUpdateCountsAsPlayer
         self.onDismiss = onDismiss
         _nameText = State(initialValue: round.name)
         _emojiText = State(initialValue: round.emoji)
@@ -201,6 +206,7 @@ private struct PlayerEditSheet: View {
             _selectedColorIndex = State(initialValue: 0)
         }
         _localDuration = State(initialValue: round.durationSeconds)
+        _countsAsPlayer = State(initialValue: round.countsAsPlayer)
     }
 
     var body: some View {
@@ -311,6 +317,15 @@ private struct PlayerEditSheet: View {
                     .toggleStyle(.switch)
                     .onChange(of: startPaused) { _ in
                         onToggleStartPaused()
+                    }
+
+                    // Counts as player toggle
+                    Toggle(isOn: $countsAsPlayer) {
+                        Label("Counts as player", systemImage: "person.fill")
+                    }
+                    .toggleStyle(.switch)
+                    .onChange(of: countsAsPlayer) { newValue in
+                        onUpdateCountsAsPlayer(newValue)
                     }
                 }
                 .padding()
