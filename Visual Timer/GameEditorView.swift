@@ -220,7 +220,7 @@ private struct PlayerEditSheet: View {
                             .foregroundStyle(Theme.ColorValue.textSecondary)
                         TextField("Player name", text: $nameText)
                             .textFieldStyle(.roundedBorder)
-                            .onChange(of: nameText) { newValue in
+                            .onChange(of: nameText) { _, newValue in
                                 onUpdateName(newValue)
                             }
                     }
@@ -261,7 +261,7 @@ private struct PlayerEditSheet: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        .onChange(of: selectedSound) { newValue in
+                        .onChange(of: selectedSound) { _, newValue in
                             onUpdateSound(newValue)
                         }
                     }
@@ -273,7 +273,7 @@ private struct PlayerEditSheet: View {
                             .foregroundStyle(Theme.ColorValue.textSecondary)
                         TextField("🎮", text: $emojiText)
                             .textFieldStyle(.roundedBorder)
-                            .onChange(of: emojiText) { newValue in
+                            .onChange(of: emojiText) { _, newValue in
                                 onUpdateEmoji(newValue)
                             }
                     }
@@ -315,7 +315,7 @@ private struct PlayerEditSheet: View {
                         Label(Theme.Label.startPaused, systemImage: Theme.Symbol.startPaused)
                     }
                     .toggleStyle(.switch)
-                    .onChange(of: startPaused) { _ in
+                    .onChange(of: startPaused) {
                         onToggleStartPaused()
                     }
 
@@ -324,7 +324,7 @@ private struct PlayerEditSheet: View {
                         Label("Counts as player", systemImage: "person.fill")
                     }
                     .toggleStyle(.switch)
-                    .onChange(of: countsAsPlayer) { newValue in
+                    .onChange(of: countsAsPlayer) { _, newValue in
                         onUpdateCountsAsPlayer(newValue)
                     }
                 }

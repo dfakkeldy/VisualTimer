@@ -185,10 +185,11 @@ private struct ShareSheet: UIViewControllerRepresentable {
         if let popover = vc.popoverPresentationController {
             let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
             let rootView = windowScene?.windows.first?.rootViewController?.view
+            let screen = rootView?.window?.windowScene?.screen
             popover.sourceView = rootView
             popover.sourceRect = CGRect(
-                x: UIScreen.main.bounds.midX,
-                y: UIScreen.main.bounds.midY,
+                x: (screen?.bounds.midX) ?? 0,
+                y: (screen?.bounds.midY) ?? 0,
                 width: 0,
                 height: 0
             )

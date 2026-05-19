@@ -57,7 +57,7 @@ struct PlayerEditView: View {
                     .foregroundStyle(Theme.ColorValue.textSecondary)
                 TextField("Player name", text: $nameText)
                     .textFieldStyle(.roundedBorder)
-                    .onChange(of: nameText) { newValue in
+                    .onChange(of: nameText) { _, newValue in
                         onUpdateName(newValue)
                     }
             }
@@ -97,7 +97,7 @@ struct PlayerEditView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .onChange(of: selectedSound) { newValue in
+                .onChange(of: selectedSound) { _, newValue in
                     onUpdateSound(newValue)
                 }
             }
@@ -109,7 +109,7 @@ struct PlayerEditView: View {
                 TextField("🎮", text: $emojiText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: Theme.Editor.emojiFieldWidth)
-                    .onChange(of: emojiText) { newValue in
+                    .onChange(of: emojiText) { _, newValue in
                         onUpdateEmoji(newValue)
                     }
             }
@@ -146,7 +146,7 @@ struct PlayerEditView: View {
                 Label(Theme.Label.startPaused, systemImage: Theme.Symbol.startPaused)
             }
             .toggleStyle(.switch)
-            .onChange(of: startPaused) { _ in
+            .onChange(of: startPaused) {
                 onToggleStartPaused()
             }
 

@@ -198,6 +198,8 @@ private extension Data {
 
     mutating func append<T>(littleEndian value: T) {
         var copy = value
-        append(Data(bytes: &copy, count: MemoryLayout<T>.size))
+        Swift.withUnsafeBytes(of: &copy) { buffer in
+            append(Data(buffer))
+        }
     }
 }
