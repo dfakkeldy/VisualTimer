@@ -26,12 +26,19 @@ final class GameViewModel: ObservableObject {
     @Published var currentRound: Round?
     @Published var currentOverallRound: Int = 1
     @Published var totalRoundCount: Int = 1
+    @Published var sessionEvents: [SessionEvent] = []
+    @Published var gameElapsedTime: TimeInterval = 0
 
     /// The timer view model that does the actual countdown.
     let timerViewModel: TimerViewModel
 
     /// Plays the finish sound when rounds complete.
     weak var soundManager: SoundManager?
+
+    /// Wall-clock time when the game started. Used for event timestamps.
+    private var gameStartDate: Date?
+    /// 1 Hz timer that increments `gameElapsedTime`.
+    private var elapsedTimer: AnyCancellable?
 
     // MARK: - Computed
 
@@ -49,6 +56,47 @@ final class GameViewModel: ObservableObject {
 
     var totalRounds: Int {
         activeRounds.count
+    }
+
+    /// The next active round whose `countsAsPlayer` is true.
+    /// Wraps across cycles if roundCount > 1. Returns nil on
+    /// the last player of the last cycle.
+    var nextPlayer: Round? {
+        let rounds = activeRounds
+        guard !rounds.isEmpty else { return nil }
+        var searchIndex = currentRoundIndex + 1
+        for _ in 0..<rounds.count {
+            if searchIndex >= rounds.count {
+                if currentOverallRound < totalRoundCount {
+                    searchIndex = 0
+                } else {
+                    return nil
+                }
+            }
+            let candidate = rounds[searchIndex]
+            if candidate.countsAsPlayer {
+                return candidate
+            }
+            searchIndex += 1
+        }
+        return nil
+    }
+
+    /// Number of active rounds where `countsAsPlayer` is true.
+    var countingPlayerCount: Int {
+        activeRounds.filter(\.countsAsPlayer).count
+    }
+
+    /// 1-based index of the current round among counting players only.
+    var countingPlayerIndex: Int {
+        let rounds = activeRounds
+        var count = 0
+        for i in 0...min(currentRoundIndex, rounds.count - 1) {
+            if rounds[i].countsAsPlayer {
+                count += 1
+            }
+        }
+        return max(count, 1)
     }
 
     // MARK: - Init
@@ -75,10 +123,18 @@ final class GameViewModel: ObservableObject {
         currentRoundIndex = 0
         currentOverallRound = 1
         totalRoundCount = game.roundCount
+        gameStartDate = Date()
+        gameElapsedTime = 0
+        sessionEvents = []
+        sessionEvents.append(.gameStarted(timestamp: gameStartDate!))
+        startElapsedTimer()
         configureTimerForCurrentRound(autoStart: true)
     }
 
     func endGame(clearState: Bool = false) {
+        sessionEvents.append(.gameEnded(timestamp: Date()))
+        stopElapsedTimer()
+        saveGameRecord()
         timerViewModel.pause()
         timerViewModel.reset()
         timerViewModel.timerColorOverride = nil
@@ -96,6 +152,9 @@ final class GameViewModel: ObservableObject {
     /// Called by the unified onFinish handler when a round's timer hits zero.
     func handleTimerFinished() {
         guard gamePhase == .playing else { return }
+        if let round = currentRound {
+            sessionEvents.append(.roundFinished(playerName: round.name, timestamp: Date()))
+        }
         advanceToNextRound()
     }
 
@@ -140,6 +199,8 @@ final class GameViewModel: ObservableObject {
         let round = rounds[currentRoundIndex]
         currentRound = round
 
+        sessionEvents.append(.roundStarted(playerName: round.name, emoji: round.emoji, timestamp: Date()))
+
         timerViewModel.reconfigureForRound(
             duration: round.durationSeconds,
             color: round.color.swiftUIColor
@@ -154,5 +215,77 @@ final class GameViewModel: ObservableObject {
     func startCurrentRound() {
         guard gamePhase == .playing, timerViewModel.state == .notStarted else { return }
         timerViewModel.play()
+    }
+
+    // MARK: - Session Recording
+
+    func recordPause() {
+        guard gamePhase == .playing else { return }
+        sessionEvents.append(.paused(timestamp: Date()))
+        stopElapsedTimer()
+    }
+
+    func recordResume() {
+        guard gamePhase == .playing else { return }
+        sessionEvents.append(.resumed(timestamp: Date()))
+        startElapsedTimer()
+    }
+
+    // MARK: - Elapsed Timer
+
+    private func startElapsedTimer() {
+        elapsedTimer = Timer
+            .publish(every: 1.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.gameElapsedTime += 1
+            }
+    }
+
+    private func stopElapsedTimer() {
+        elapsedTimer?.cancel()
+        elapsedTimer = nil
+    }
+
+    // MARK: - Controls
+
+    func doOverToPrevious() {
+        guard gamePhase == .playing, currentRoundIndex > 0 else { return }
+        let rounds = activeRounds
+        let prevIndex = currentRoundIndex - 1
+        let prevPlayer = rounds[prevIndex]
+        sessionEvents.append(.doOver(previousPlayer: prevPlayer.name, timestamp: Date()))
+        currentRoundIndex = prevIndex
+        configureTimerForCurrentRound(autoStart: true)
+    }
+
+    func skipCurrentRound() {
+        guard gamePhase == .playing else { return }
+        let rounds = activeRounds
+        guard currentRoundIndex < rounds.count else { return }
+        sessionEvents.append(.skipped(playerName: rounds[currentRoundIndex].name, timestamp: Date()))
+        advanceToNextRound()
+    }
+
+    func restartCurrentTimer() {
+        guard gamePhase == .playing else { return }
+        if let round = currentRound {
+            sessionEvents.append(.restartTimer(playerName: round.name, timestamp: Date()))
+        }
+        configureTimerForCurrentRound(autoStart: true)
+    }
+
+    /// Saves the completed game session to the History store.
+    private func saveGameRecord() {
+        guard let game = gameSequence else { return }
+        let session = GameSession(events: sessionEvents)
+        let record = GameRecord(
+            id: UUID(),
+            gameTitle: game.title,
+            session: session,
+            playerNames: activeRounds.map(\.name),
+            playedAt: gameStartDate ?? Date()
+        )
+        HistoryStore().save(record)
     }
 }
