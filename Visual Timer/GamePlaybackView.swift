@@ -74,12 +74,63 @@ struct GamePlaybackView: View {
                 roundInfoHeader
             }
 
+            // Game duration counter
+            if gameViewModel.gamePhase != .ready {
+                Text(formatElapsed(gameViewModel.gameElapsedTime))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .padding(.top, 4)
+            }
+
             Spacer()
 
             timerCircleButton
 
             TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
+
+            // Control buttons
+            if gameViewModel.gamePhase == .playing {
+                HStack(spacing: 24) {
+                    Button {
+                        gameViewModel.doOverToPrevious()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: Theme.Symbol.doOver)
+                                .font(.title3)
+                            Text(Theme.Label.doOver)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+                    .disabled(gameViewModel.currentRoundIndex == 0)
+
+                    Button {
+                        gameViewModel.skipCurrentRound()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: Theme.Symbol.skip)
+                                .font(.title3)
+                            Text(Theme.Label.skip)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+
+                    Button {
+                        gameViewModel.restartCurrentTimer()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(systemName: Theme.Symbol.restart)
+                                .font(.title3)
+                            Text(Theme.Label.restart)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+                }
+                .padding(.top, 12)
+            }
 
             Spacer()
 
@@ -98,15 +149,42 @@ struct GamePlaybackView: View {
     // MARK: - Round Info Header
 
     private var roundInfoHeader: some View {
-        VStack(spacing: 4) {
+        HStack {
+            // Current player (left)
             if let round = gameViewModel.currentRound {
-                if !round.emoji.isEmpty {
-                    Text(round.emoji)
-                        .font(.system(size: 56))
+                HStack(spacing: 4) {
+                    if !round.emoji.isEmpty {
+                        Text(round.emoji)
+                            .font(.system(size: 56))
+                    }
+                    Text(round.name)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(round.color.swiftUIColor)
                 }
-                Text(round.name)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(round.color.swiftUIColor)
+            }
+
+            Spacer()
+
+            // Next player indicator (right)
+            if let next = gameViewModel.nextPlayer {
+                HStack(spacing: 4) {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(Theme.Label.nextPlayer)
+                            .font(.caption2)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                        HStack(spacing: 4) {
+                            if !next.emoji.isEmpty {
+                                Text(next.emoji)
+                            }
+                            Text(next.name)
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                        }
+                    }
+                    Image(systemName: Theme.Symbol.nextPlayer)
+                        .font(.caption)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                }
             }
         }
         .padding(.top, 16)
@@ -116,7 +194,7 @@ struct GamePlaybackView: View {
 
     private var roundProgressFooter: some View {
         VStack(spacing: 4) {
-            Text("Player \(gameViewModel.currentRoundNumber) of \(gameViewModel.totalRounds)")
+            Text("Player \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
                 .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
@@ -194,6 +272,8 @@ struct GamePlaybackView: View {
     }
 
     private func handleCircleTap() {
+        let wasPaused = timerViewModel.state == .paused
+
         switch timerViewModel.state {
         case .notStarted, .paused:
             if gameViewModel.hasActiveGame && timerViewModel.state == .notStarted {
@@ -201,8 +281,14 @@ struct GamePlaybackView: View {
             } else {
                 timerViewModel.play()
             }
+            if gameViewModel.hasActiveGame && wasPaused {
+                gameViewModel.recordResume()
+            }
         case .running:
             timerViewModel.pause()
+            if gameViewModel.hasActiveGame {
+                gameViewModel.recordPause()
+            }
         case .finished:
             break
         }
@@ -273,6 +359,15 @@ struct GamePlaybackView: View {
             .disabled(timerViewModel.state != .paused)
             .accessibilityLabel(Theme.Label.reset)
         }
+    }
+
+    // MARK: - Helpers
+
+    private func formatElapsed(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        let m = total / 60
+        let s = total % 60
+        return String(format: "%d:%02d", m, s)
     }
 
     private var settingsGear: some View {
