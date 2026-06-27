@@ -32,6 +32,10 @@ Carthage/
 Icon
 ._*
 
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.pyc
+
 # ── Xcode playground ──────────────────────────────────
 timeline.xctimeline
 playground.xcworkspace
