@@ -6,6 +6,7 @@ struct GameEditorView: View {
     @ObservedObject var editor: GameEditorViewModel
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
+    @ObservedObject var favoriteTemplates: FavoriteTemplateStore
     let onPlayGame: (GameSequence) -> Void
 
     @State private var showSaveAlert = false
@@ -122,16 +123,7 @@ struct GameEditorView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 12) {
                 ForEach(editor.savedTemplates) { template in
-                    Button {
-                        loadSavedTemplate(template)
-                    } label: {
-                        templateCard(
-                            title: template.title,
-                            subtitle: template.subtitle,
-                            systemImage: Theme.Symbol.savedTemplates
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    savedTemplateCard(template)
                 }
 
                 ForEach(StarterTemplateLibrary.templates) { template in
@@ -153,7 +145,44 @@ struct GameEditorView: View {
         .scrollIndicators(.hidden)
     }
 
-    private func templateCard(title: String, subtitle: String, systemImage: String) -> some View {
+    private func savedTemplateCard(_ template: SavedTemplate) -> some View {
+        let isFavorite = favoriteTemplates.isFavorite(template)
+
+        return ZStack(alignment: .topTrailing) {
+            Button {
+                loadSavedTemplate(template)
+            } label: {
+                templateCard(
+                    title: template.title,
+                    subtitle: template.subtitle,
+                    systemImage: Theme.Symbol.savedTemplates,
+                    trailingInset: 22
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                favoriteTemplates.toggleFavorite(template)
+            } label: {
+                Image(systemName: isFavorite ? Theme.Symbol.favoriteFilled : Theme.Symbol.favorite)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(isFavorite ? .yellow : Theme.ColorValue.textSecondary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isFavorite ? Theme.Label.unfavoriteTemplate : Theme.Label.favoriteTemplate)
+            .accessibilityValue(isFavorite ? "Selected" : "Not selected")
+            .padding(6)
+        }
+    }
+
+    private func templateCard(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        trailingInset: CGFloat = 0
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
@@ -171,6 +200,7 @@ struct GameEditorView: View {
                 .foregroundStyle(Theme.ColorValue.textSecondary)
                 .lineLimit(2)
         }
+        .padding(.trailing, trailingInset)
         .frame(width: 156, height: 66, alignment: .leading)
         .padding(12)
         .background(Theme.ColorValue.circleBackground)

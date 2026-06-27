@@ -136,6 +136,14 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    func applySavedTemplate(id templateID: UUID) -> (Bool, [ParseError]) {
+        refreshSavedTemplates()
+        guard let template = savedTemplates.first(where: { $0.id == templateID }) else {
+            return (false, [ParseError("Template not found.")])
+        }
+        return applySavedTemplate(template)
+    }
+
     func loadInitialTemplateIfNeeded() {
         refreshSavedTemplates()
         migrateLegacyTemplateIfNeeded()

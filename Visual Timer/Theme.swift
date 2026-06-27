@@ -91,6 +91,8 @@ enum Theme {
         static let nextPlayer = "arrow.right"
         static let templates = "rectangle.stack.badge.play"
         static let savedTemplates = "tray.full"
+        static let favorite = "star"
+        static let favoriteFilled = "star.fill"
         static let importTemplate = "square.and.arrow.down"
         static let exportTemplate = "square.and.arrow.up"
         static let proUnlock = "lock.open"
@@ -122,6 +124,8 @@ enum Theme {
         static let export = "Export"
         static let importTemplate = "Import template"
         static let exportTemplate = "Export template"
+        static let favoriteTemplate = "Favorite template"
+        static let unfavoriteTemplate = "Unfavorite template"
         static let delete = "Delete"
     }
 

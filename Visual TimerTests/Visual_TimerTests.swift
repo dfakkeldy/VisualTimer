@@ -196,6 +196,38 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertNil(editor.expandedRoundId)
     }
 
+    func testGameEditorViewModel_applySavedTemplateByIDLoadsStoredTemplate() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        var game = makeTemplateGame(title: "Stored Template")
+        game.roundCount = 3
+        let saved = try store.save(game: game)
+        let editor = GameEditorViewModel(templateLibrary: store)
+
+        let result = editor.applySavedTemplate(id: saved.id)
+
+        XCTAssertTrue(result.0, "Unexpected load errors: \(result.1.map(\.message))")
+        XCTAssertEqual(editor.gameTitle, "Stored Template")
+        XCTAssertEqual(editor.rounds.map(\.name), ["Prep", "Cook"])
+        XCTAssertEqual(editor.roundCount, 3)
+        XCTAssertEqual(editor.currentSavedTemplateID, saved.id)
+    }
+
+    func testGameEditorViewModel_applySavedTemplateByIDReportsMissingTemplate() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let editor = GameEditorViewModel(templateLibrary: store)
+
+        let result = editor.applySavedTemplate(id: UUID())
+
+        XCTAssertFalse(result.0)
+        XCTAssertEqual(result.1.first?.message, "Template not found.")
+    }
+
     // MARK: - TemplateSavePolicy
 
     func testTemplateSavePolicy_freeAllowsFirstTemplate() {
