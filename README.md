@@ -22,7 +22,10 @@ starter templates for common timed sessions.
   files without overwriting existing local work.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
   own devices through the private CloudKit database.
-- **Watch app** - Keep companion watch target support.
+- **Favorite templates and widgets** - Mark one saved template as the favorite
+  and start it from Home Screen or Lock Screen widgets.
+- **Watch app** - Use watch-local starter templates with a crown-adjustable
+  countdown.
 
 ## Core Features
 
@@ -46,6 +49,12 @@ starter templates for common timed sessions.
 - **iCloud sync** - `CKSyncEngine` syncs Pro template records in the private
   CloudKit database under container `iCloud.Dan.Visual-Timer`. Selected sound
   syncs through `NSUbiquitousKeyValueStore`.
+- **Widget quick starts** - The app writes favorite-template snapshots into App
+  Group `group.Dan.Visual-Timer`. Widget intents write a pending start request
+  and open the app; the app consumes that request and starts the template.
+- **Watch-native timer** - The watch app uses its own template list and timer
+  view model so it does not depend on iOS-only audio, CloudKit, or idle-timer
+  behavior.
 
 ## Product Roadmap
 
@@ -59,7 +68,7 @@ free. Pro value is built around reuse and portability:
 - Future iCloud sync for history.
 - Shared templates for families, classrooms, kitchens, meetings, and game
   nights.
-- Home Screen and Lock Screen widgets for one-tap template starts.
+- Richer widget controls, live progress surfaces, and shared template workflows.
 
 ## Architecture
 
@@ -72,6 +81,8 @@ state owners.
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
 | Sync | `TemplateCloudSyncEngine`, `TemplateCloudRecordMapper`, `UbiquitousSettingsStore` | Pro iCloud template sync and lightweight settings sync |
+| Widgets | `TurnTimerWidget`, `TurnTimerShared`, `TemplateWidgetUpdater` | Favorite-template snapshots, AppIntent starts, widget empty states |
+| Watch | `WatchApp` | Watch-local templates and crown-adjustable countdown |
 | History | `HistoryViewModel`, session models and views | Completed session storage and review |
 | Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
@@ -96,8 +107,8 @@ through callbacks.
 4. Build and run with Command-R.
 
 No additional dependencies are required. The project uses only system
-frameworks, including SwiftUI, Combine, AVFoundation, StoreKit, and WatchKit
-support.
+frameworks, including SwiftUI, Combine, AVFoundation, StoreKit, WidgetKit,
+AppIntents, and WatchKit support.
 
 ## CloudKit Setup
 
@@ -112,3 +123,15 @@ account, create or sync at least one template, then deploy the CloudKit
 development schema to production in CloudKit Dashboard. Local simulator builds
 verify compilation and record mapping, but they do not prove live iCloud account,
 container, subscription, or production-schema behavior.
+
+## Widgets and Watch
+
+Widgets read only compact favorite-template snapshots from App Group
+`group.Dan.Visual-Timer`. They are quick-start surfaces, not a background live
+timer: tapping Start opens the app, which loads and starts the favorite template.
+If no favorite exists, the widget opens the Templates tab so the user can choose
+one.
+
+The watch app intentionally stays local and lightweight. It ships with watch
+starter templates and a crown-adjustable timer, but it does not sync saved
+templates or play the iPhone app's generated sounds yet.

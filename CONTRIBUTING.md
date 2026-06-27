@@ -32,6 +32,27 @@ basic session playback behind Pro. Pro gates reuse and portability: additional
 saved templates, full history/export, iCloud template sync, sharing, widgets,
 and advanced customization.
 
+## Widgets
+
+- Widgets read compact snapshots from App Group `group.Dan.Visual-Timer`; the
+  iOS app remains the source of truth for saved `.turntimer` documents.
+- A widget Start action should write a pending template ID through
+  `TemplateWidgetStore` and open the app. The app is responsible for loading and
+  starting playback.
+- Do not treat widgets as a background live timer unless a future phase adds a
+  dedicated live activity or shared active-timer state.
+- Empty widget states should open the Templates tab so the user can pick a
+  favorite saved template.
+
+## Watch App
+
+- Keep watch code in `WatchApp/` watch-native. Do not import or depend on
+  iOS-only audio, CloudKit sync, StoreKit paywalls, or idle-timer behavior.
+- The current watch scope is local starter templates plus a crown-adjustable
+  countdown.
+- If saved-template sync comes to watchOS later, add a dedicated sync boundary
+  rather than sharing the iOS editor or CloudKit engine directly.
+
 ## Template Files
 
 - New saved templates use portable `.turntimer` JSON documents in
@@ -107,6 +128,9 @@ and advanced customization.
 - UI tests live in `Visual TimerUITests/`.
 - Before submitting a PR, verify the app builds with `xcodebuild` and
   manually smoke-test the four timer states.
+- When changing widgets, also verify the app scheme builds the
+  `TurnTimerWidgetExtension` target. When changing watch code, build the
+  `Visual Timer Watch Watch App` scheme.
 - CloudKit runtime behavior cannot be fully proven by local simulator builds.
   At minimum, compile the sync layer, unit-test the record mapper, and document
   any live iCloud verification that still needs a signed build or TestFlight.

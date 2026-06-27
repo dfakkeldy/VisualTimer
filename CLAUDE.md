@@ -19,9 +19,10 @@ approach.
 * **Current Phase:** Turn Timer Pro uses a $4.99 one-time non-consumable unlock.
   Free users keep quick timer use, built-in starter templates, basic playback,
   and one custom saved template. Pro unlocks unlimited saved templates, full
-  history/export, and iCloud template sync.
-* **Roadmap:** Pro value grows through richer sharing, history sync, widgets,
-  and advanced customization.
+  history/export, iCloud template sync, favorite-template widgets, and future
+  advanced reuse features.
+* **Roadmap:** Pro value grows through richer sharing, history sync, richer
+  widget controls, and advanced customization.
 * **Product ID:** The StoreKit 2 non-consumable unlock is
   `turntimer.pro.unlock`; `TurnTimer.storekit` exists for local testing.
 
@@ -50,6 +51,12 @@ approach.
   `Template`. Local builds can compile the sync layer and unit-test record
   mapping, but live account/container/subscription behavior requires a signed
   build and CloudKit Dashboard schema deployment before release.
+* **Widgets:** Widgets read compact favorite-template snapshots from App Group
+  `group.Dan.Visual-Timer`. Widget AppIntents write pending requests and open
+  the app; they do not run a background live timer.
+* **Watch Scope:** The watch app is watch-native and local-only for now. Keep it
+  free of iOS-only audio, CloudKit, StoreKit paywalls, and idle-timer code unless
+  a dedicated watch sync/audio phase is planned.
 * **Strict Theming:** Never hardcode magic numbers, strings, or colors in views.
   If a new color, emoji, symbol, label, or layout spacing is needed, add it to
   `Theme.swift`.
