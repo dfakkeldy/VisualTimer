@@ -225,6 +225,80 @@ final class Visual_TimerTests: XCTestCase {
         ))
     }
 
+    func testTemplateSavePolicy_freeAllowsUpdatingExistingTurnTimerTemplate() {
+        XCTAssertTrue(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: false,
+            existingTemplateCount: 1,
+            isUpdatingExistingTemplate: true
+        ))
+    }
+
+    func testTemplateSavePolicy_freeBlocksSecondTurnTimerTemplate() {
+        XCTAssertFalse(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: false,
+            existingTemplateCount: 1,
+            isUpdatingExistingTemplate: false
+        ))
+    }
+
+    // MARK: - TurnTimerTemplateDocument
+
+    func testTemplateDocumentCodec_roundTripPreservesGame() throws {
+        let game = makeTemplateGame(title: "Recipe Steps")
+        let document = TurnTimerTemplateDocument(
+            templateID: UUID(uuidString: "75DA13FA-8842-4D1C-B9E4-648F36D5B013")!,
+            title: "Recipe Steps",
+            game: game,
+            createdAt: Date(timeIntervalSince1970: 1_000),
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            exportedAt: Date(timeIntervalSince1970: 3_000)
+        )
+
+        let codec = TemplateDocumentCodec()
+        let data = try codec.encode(document)
+        let decoded = try codec.decode(data)
+
+        XCTAssertEqual(decoded.templateID, document.templateID)
+        XCTAssertEqual(decoded.title, "Recipe Steps")
+        XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
+        XCTAssertEqual(decoded.game.rounds.map(\.durationSeconds), [60, 300])
+    }
+
+    func testTemplateLibraryStore_importTemplateDuplicatesWithoutOverwriting() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let saved = try store.save(game: makeTemplateGame(title: "Game Night"))
+        let incoming = TurnTimerTemplateDocument(title: "Game Night", game: makeTemplateGame(title: "Game Night"))
+
+        let imported = try store.importTemplate(incoming)
+        let templates = store.listTemplates()
+
+        XCTAssertNotEqual(imported.id, saved.id)
+        XCTAssertEqual(imported.title, "Game Night Copy")
+        XCTAssertEqual(templates.count, 2)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: saved.url.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: imported.url.path))
+    }
+
+    func testTemplateLibraryStore_migratesLegacyVTGameToTurnTimerFile() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let legacyURL = directory.appendingPathComponent("Legacy.vtgame")
+        let legacyContent = GameFileParser().serialize(makeTemplateGame(title: "Legacy Template"))
+        try legacyContent.write(to: legacyURL, atomically: true, encoding: .utf8)
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let migrated = try XCTUnwrap(store.migrateLegacyTemplateIfNeeded(fileName: "Legacy.vtgame"))
+        let document = try store.loadDocument(id: migrated.id)
+
+        XCTAssertEqual(migrated.title, "Legacy Template")
+        XCTAssertEqual(migrated.url.pathExtension, "turntimer")
+        XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
+    }
+
     // MARK: - HistoryAccessPolicy
 
     func testHistoryAccessPolicy_freeLimitsRecords() {
@@ -259,6 +333,23 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(game.rounds[0].orderIndex, 0)
         XCTAssertEqual(game.rounds[1].orderIndex, 1)
         XCTAssertEqual(game.rounds[2].orderIndex, 2)
+    }
+
+    private func makeTemplateGame(title: String) -> GameSequence {
+        var game = GameSequence(title: title, roundCount: 1)
+        game.rounds = [
+            Round(name: "Prep", durationSeconds: 60, orderIndex: 0),
+            Round(name: "Cook", durationSeconds: 300, orderIndex: 1),
+        ]
+        game.reindexRounds()
+        return game
+    }
+
+    private func makeTemporaryDirectory() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("VisualTimerTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
     }
 
     private func makeHistoryRecords(count: Int) -> [GameRecord] {
