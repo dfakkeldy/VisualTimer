@@ -8,6 +8,7 @@ struct GameEditorView: View {
 
     @State private var showSaveAlert = false
     @State private var saveAlertMessage = ""
+    @State private var requestedProFeature: ProFeature?
     @FocusState private var titleFocused: Bool
 
     private var editingRound: Round? {
@@ -43,6 +44,9 @@ struct GameEditorView: View {
                 Button("OK") {}
             } message: {
                 Text(saveAlertMessage)
+            }
+            .sheet(item: $requestedProFeature) { feature in
+                ProPaywallView(feature: feature, proAccess: proAccess)
             }
             .sheet(item: Binding(
                 get: { editingRound },
@@ -175,13 +179,17 @@ struct GameEditorView: View {
     // MARK: - Helpers
 
     private func saveGame() {
-        let (success, errors) = editor.saveToDocuments()
-        if success {
+        let result = editor.saveToDocuments(isProUnlocked: proAccess.isProUnlocked)
+        switch result {
+        case .saved:
             saveAlertMessage = "Template saved to Documents."
-        } else {
+            showSaveAlert = true
+        case .requiresPro:
+            requestedProFeature = .unlimitedTemplates
+        case .failed(let errors):
             saveAlertMessage = errors.map(\.message).joined(separator: "\n")
+            showSaveAlert = true
         }
-        showSaveAlert = true
     }
 }
 

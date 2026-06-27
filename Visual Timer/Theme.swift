@@ -90,6 +90,10 @@ enum Theme {
         static let history = "clock.arrow.circlepath"
         static let nextPlayer = "arrow.right"
         static let templates = "rectangle.stack.badge.play"
+        static let proUnlock = "lock.open"
+        static let proTemplates = "rectangle.stack.badge.plus"
+        static let proHistoryExport = "square.and.arrow.up"
+        static let proFutureFeatures = "icloud"
     }
 
     // MARK: - Accessibility Labels

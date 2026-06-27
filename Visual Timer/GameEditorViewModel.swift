@@ -12,7 +12,17 @@ final class GameEditorViewModel: ObservableObject {
 
     private let parser = GameFileParser()
 
+    enum TemplateSaveResult {
+        case saved
+        case requiresPro
+        case failed([ParseError])
+    }
+
     var isExpanded: Bool { expandedRoundId != nil }
+
+    private var currentTemplateFileName: String {
+        "\(gameTitle).vtgame"
+    }
 
     // MARK: - Round CRUD
 
@@ -127,22 +137,31 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
-    func saveToDocuments() -> (Bool, [ParseError]) {
+    func saveToDocuments(isProUnlocked: Bool) -> TemplateSaveResult {
+        guard TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: isProUnlocked,
+            lastSavedFileName: lastGameFileName,
+            proposedFileName: currentTemplateFileName
+        ) else {
+            return .requiresPro
+        }
+
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = docs.appendingPathComponent("\(gameTitle).vtgame")
+        let url = docs.appendingPathComponent(currentTemplateFileName)
         let result = save(to: url)
         if result.0 {
-            lastGameFileName = "\(gameTitle).vtgame"
+            lastGameFileName = currentTemplateFileName
+            return .saved
         }
-        return result
+        return .failed(result.1)
     }
 
     /// Saves silently — no alert. Called automatically when tapping Play.
     func autoSave() {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = docs.appendingPathComponent("\(gameTitle).vtgame")
+        let url = docs.appendingPathComponent(currentTemplateFileName)
         _ = save(to: url)
-        lastGameFileName = "\(gameTitle).vtgame"
+        lastGameFileName = currentTemplateFileName
     }
 
     /// Tries to load the most recently saved game. Returns true if successful.

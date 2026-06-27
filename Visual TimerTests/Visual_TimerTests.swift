@@ -191,6 +191,40 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertNil(editor.expandedRoundId)
     }
 
+    // MARK: - TemplateSavePolicy
+
+    func testTemplateSavePolicy_freeAllowsFirstTemplate() {
+        XCTAssertTrue(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: false,
+            lastSavedFileName: "",
+            proposedFileName: "Game Night.vtgame"
+        ))
+    }
+
+    func testTemplateSavePolicy_freeAllowsOverwritingExistingTemplate() {
+        XCTAssertTrue(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: false,
+            lastSavedFileName: "Game Night.vtgame",
+            proposedFileName: "Game Night.vtgame"
+        ))
+    }
+
+    func testTemplateSavePolicy_freeBlocksSecondTemplate() {
+        XCTAssertFalse(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: false,
+            lastSavedFileName: "Game Night.vtgame",
+            proposedFileName: "Recipe Steps.vtgame"
+        ))
+    }
+
+    func testTemplateSavePolicy_proAllowsSecondTemplate() {
+        XCTAssertTrue(TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: true,
+            lastSavedFileName: "Game Night.vtgame",
+            proposedFileName: "Recipe Steps.vtgame"
+        ))
+    }
+
     // MARK: - GameSequence
 
     func testGameSequence_reindexRounds() {
