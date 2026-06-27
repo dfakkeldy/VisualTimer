@@ -24,6 +24,7 @@ final class GameEditorViewModel: ObservableObject {
 
     enum TemplateImportResult {
         case imported(SavedTemplate)
+        case requiresPro
         case failed([ParseError])
     }
 
@@ -257,7 +258,16 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
-    func importTemplate(from url: URL) -> TemplateImportResult {
+    func importTemplate(from url: URL, isProUnlocked: Bool) -> TemplateImportResult {
+        refreshSavedTemplates()
+        guard TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: isProUnlocked,
+            existingTemplateCount: savedTemplates.count,
+            isUpdatingExistingTemplate: false
+        ) else {
+            return .requiresPro
+        }
+
         do {
             let savedTemplate = try templateLibrary.importTemplate(from: url)
             refreshSavedTemplates()
