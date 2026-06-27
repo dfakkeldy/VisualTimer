@@ -1,3 +1,4 @@
+import CloudKit
 import XCTest
 @testable import Visual_Timer
 
@@ -149,7 +150,11 @@ final class Visual_TimerTests: XCTestCase {
 
         XCTAssertTrue(errors.isEmpty)
         let round = game.activeRounds[0]
-        XCTAssertEqual(round.color, .default)
+        if case .palette(let index) = round.color {
+            XCTAssertEqual(index, 0)
+        } else {
+            XCTFail("Expected default palette color")
+        }
         XCTAssertEqual(round.sound, .chime)
         XCTAssertEqual(round.startPaused, false)
         XCTAssertEqual(round.isActive, true)
@@ -297,6 +302,20 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(migrated.title, "Legacy Template")
         XCTAssertEqual(migrated.url.pathExtension, "turntimer")
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
+    }
+
+    func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
+        let game = makeTemplateGame(title: "Synced Template")
+        let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
+        let mapper = TemplateCloudRecordMapper()
+
+        let record = try mapper.record(from: document)
+        let decoded = try mapper.document(from: record)
+
+        XCTAssertEqual(record.recordType, TemplateSyncConfiguration.recordType)
+        XCTAssertEqual(decoded.templateID, document.templateID)
+        XCTAssertEqual(decoded.title, "Synced Template")
+        XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
     // MARK: - HistoryAccessPolicy

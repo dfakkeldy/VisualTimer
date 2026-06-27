@@ -6,6 +6,7 @@ struct SettingsView: View {
 
     @ObservedObject var soundManager: SoundManager
     @ObservedObject var proAccess: ProAccessViewModel
+    @ObservedObject var templateSync: TemplateCloudSyncEngine
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -36,6 +37,22 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    HStack {
+                        Text("Template Sync")
+                        Spacer()
+                        Text(templateSync.statusText)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+
+                    Button {
+                        Task {
+                            await templateSync.refreshNow()
+                        }
+                    } label: {
+                        Text("Refresh Sync")
+                    }
+                    .disabled(!proAccess.isProUnlocked)
+
                     HStack {
                         Text("Status")
                         Spacer()

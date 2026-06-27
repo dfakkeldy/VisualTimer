@@ -5,6 +5,7 @@ struct GameEditorView: View {
 
     @ObservedObject var editor: GameEditorViewModel
     @ObservedObject var proAccess: ProAccessViewModel
+    @ObservedObject var templateSync: TemplateCloudSyncEngine
     let onPlayGame: (GameSequence) -> Void
 
     @State private var showSaveAlert = false
@@ -23,6 +24,7 @@ struct GameEditorView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 titleField
+                TemplateSyncStatusView(syncEngine: templateSync, isProUnlocked: proAccess.isProUnlocked)
                 templatePicker
                 roundCountStepper
                 roundsList
