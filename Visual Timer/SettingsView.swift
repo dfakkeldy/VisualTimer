@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsView: View {
 
     @ObservedObject var soundManager: SoundManager
+    @ObservedObject var proAccess: ProAccessViewModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -33,6 +34,41 @@ struct SettingsView: View {
                 } footer: {
                     Text("This sound will play when the timer reaches zero.")
                 }
+
+                Section {
+                    HStack {
+                        Text("Status")
+                        Spacer()
+                        Text(proAccess.isProUnlocked ? "Unlocked" : "Free")
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+
+                    if !proAccess.isProUnlocked {
+                        Button {
+                            Task { await proAccess.purchasePro() }
+                        } label: {
+                            Text("Unlock Pro \(proAccess.displayPrice)")
+                        }
+                        .disabled(proAccess.purchaseState == .purchasing)
+                    }
+
+                    Button {
+                        Task { await proAccess.restorePurchases() }
+                    } label: {
+                        Text("Restore Purchases")
+                    }
+                    .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+
+                    if let statusMessage {
+                        Text(statusMessage)
+                            .font(.footnote)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+                } header: {
+                    Text("Turn Timer Pro")
+                } footer: {
+                    Text("Pro unlocks unlimited templates, full history export, and future sync, sharing, and widgets.")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -41,6 +77,21 @@ struct SettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private var statusMessage: String? {
+        switch proAccess.purchaseState {
+        case .idle, .purchased:
+            return nil
+        case .loading:
+            return "Checking purchase status..."
+        case .purchasing:
+            return "Purchasing..."
+        case .pending:
+            return "Purchase pending approval."
+        case .failed(let message):
+            return message
         }
     }
 }

@@ -3,9 +3,11 @@ import SwiftUI
 struct HistoryView: View {
 
     @ObservedObject var history: HistoryViewModel
+    @ObservedObject var proAccess: ProAccessViewModel
 
-    init(history: HistoryViewModel) {
+    init(history: HistoryViewModel, proAccess: ProAccessViewModel) {
         self.history = history
+        self.proAccess = proAccess
     }
 
     @State private var deleteTarget: GameRecord?

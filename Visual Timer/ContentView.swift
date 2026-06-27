@@ -9,6 +9,7 @@ struct ContentView: View {
 
     @StateObject private var viewModel = TimerViewModel()
     @StateObject private var soundManager = SoundManager()
+    @StateObject private var proAccess = ProAccessViewModel()
 
     @State private var showSettings = false
 
@@ -43,7 +44,7 @@ struct ContentView: View {
             value: viewModel.state
         )
         .sheet(isPresented: $showSettings) {
-            SettingsView(soundManager: soundManager)
+            SettingsView(soundManager: soundManager, proAccess: proAccess)
         }
         .onAppear {
             viewModel.onFinish = { [weak soundManager] in

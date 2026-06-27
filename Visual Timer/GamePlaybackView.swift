@@ -5,6 +5,7 @@ struct GamePlaybackView: View {
     @ObservedObject var timerViewModel: TimerViewModel
     @ObservedObject var gameViewModel: GameViewModel
     @ObservedObject var soundManager: SoundManager
+    @ObservedObject var proAccess: ProAccessViewModel
 
     @State private var showSettings = false
 
@@ -32,7 +33,7 @@ struct GamePlaybackView: View {
             value: gameViewModel.gamePhase
         )
         .sheet(isPresented: $showSettings) {
-            SettingsView(soundManager: soundManager)
+            SettingsView(soundManager: soundManager, proAccess: proAccess)
         }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in

@@ -3,6 +3,7 @@ import SwiftUI
 struct GameEditorView: View {
 
     @ObservedObject var editor: GameEditorViewModel
+    @ObservedObject var proAccess: ProAccessViewModel
     let onPlayGame: (GameSequence) -> Void
 
     @State private var showSaveAlert = false
