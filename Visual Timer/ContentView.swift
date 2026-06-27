@@ -8,9 +8,18 @@ import SwiftUI
 struct ContentView: View {
 
     @StateObject private var viewModel = TimerViewModel()
-    @StateObject private var soundManager = SoundManager()
+    @StateObject private var ubiquitousSettingsStore: UbiquitousSettingsStore
+    @StateObject private var soundManager: SoundManager
+    @StateObject private var proAccess = ProAccessViewModel()
+    @StateObject private var templateSync = TemplateCloudSyncEngine()
 
     @State private var showSettings = false
+
+    init() {
+        let settingsStore = UbiquitousSettingsStore()
+        _ubiquitousSettingsStore = StateObject(wrappedValue: settingsStore)
+        _soundManager = StateObject(wrappedValue: SoundManager(ubiquitousSettingsStore: settingsStore))
+    }
 
     // MARK: - Body
 
@@ -43,7 +52,11 @@ struct ContentView: View {
             value: viewModel.state
         )
         .sheet(isPresented: $showSettings) {
-            SettingsView(soundManager: soundManager)
+            SettingsView(
+                soundManager: soundManager,
+                proAccess: proAccess,
+                templateSync: templateSync
+            )
         }
         .onAppear {
             viewModel.onFinish = { [weak soundManager] in

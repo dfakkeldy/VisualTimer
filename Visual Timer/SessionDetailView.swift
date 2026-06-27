@@ -4,14 +4,17 @@ struct SessionDetailView: View {
 
     let record: GameRecord
     @ObservedObject var history: HistoryViewModel
+    @ObservedObject var proAccess: ProAccessViewModel
 
-    init(record: GameRecord, history: HistoryViewModel) {
+    init(record: GameRecord, history: HistoryViewModel, proAccess: ProAccessViewModel) {
         self.record = record
         self._history = ObservedObject(wrappedValue: history)
+        self._proAccess = ObservedObject(wrappedValue: proAccess)
     }
 
     @State private var showDeleteConfirmation = false
     @State private var showExporter = false
+    @State private var requestedProFeature: ProFeature?
 
     var body: some View {
         ScrollView {
@@ -51,12 +54,17 @@ struct SessionDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    guard proAccess.isProUnlocked else {
+                        requestedProFeature = .historyExport
+                        return
+                    }
                     if history.exportURL(for: record) != nil {
                         showExporter = true
                     }
                 } label: {
-                    Image(systemName: "square.and.arrow.up")
+                    Image(systemName: Theme.Symbol.proHistoryExport)
                 }
+                .accessibilityLabel(Theme.Label.export)
             }
             ToolbarItem(placement: .destructiveAction) {
                 Button {
@@ -64,6 +72,7 @@ struct SessionDetailView: View {
                 } label: {
                     Image(systemName: Theme.Symbol.delete)
                 }
+                .accessibilityLabel(Theme.Label.delete)
             }
         }
         .alert("Delete Session", isPresented: $showDeleteConfirmation) {
@@ -78,6 +87,9 @@ struct SessionDetailView: View {
             if let url = history.exportURL(for: record) {
                 ShareSheet(items: [url])
             }
+        }
+        .sheet(item: $requestedProFeature) { feature in
+            ProPaywallView(feature: feature, proAccess: proAccess)
         }
     }
 
@@ -173,30 +185,4 @@ struct SessionDetailView: View {
         f.timeStyle = .short
         return f
     }()
-}
-
-// MARK: - Share Sheet (UIKit bridge)
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        if let popover = vc.popoverPresentationController {
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            let rootView = windowScene?.windows.first?.rootViewController?.view
-            let screen = rootView?.window?.windowScene?.screen
-            popover.sourceView = rootView
-            popover.sourceRect = CGRect(
-                x: (screen?.bounds.midX) ?? 0,
-                y: (screen?.bounds.midY) ?? 0,
-                width: 0,
-                height: 0
-            )
-            popover.permittedArrowDirections = []
-        }
-        return vc
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

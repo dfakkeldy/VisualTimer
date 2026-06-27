@@ -1,0 +1,41 @@
+{
+  "identifier" : "9F4F4E43-7465-4618-A558-7F2E85A49623",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "27A1133A-04CA-4912-8C8C-E8BB38BA9F36",
+      "localizations" : [
+        {
+          "description" : "Unlock unlimited templates, full history export, and Pro features.",
+          "displayName" : "Turn Timer Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "turntimer.pro.unlock",
+      "referenceName" : "Turn Timer Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1096242208",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_developerTeamID" : "8AXNA5B37R",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 772095600,
+    "_locale" : "en_US",
+    "_storefront" : "USA"
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
