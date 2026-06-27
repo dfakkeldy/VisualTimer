@@ -20,7 +20,7 @@ struct ProPaywallView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Label("Unlimited saved templates", systemImage: Theme.Symbol.proTemplates)
                     Label("Full history and export", systemImage: Theme.Symbol.proHistoryExport)
-                    Label("Ready for sync, sharing, and widgets", systemImage: Theme.Symbol.proFutureFeatures)
+                    Label("iCloud sync, sharing, and widgets", systemImage: Theme.Symbol.proFutureFeatures)
                 }
                 .foregroundStyle(Theme.ColorValue.textPrimary)
 

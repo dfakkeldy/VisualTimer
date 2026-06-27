@@ -16,11 +16,12 @@ approach.
   programmatic 16-bit PCM WAV sound generation.
 * **Target:** iOS and watchOS using Swift 5.0 project settings, SwiftUI,
   Combine, AVFoundation, and StoreKit.
-* **Current Phase:** Turn Timer Pro adds a $4.99 one-time non-consumable unlock
-  while keeping quick timer use, built-in starter templates, and basic playback
-  free.
-* **Roadmap:** Pro value grows through additional saved templates, full
-  history/export, sync, shared templates, and widgets.
+* **Current Phase:** Turn Timer Pro uses a $4.99 one-time non-consumable unlock.
+  Free users keep quick timer use, built-in starter templates, basic playback,
+  and one custom saved template. Pro unlocks unlimited saved templates, full
+  history/export, and iCloud template sync.
+* **Roadmap:** Pro value grows through richer sharing, history sync, widgets,
+  and advanced customization.
 * **Product ID:** The StoreKit 2 non-consumable unlock is
   `turntimer.pro.unlock`; `TurnTimer.storekit` exists for local testing.
 
@@ -35,14 +36,20 @@ approach.
   transitions (Not Started, Running, Paused, Finished). When implementing
   sequential rounds, ensure transitions from one turn to the next, to pauses, or
   to completion respect these guards to prevent sequence breaking or UI glitches.
-* **Custom File Parsing:** Templates are saved to local files in a custom
-  human-readable format. Prioritize robust, safe parsing. Handle malformed files
-  gracefully without crashing the app, and decouple storage/parsing logic from
-  the UI.
+* **Template Documents:** New saved templates are `.turntimer` JSON documents in
+  `Documents/Templates/<templateID>.turntimer`. Legacy `.vtgame` files may still
+  be loaded for migration. Prioritize robust, safe parsing. Handle malformed
+  files gracefully without crashing the app, and decouple storage/parsing logic
+  from the UI.
 * **Monetization Boundaries:** Never gate quick timer, built-in starter
   templates, or basic playback behind Pro. Pro gates reuse and portability:
-  additional saved templates, full history/export, sync, sharing, widgets, and
-  advanced customization.
+  additional saved templates, full history/export, iCloud template sync,
+  sharing, widgets, and advanced customization.
+* **CloudKit Sync:** Template sync uses private CloudKit container
+  `iCloud.Dan.Visual-Timer`, custom zone `TurnTimerTemplates`, and record type
+  `Template`. Local builds can compile the sync layer and unit-test record
+  mapping, but live account/container/subscription behavior requires a signed
+  build and CloudKit Dashboard schema deployment before release.
 * **Strict Theming:** Never hardcode magic numbers, strings, or colors in views.
   If a new color, emoji, symbol, label, or layout spacing is needed, add it to
   `Theme.swift`.
