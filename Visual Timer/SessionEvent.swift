@@ -130,7 +130,7 @@ extension SessionEvent {
     /// Human-readable label for the event in the timeline.
     var label: String {
         switch self {
-        case .gameStarted: return "Game started"
+        case .gameStarted: return "Session started"
         case .roundStarted(let name, _, _): return "\(name) — round started"
         case .roundFinished(let name, _): return "\(name) — round finished"
         case .skipped(let name, _): return "\(name) — skipped"
@@ -138,7 +138,7 @@ extension SessionEvent {
         case .restartTimer(let name, _): return "\(name) — timer restarted"
         case .paused: return "Paused"
         case .resumed: return "Resumed"
-        case .gameEnded: return "Game over"
+        case .gameEnded: return "Session complete"
         }
     }
 

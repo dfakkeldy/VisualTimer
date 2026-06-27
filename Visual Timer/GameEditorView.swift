@@ -18,15 +18,16 @@ struct GameEditorView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 titleField
+                starterTemplates
                 roundCountStepper
                 roundsList
             }
             .background(Theme.ColorValue.appBackground)
-            .navigationTitle("Game Editor")
+            .navigationTitle("Templates")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Play") {
+                    Button("Start") {
                         editor.autoSave()
                         let game = editor.buildGameSequence()
                         onPlayGame(game)
@@ -35,9 +36,7 @@ struct GameEditorView: View {
                 }
             }
             .onAppear {
-                if editor.rounds.isEmpty {
-                    _ = editor.loadLastGame()
-                }
+                editor.loadInitialTemplateIfNeeded()
             }
             .alert("Save Status", isPresented: $showSaveAlert) {
                 Button("OK") {}
@@ -67,7 +66,7 @@ struct GameEditorView: View {
 
     private var titleField: some View {
         HStack {
-            TextField("Game Title", text: $editor.gameTitle)
+            TextField("Template Name", text: $editor.gameTitle)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(Theme.ColorValue.textPrimary)
                 .focused($titleFocused)
@@ -83,11 +82,41 @@ struct GameEditorView: View {
         .padding(.vertical, 12)
     }
 
+    private var starterTemplates: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(StarterTemplateLibrary.templates) { template in
+                    Button {
+                        editor.applyStarterTemplate(template)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(template.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.ColorValue.textPrimary)
+                            Text(template.subtitle)
+                                .font(.caption)
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                                .lineLimit(2)
+                        }
+                        .frame(width: 150, alignment: .leading)
+                        .padding(12)
+                        .background(Theme.ColorValue.circleBackground)
+                        .clipShape(.rect(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
+            .padding(.vertical, 8)
+        }
+        .scrollIndicators(.hidden)
+    }
+
     // MARK: - Round Count Stepper
 
     private var roundCountStepper: some View {
         HStack {
-            Text("Number of Rounds")
+            Text("Repeat Sequence")
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Spacer()
             Button {
@@ -133,7 +162,7 @@ struct GameEditorView: View {
                 }
                 .listRowBackground(Theme.ColorValue.circleBackground)
             } header: {
-                Text("Players (\(editor.rounds.count))")
+                Text("Rounds (\(editor.rounds.count))")
                     .font(.system(size: Theme.Editor.sectionHeaderFontSize))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
@@ -147,7 +176,7 @@ struct GameEditorView: View {
     private func saveGame() {
         let (success, errors) = editor.saveToDocuments()
         if success {
-            saveAlertMessage = "Saved to Documents."
+            saveAlertMessage = "Template saved to Documents."
         } else {
             saveAlertMessage = errors.map(\.message).joined(separator: "\n")
         }
@@ -218,7 +247,7 @@ private struct PlayerEditSheet: View {
                         Text("Name")
                             .font(.caption)
                             .foregroundStyle(Theme.ColorValue.textSecondary)
-                        TextField("Player name", text: $nameText)
+                        TextField("Round name", text: $nameText)
                             .textFieldStyle(.roundedBorder)
                             .onChange(of: nameText) { _, newValue in
                                 onUpdateName(newValue)
@@ -319,9 +348,9 @@ private struct PlayerEditSheet: View {
                         onToggleStartPaused()
                     }
 
-                    // Counts as player toggle
+                    // Counts as turn toggle
                     Toggle(isOn: $countsAsPlayer) {
-                        Label("Counts as player", systemImage: "person.fill")
+                        Label("Counts as turn", systemImage: "person.fill")
                     }
                     .toggleStyle(.switch)
                     .onChange(of: countsAsPlayer) { _, newValue in

@@ -22,7 +22,7 @@ struct GameFileParser {
 
     func parse(_ input: String) -> (GameSequence, [ParseError]) {
         var errors: [ParseError] = []
-        var title = "Untitled Game"
+        var title = "Untitled Template"
         var roundCount = 1
         var rounds: [Round] = []
         var currentRound: RoundBuilder?

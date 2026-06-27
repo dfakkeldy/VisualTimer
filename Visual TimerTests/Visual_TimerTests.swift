@@ -155,6 +155,42 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(round.isActive, true)
     }
 
+    // MARK: - StarterTemplateLibrary
+
+    func testStarterTemplateLibrary_containsPhaseOneTemplates() {
+        let titles = StarterTemplateLibrary.templates.map(\.title)
+
+        XCTAssertEqual(titles, [
+            "Game Night",
+            "Recipe Steps",
+            "Plant Watering",
+            "Classroom Stations",
+            "Meeting Agenda",
+        ])
+    }
+
+    func testStarterTemplateLibrary_gameNightHasPlayerTurnsAndTimeout() {
+        let template = StarterTemplateLibrary.defaultTemplate
+        let rounds = template.game.rounds
+
+        XCTAssertEqual(template.title, "Game Night")
+        XCTAssertEqual(template.game.roundCount, 1)
+        XCTAssertEqual(rounds.map(\.name), ["Alice", "Bob", "Charlie", "Timeout"])
+        XCTAssertEqual(rounds.map(\.countsAsPlayer), [true, true, true, false])
+    }
+
+    func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
+        let editor = GameEditorViewModel()
+
+        editor.addRound()
+        editor.applyStarterTemplate(StarterTemplateLibrary.templates[1])
+
+        XCTAssertEqual(editor.gameTitle, "Recipe Steps")
+        XCTAssertEqual(editor.rounds.map(\.name), ["Prep", "Simmer", "Flip or Stir", "Rest"])
+        XCTAssertEqual(editor.roundCount, 1)
+        XCTAssertNil(editor.expandedRoundId)
+    }
+
     // MARK: - GameSequence
 
     func testGameSequence_reindexRounds() {

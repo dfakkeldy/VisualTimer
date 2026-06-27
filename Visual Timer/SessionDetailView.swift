@@ -66,7 +66,7 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .alert("Delete Record", isPresented: $showDeleteConfirmation) {
+        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 history.deleteRecord(id: record.id)
             }

@@ -26,7 +26,7 @@ struct HistoryView: View {
             .onAppear {
                 history.loadRecords()
             }
-            .alert("Delete Record", isPresented: $showDeleteConfirmation, presenting: deleteTarget) { record in
+            .alert("Delete Session", isPresented: $showDeleteConfirmation, presenting: deleteTarget) { record in
                 Button("Delete", role: .destructive) {
                     history.deleteRecord(id: record.id)
                 }
@@ -44,10 +44,10 @@ struct HistoryView: View {
             Image(systemName: Theme.Symbol.history)
                 .font(.system(size: 48))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("No games played yet")
+            Text("No sessions yet")
                 .font(.title3.weight(.medium))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("Complete a game to see it here.")
+            Text("Complete a session to see it here.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary.opacity(0.7))
         }

@@ -10,21 +10,6 @@ final class GameEditorViewModel: ObservableObject {
 
     @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
 
-    func populateSampleData() {
-        gameTitle = "Game Night"
-        let sampleRounds: [(String, RoundColor, String, Int)] = [
-            ("Alice", .palette(index: 0), "🎮", 60),
-            ("Bob", .palette(index: 1), "🎯", 45),
-            ("Charlie", .palette(index: 2), "🎲", 30),
-            ("Diana", .palette(index: 3), "♟️", 90),
-            ("Timeout", .palette(index: 4), "⏳", 120),
-        ]
-        rounds = sampleRounds.enumerated().map { i, r in
-            Round(name: r.0, color: r.1, sound: .chime, emoji: r.2, durationSeconds: r.3, orderIndex: i)
-        }
-        roundCount = rounds.count
-    }
-
     private let parser = GameFileParser()
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -102,6 +87,23 @@ final class GameEditorViewModel: ObservableObject {
     func updateCountsAsPlayer(id: UUID, countsAsPlayer: Bool) {
         guard let index = rounds.firstIndex(where: { $0.id == id }) else { return }
         rounds[index].countsAsPlayer = countsAsPlayer
+    }
+
+    // MARK: - Starter Templates
+
+    func applyStarterTemplate(_ template: StarterTemplate) {
+        var game = template.game
+        game.reindexRounds()
+        gameTitle = game.title
+        rounds = game.rounds
+        roundCount = game.roundCount
+        expandedRoundId = nil
+    }
+
+    func loadInitialTemplateIfNeeded() {
+        guard rounds.isEmpty else { return }
+        if loadLastGame() { return }
+        applyStarterTemplate(StarterTemplateLibrary.defaultTemplate)
     }
 
     // MARK: - Build Sequence

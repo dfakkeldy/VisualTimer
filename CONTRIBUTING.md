@@ -1,8 +1,15 @@
-# Contributing to Visual Timer
+# Contributing to Turn Timer
 
 This document describes the codebase conventions and architecture
 rules so that contributors (human or AI) can make changes that are
 consistent with the existing design.
+
+## Product Language
+
+Use Turn Timer, templates, sequences, rounds, turns, routines, and
+sessions in user-facing copy. Internal `GameSequence` naming can remain
+until a dedicated model migration. Avoid describing the app as only a
+generic timer or only a board-game timer.
 
 ## Architecture Rule: MVVM with Dumb Views
 

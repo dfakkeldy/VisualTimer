@@ -83,12 +83,13 @@ enum Theme {
         static let inactiveToggle = "circle"
         static let startPaused = "hand.raised.fill"
         static let endGame = "flag.checkered"
-    static let dragHandle = "line.horizontal.3"
+        static let dragHandle = "line.horizontal.3"
         static let doOver = "arrow.uturn.backward"
         static let skip = "forward.end.fill"
         static let restart = "arrow.counterclockwise.circle"
         static let history = "clock.arrow.circlepath"
         static let nextPlayer = "arrow.right"
+        static let templates = "rectangle.stack.badge.play"
     }
 
     // MARK: - Accessibility Labels
@@ -101,16 +102,16 @@ enum Theme {
         static let settings = "Settings"
         static let decrementDuration = "Decrease duration"
         static let incrementDuration = "Increase duration"
-        static let addPlayer = "Add player"
-        static let endGame = "End game"
+        static let addPlayer = "Add round"
+        static let endGame = "End session"
         static let startPaused = "Start paused"
         static let roundActive = "Round active"
-        static let gameOver = "Game over"
+        static let gameOver = "Session complete"
         static let doOver = "Do-over"
         static let skip = "Skip"
         static let restart = "Restart"
         static let nextPlayer = "Next"
-        static let gameDuration = "Game time"
+        static let gameDuration = "Session time"
         static let export = "Export"
         static let delete = "Delete"
     }
@@ -120,8 +121,8 @@ enum Theme {
     enum Tab {
         static let timerTabSymbol = "timer"
         static let timerTabTitle = "Timer"
-        static let editorTabSymbol = "list.bullet"
-        static let editorTabTitle = "Editor"
+        static let editorTabSymbol = Symbol.templates
+        static let editorTabTitle = "Templates"
         static let historyTabSymbol = "clock.arrow.circlepath"
         static let historyTabTitle = "History"
     }
