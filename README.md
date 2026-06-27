@@ -4,7 +4,7 @@ Turn Timer is a visual sequence timer for turns, routines, and real-world countd
 It keeps the one-tap visual countdown from the original app and adds editable
 starter templates for common timed sessions.
 
-## Phase 1 Scope
+## Current Scope
 
 - **Quick timer** - Start a standalone visual countdown with the existing timer
   controls.
@@ -14,7 +14,10 @@ starter templates for common timed sessions.
   sounds, add emoji, and decide whether a round counts as a turn.
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
   restart, or do over a turn.
-- **History** - Review completed timer sessions.
+- **History** - Review completed timer sessions, with recent sessions free and
+  full local history available with Pro.
+- **Turn Timer Pro** - Unlock unlimited saved templates and history export with
+  a one-time $4.99 StoreKit purchase.
 - **Watch app** - Keep companion watch target support.
 
 ## Core Features
@@ -29,11 +32,19 @@ starter templates for common timed sessions.
   finish sound can play even when the hardware silent switch is engaged.
 - **State machines** - Timer and sequence transitions are guarded so playback
   remains predictable across play, pause, skip, restart, and completion.
+- **StoreKit Pro unlock** - `turntimer.pro.unlock` is configured in
+  `TurnTimer.storekit` for local testing. Free users keep starter templates and
+  one custom saved template; Pro unlocks additional saved templates plus full
+  history/export.
 
 ## Product Roadmap
 
-Turn Timer is planned as a $4.99 paid app with Pro value built around:
+Turn Timer is planned as a free timer with a $4.99 one-time Pro unlock. The
+core timer, built-in starter templates, and one custom saved template remain
+free. Pro value is built around reuse and portability:
 
+- Additional saved templates.
+- Full local history and history export.
 - iCloud sync for templates and history.
 - Shared templates for families, classrooms, kitchens, meetings, and game
   nights.
@@ -50,6 +61,7 @@ state owners.
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `GameFileParser` | Template editing, starter data, local save/load |
 | History | `HistoryViewModel`, session models and views | Completed session storage and review |
+| Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
 | Theme | `Theme` | Shared colors, symbols, labels, dimensions, and animation values |
 
@@ -72,4 +84,5 @@ through callbacks.
 4. Build and run with Command-R.
 
 No additional dependencies are required. The project uses only system
-frameworks, including SwiftUI, Combine, AVFoundation, and WatchKit support.
+frameworks, including SwiftUI, Combine, AVFoundation, StoreKit, and WatchKit
+support.

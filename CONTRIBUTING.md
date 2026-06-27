@@ -19,11 +19,18 @@ generic timer or only a board-game timer.
   playback.
 - **Views are declarative.** Every SwiftUI view receives data through
   `let` properties and communicates back through closure callbacks.
-  No `@StateObject`, `@ObservedObject`, or business logic belongs in
-  leaf views — only in `ContentView` (the composer) and sheet
-  presenters.
+  Feature container views may observe their owning view models, but leaf
+  controls should stay stateless and business logic-free.
 - **State flows down, events flow up.** Published properties drive
   the UI; button taps invoke closures that call ViewModel methods.
+
+## Monetization Rules
+
+Turn Timer uses a non-consumable StoreKit 2 Pro unlock with product ID
+`turntimer.pro.unlock`. Do not block quick timer, built-in starter templates, or
+basic session playback behind Pro. Pro gates reuse and portability: additional
+saved templates, full history/export, sync, sharing, widgets, and advanced
+customization.
 
 ## Adding a New View
 
@@ -33,8 +40,8 @@ generic timer or only a board-game timer.
 3. Use `Theme` constants for every color, dimension, symbol name, and
    animation value — never hardcode a number or string.
 4. Write a `///` doc comment on the struct describing its purpose.
-5. Compose the new view inside `ContentView`; do not add state
-   management to the view itself.
+5. Compose the new view inside the relevant feature container; keep state
+   management at the container or view-model layer.
 
 ## Modifying the Timer Behavior
 

@@ -15,12 +15,14 @@ approach.
   and sequence state machines, editable starter templates, local history, and
   programmatic 16-bit PCM WAV sound generation.
 * **Target:** iOS and watchOS using Swift 5.0 project settings, SwiftUI,
-  Combine, and AVFoundation.
-* **Current Phase:** Rebranding from Visual Timer into Turn Timer while keeping
-  the existing internal `GameSequence` model stable. The public product language
-  should emphasize templates, sequences, rounds, turns, routines, and sessions.
-* **Roadmap:** The paid app strategy is $4.99, with future value from sync,
-  shared templates, and widgets.
+  Combine, AVFoundation, and StoreKit.
+* **Current Phase:** Turn Timer Pro adds a $4.99 one-time non-consumable unlock
+  while keeping quick timer use, built-in starter templates, and basic playback
+  free.
+* **Roadmap:** Pro value grows through additional saved templates, full
+  history/export, sync, shared templates, and widgets.
+* **Product ID:** The StoreKit 2 non-consumable unlock is
+  `turntimer.pro.unlock`; `TurnTimer.storekit` exists for local testing.
 
 ## Architecture & Coding Guidelines
 
@@ -37,6 +39,10 @@ approach.
   human-readable format. Prioritize robust, safe parsing. Handle malformed files
   gracefully without crashing the app, and decouple storage/parsing logic from
   the UI.
+* **Monetization Boundaries:** Never gate quick timer, built-in starter
+  templates, or basic playback behind Pro. Pro gates reuse and portability:
+  additional saved templates, full history/export, sync, sharing, widgets, and
+  advanced customization.
 * **Strict Theming:** Never hardcode magic numbers, strings, or colors in views.
   If a new color, emoji, symbol, label, or layout spacing is needed, add it to
   `Theme.swift`.
