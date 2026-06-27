@@ -54,10 +54,10 @@ Family Sharing: off for Phase 2
 If creating the file manually, use the minimal modern `.storekit` JSON structure Xcode accepts for a non-consumable product. After adding it, run:
 
 ```bash
-plutil -lint TurnTimer.storekit
+python3 -m json.tool TurnTimer.storekit >/dev/null
 ```
 
-Expected: `TurnTimer.storekit: OK`.
+Expected: command exits 0.
 
 If Xcode refuses to use a manually created file later, recreate the file from Xcode with File > New > File > StoreKit Configuration File, then preserve the same product ID and price.
 
@@ -80,7 +80,7 @@ enum ProProduct {
 Run:
 
 ```bash
-plutil -lint TurnTimer.storekit
+python3 -m json.tool TurnTimer.storekit >/dev/null
 xcodebuild build-for-testing -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer' -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
@@ -888,4 +888,3 @@ PR body must include:
 - What Pro unlocks.
 - Verification commands and outcomes.
 - Note that the PR is stacked on Phase 1.
-
