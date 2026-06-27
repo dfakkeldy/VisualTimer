@@ -11,7 +11,12 @@ struct HistoryView: View {
     }
 
     @State private var deleteTarget: GameRecord?
+    @State private var requestedProFeature: ProFeature?
     @State private var showDeleteConfirmation = false
+
+    private var visibleRecords: [GameRecord] {
+        HistoryAccessPolicy.visibleRecords(history.records, isProUnlocked: proAccess.isProUnlocked)
+    }
 
     var body: some View {
         NavigationStack {
@@ -36,6 +41,9 @@ struct HistoryView: View {
             } message: { record in
                 Text("Delete \"\(record.gameTitle)\" from history? This cannot be undone.")
             }
+            .sheet(item: $requestedProFeature) { feature in
+                ProPaywallView(feature: feature, proAccess: proAccess)
+            }
         }
     }
 
@@ -59,19 +67,30 @@ struct HistoryView: View {
 
     private var recordsList: some View {
         List {
-            ForEach(history.records) { record in
+            ForEach(visibleRecords) { record in
                 NavigationLink {
-                    SessionDetailView(record: record, history: history)
+                    SessionDetailView(record: record, history: history, proAccess: proAccess)
                 } label: {
                     recordRow(record)
                 }
                 .listRowBackground(Theme.ColorValue.circleBackground)
             }
             .onDelete { offsets in
-                for index in offsets {
-                    let record = history.records[index]
+                let recordsToDelete = offsets.compactMap { index in
+                    visibleRecords.indices.contains(index) ? visibleRecords[index] : nil
+                }
+                for record in recordsToDelete {
                     history.deleteRecord(id: record.id)
                 }
+            }
+
+            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
+                Button {
+                    requestedProFeature = .fullHistory
+                } label: {
+                    Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
+                }
+                .listRowBackground(Theme.ColorValue.circleBackground)
             }
         }
         .listStyle(.plain)

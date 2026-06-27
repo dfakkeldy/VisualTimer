@@ -225,6 +225,26 @@ final class Visual_TimerTests: XCTestCase {
         ))
     }
 
+    // MARK: - HistoryAccessPolicy
+
+    func testHistoryAccessPolicy_freeLimitsRecords() {
+        let records = makeHistoryRecords(count: 7)
+
+        let visible = HistoryAccessPolicy.visibleRecords(records, isProUnlocked: false)
+
+        XCTAssertEqual(visible.count, HistoryAccessPolicy.freeRecordLimit)
+        XCTAssertTrue(HistoryAccessPolicy.isLimited(records: records, isProUnlocked: false))
+    }
+
+    func testHistoryAccessPolicy_proShowsAllRecords() {
+        let records = makeHistoryRecords(count: 7)
+
+        let visible = HistoryAccessPolicy.visibleRecords(records, isProUnlocked: true)
+
+        XCTAssertEqual(visible.count, 7)
+        XCTAssertFalse(HistoryAccessPolicy.isLimited(records: records, isProUnlocked: true))
+    }
+
     // MARK: - GameSequence
 
     func testGameSequence_reindexRounds() {
@@ -239,5 +259,17 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(game.rounds[0].orderIndex, 0)
         XCTAssertEqual(game.rounds[1].orderIndex, 1)
         XCTAssertEqual(game.rounds[2].orderIndex, 2)
+    }
+
+    private func makeHistoryRecords(count: Int) -> [GameRecord] {
+        (0..<count).map { index in
+            GameRecord(
+                id: UUID(),
+                gameTitle: "Session \(index)",
+                session: GameSession(events: []),
+                playerNames: [],
+                playedAt: Date(timeIntervalSince1970: TimeInterval(index))
+            )
+        }
     }
 }
