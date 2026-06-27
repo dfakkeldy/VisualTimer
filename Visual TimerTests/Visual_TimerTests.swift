@@ -304,6 +304,61 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    func testTemplateLibraryStore_snapshotSummarizesTemplateForWidgets() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let saved = try store.save(game: makeTemplateGame(title: "Widget Template"))
+
+        let snapshot = try store.snapshot(for: saved)
+
+        XCTAssertEqual(snapshot.id, saved.id.uuidString)
+        XCTAssertEqual(snapshot.title, "Widget Template")
+        XCTAssertEqual(snapshot.subtitle, "2 rounds • once")
+        XCTAssertEqual(snapshot.roundCount, 2)
+        XCTAssertEqual(snapshot.repeatCount, 1)
+        XCTAssertEqual(snapshot.firstRoundName, "Prep")
+        XCTAssertEqual(snapshot.firstRoundDurationSeconds, 60)
+        XCTAssertEqual(snapshot.totalDurationSeconds, 360)
+    }
+
+    func testTemplateWidgetStore_consumesPendingStartRequestOnce() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let store = TemplateWidgetStore(userDefaults: defaults)
+
+        store.writePendingStart(templateID: "template-id")
+
+        XCTAssertEqual(store.consumePendingStartTemplateID(), "template-id")
+        XCTAssertNil(store.consumePendingStartTemplateID())
+    }
+
+    func testTemplateWidgetStore_roundTripsPayload() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let store = TemplateWidgetStore(userDefaults: defaults)
+        let snapshot = TemplateWidgetSnapshot(
+            id: "favorite-id",
+            title: "Game Night",
+            subtitle: "4 rounds • once",
+            roundCount: 4,
+            repeatCount: 1,
+            firstRoundName: "Alice",
+            firstRoundDurationSeconds: 60,
+            totalDurationSeconds: 300,
+            modifiedAt: Date(timeIntervalSince1970: 10)
+        )
+        let payload = TemplateWidgetPayload(
+            favoriteTemplateID: "favorite-id",
+            templates: [snapshot],
+            generatedAt: Date(timeIntervalSince1970: 20)
+        )
+
+        store.writePayload(payload)
+
+        XCTAssertEqual(store.readPayload(), payload)
+        XCTAssertEqual(store.readPayload().favoriteTemplate, snapshot)
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
@@ -369,6 +424,16 @@ final class Visual_TimerTests: XCTestCase {
             .appendingPathComponent("VisualTimerTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    private func makeIsolatedUserDefaults() throws -> UserDefaults {
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        return defaults
     }
 
     private func makeHistoryRecords(count: Int) -> [GameRecord] {

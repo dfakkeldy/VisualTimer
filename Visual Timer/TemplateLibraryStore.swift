@@ -51,6 +51,24 @@ final class TemplateLibraryStore {
         try codec.decode(from: templateURL(for: id))
     }
 
+    func snapshot(for template: SavedTemplate) throws -> TemplateWidgetSnapshot {
+        let document = try loadDocument(id: template.id)
+        let activeRounds = document.game.activeRounds
+        let firstRound = activeRounds.first
+        let totalSeconds = activeRounds.reduce(0) { $0 + $1.durationSeconds } * max(1, document.game.roundCount)
+        return TemplateWidgetSnapshot(
+            id: template.id.uuidString,
+            title: template.title,
+            subtitle: template.subtitle,
+            roundCount: template.roundCount,
+            repeatCount: template.repeatCount,
+            firstRoundName: firstRound?.name ?? "Ready",
+            firstRoundDurationSeconds: firstRound?.durationSeconds ?? 0,
+            totalDurationSeconds: totalSeconds,
+            modifiedAt: template.modifiedAt
+        )
+    }
+
     func save(game: GameSequence, templateID: UUID? = nil) throws -> SavedTemplate {
         let now = dateProvider()
         let id = templateID ?? UUID()

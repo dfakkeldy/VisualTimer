@@ -88,6 +88,11 @@
 			path = "Visual Timer";
 			sourceTree = "<group>";
 		};
+		CD4000010000000000000001 /* TurnTimerShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TurnTimerShared;
+			sourceTree = "<group>";
+		};
 		CC56F6D12FBA1C2400918D5A /* Visual TimerTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Visual TimerTests";
@@ -180,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
+				CD4000010000000000000001 /* TurnTimerShared */,
 				CC56F6D12FBA1C2400918D5A /* Visual TimerTests */,
 				CC56F6DB2FBA1C2400918D5A /* Visual TimerUITests */,
 				CC56FDFA2FBA5A7000918D5A /* Visual Timer Watch Watch App */,
@@ -224,6 +230,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
+				CD4000010000000000000001 /* TurnTimerShared */,
 			);
 			name = "Visual Timer";
 			packageProductDependencies = (
