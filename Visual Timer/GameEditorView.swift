@@ -348,7 +348,7 @@ private struct PlayerEditSheet: View {
                         onToggleStartPaused()
                     }
 
-                    // Counts as player toggle
+                    // Counts as turn toggle
                     Toggle(isOn: $countsAsPlayer) {
                         Label("Counts as turn", systemImage: "person.fill")
                     }

@@ -206,7 +206,7 @@ struct GamePlaybackView: View {
         }
     }
 
-    // MARK: - Game Over
+    // MARK: - Session Complete
 
     private var gameOverView: some View {
         VStack(spacing: 8) {
