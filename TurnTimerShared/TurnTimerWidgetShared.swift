@@ -38,6 +38,7 @@ struct TemplateWidgetStore {
     private enum Key {
         static let payload = "turntimer.widget.payload"
         static let pendingStartTemplateID = "turntimer.widget.pendingStartTemplateID"
+        static let pendingOpenTemplates = "turntimer.widget.pendingOpenTemplates"
     }
 
     private let userDefaults: UserDefaults?
@@ -68,5 +69,15 @@ struct TemplateWidgetStore {
         let templateID = userDefaults?.string(forKey: Key.pendingStartTemplateID)
         userDefaults?.removeObject(forKey: Key.pendingStartTemplateID)
         return templateID
+    }
+
+    func writePendingOpenTemplates() {
+        userDefaults?.set(true, forKey: Key.pendingOpenTemplates)
+    }
+
+    func consumePendingOpenTemplates() -> Bool {
+        let shouldOpen = userDefaults?.bool(forKey: Key.pendingOpenTemplates) ?? false
+        userDefaults?.removeObject(forKey: Key.pendingOpenTemplates)
+        return shouldOpen
     }
 }

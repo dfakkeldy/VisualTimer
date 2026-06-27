@@ -365,6 +365,16 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertNil(store.consumePendingStartTemplateID())
     }
 
+    func testTemplateWidgetStore_consumesOpenTemplatesRequestOnce() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let store = TemplateWidgetStore(userDefaults: defaults)
+
+        store.writePendingOpenTemplates()
+
+        XCTAssertTrue(store.consumePendingOpenTemplates())
+        XCTAssertFalse(store.consumePendingOpenTemplates())
+    }
+
     func testTemplateWidgetStore_roundTripsPayload() throws {
         let defaults = try makeIsolatedUserDefaults()
         let store = TemplateWidgetStore(userDefaults: defaults)

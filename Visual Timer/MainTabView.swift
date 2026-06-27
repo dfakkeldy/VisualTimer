@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MainTabView: View {
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var soundManager: SoundManager
     @StateObject private var gameEditorViewModel: GameEditorViewModel
@@ -76,7 +78,7 @@ struct MainTabView: View {
         }
         .task {
             gameEditorViewModel.refreshSavedTemplates()
-            consumePendingWidgetStart()
+            consumePendingWidgetRequests()
             refreshWidgetSnapshots()
         }
         .task(id: proAccess.isProUnlocked) {
@@ -95,6 +97,10 @@ struct MainTabView: View {
             gameEditorViewModel.refreshSavedTemplates()
             refreshWidgetSnapshots()
         }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            consumePendingWidgetRequests()
+        }
         .onOpenURL(perform: handleWidgetURL)
         .alert("Template Unavailable", isPresented: $showTemplateStartError) {
             Button("OK") {}
@@ -111,9 +117,14 @@ struct MainTabView: View {
         )
     }
 
-    private func consumePendingWidgetStart() {
-        guard let templateID = widgetStore.consumePendingStartTemplateID() else { return }
-        startTemplateFromWidget(idString: templateID)
+    private func consumePendingWidgetRequests() {
+        if widgetStore.consumePendingOpenTemplates() {
+            selectedTab = 1
+        }
+
+        if let templateID = widgetStore.consumePendingStartTemplateID() {
+            startTemplateFromWidget(idString: templateID)
+        }
     }
 
     private func handleWidgetURL(_ url: URL) {

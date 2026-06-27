@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CC56FE2C2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CD4100020000000000000001 /* TurnTimerWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = CD4100010000000000000001 /* TurnTimerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +47,13 @@
 			remoteGlobalIDString = CC56FE2A2FBA5ABC00918D5A;
 			remoteInfo = "Visual Timer Watch Watch App";
 		};
+		CD41000C0000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CC56F6B92FBA1C2200918D5A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CD4100070000000000000001;
+			remoteInfo = TurnTimerWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -70,6 +78,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD41000B0000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CD4100020000000000000001 /* TurnTimerWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -80,7 +99,19 @@
 		CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Visual Timer Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56FE3A2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual Timer Watch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual Timer Watch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CD4100010000000000000001 /* TurnTimerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TurnTimerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CD41000E0000000000000001 /* Exceptions for "TurnTimerWidget" folder in "TurnTimerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				TurnTimerWidget.entitlements,
+			);
+			target = CD4100070000000000000001 /* TurnTimerWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CC56F6C32FBA1C2200918D5A /* Visual Timer */ = {
@@ -91,6 +122,14 @@
 		CD4000010000000000000001 /* TurnTimerShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TurnTimerShared;
+			sourceTree = "<group>";
+		};
+		CD4100030000000000000001 /* TurnTimerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CD41000E0000000000000001 /* Exceptions for "TurnTimerWidget" folder in "TurnTimerWidgetExtension" target */,
+			);
+			path = TurnTimerWidget;
 			sourceTree = "<group>";
 		};
 		CC56F6D12FBA1C2400918D5A /* Visual TimerTests */ = {
@@ -178,6 +217,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD4100040000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -186,6 +232,7 @@
 			children = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
 				CD4000010000000000000001 /* TurnTimerShared */,
+				CD4100030000000000000001 /* TurnTimerWidget */,
 				CC56F6D12FBA1C2400918D5A /* Visual TimerTests */,
 				CC56F6DB2FBA1C2400918D5A /* Visual TimerUITests */,
 				CC56FDFA2FBA5A7000918D5A /* Visual Timer Watch Watch App */,
@@ -208,6 +255,7 @@
 				CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */,
 				CC56FE3A2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests.xctest */,
 				CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */,
+				CD4100010000000000000001 /* TurnTimerWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -222,11 +270,13 @@
 				CC56F6BD2FBA1C2200918D5A /* Sources */,
 				CC56F6BE2FBA1C2200918D5A /* Frameworks */,
 				CC56F6BF2FBA1C2200918D5A /* Resources */,
+				CD41000B0000000000000001 /* Embed App Extensions */,
 				CC56FE1D2FBA5A7200918D5A /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CD41000D0000000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
@@ -372,6 +422,29 @@
 			productReference = CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		CD4100070000000000000001 /* TurnTimerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD41000A0000000000000001 /* Build configuration list for PBXNativeTarget "TurnTimerWidgetExtension" */;
+			buildPhases = (
+				CD4100060000000000000001 /* Sources */,
+				CD4100040000000000000001 /* Frameworks */,
+				CD4100050000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CD4100030000000000000001 /* TurnTimerWidget */,
+				CD4000010000000000000001 /* TurnTimerShared */,
+			);
+			name = TurnTimerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = TurnTimerWidgetExtension;
+			productReference = CD4100010000000000000001 /* TurnTimerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -407,6 +480,9 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = CC56FE2A2FBA5ABC00918D5A;
 					};
+					CD4100070000000000000001 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 				};
 			};
 			buildConfigurationList = CC56F6BC2FBA1C2200918D5A /* Build configuration list for PBXProject "Visual Timer" */;
@@ -430,6 +506,7 @@
 				CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */,
 				CC56FE392FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests */,
 				CC56FE432FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests */,
+				CD4100070000000000000001 /* TurnTimerWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -484,6 +561,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD4100050000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -529,6 +613,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CD4100060000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -556,6 +647,11 @@
 			isa = PBXTargetDependency;
 			target = CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */;
 			targetProxy = CC56FE452FBA5ABE00918D5A /* PBXContainerItemProxy */;
+		};
+		CD41000D0000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CD4100070000000000000001 /* TurnTimerWidgetExtension */;
+			targetProxy = CD41000C0000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1025,6 +1121,72 @@
 			};
 			name = Release;
 		};
+		CD4100080000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TurnTimerWidget/TurnTimerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8AXNA5B37R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TurnTimerWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Dan.Visual-Timer.TurnTimerWidgetExtension";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CD4100090000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TurnTimerWidget/TurnTimerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8AXNA5B37R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TurnTimerWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Dan.Visual-Timer.TurnTimerWidgetExtension";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1096,6 +1258,15 @@
 			buildConfigurations = (
 				CC56FE572FBA5ABE00918D5A /* Debug */,
 				CC56FE582FBA5ABE00918D5A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CD41000A0000000000000001 /* Build configuration list for PBXNativeTarget "TurnTimerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD4100080000000000000001 /* Debug */,
+				CD4100090000000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
