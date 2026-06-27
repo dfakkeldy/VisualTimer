@@ -7,10 +7,14 @@ final class GameEditorViewModel: ObservableObject {
     @Published var rounds: [Round] = []
     @Published var roundCount: Int = 1
     @Published var expandedRoundId: UUID?
+    @Published private(set) var savedTemplates: [SavedTemplate] = []
 
     @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
+    @AppStorage("lastTemplateID") private var lastTemplateID: String = ""
+    @AppStorage("hasMigratedLegacyTemplateLibrary") private var hasMigratedLegacyTemplateLibrary: Bool = false
 
     private let parser = GameFileParser()
+    private let templateLibrary: TemplateLibraryStore
 
     enum TemplateSaveResult {
         case saved
@@ -18,10 +22,20 @@ final class GameEditorViewModel: ObservableObject {
         case failed([ParseError])
     }
 
+    enum TemplateImportResult {
+        case imported(SavedTemplate)
+        case requiresPro
+        case failed([ParseError])
+    }
+
+    init(templateLibrary: TemplateLibraryStore = TemplateLibraryStore()) {
+        self.templateLibrary = templateLibrary
+    }
+
     var isExpanded: Bool { expandedRoundId != nil }
 
-    private var currentTemplateFileName: String {
-        "\(gameTitle).vtgame"
+    var currentSavedTemplateID: UUID? {
+        UUID(uuidString: lastTemplateID)
     }
 
     // MARK: - Round CRUD
@@ -108,9 +122,23 @@ final class GameEditorViewModel: ObservableObject {
         rounds = game.rounds
         roundCount = game.roundCount
         expandedRoundId = nil
+        lastTemplateID = ""
+    }
+
+    func applySavedTemplate(_ template: SavedTemplate) -> (Bool, [ParseError]) {
+        do {
+            let document = try templateLibrary.loadDocument(id: template.id)
+            applyDocument(document)
+            lastTemplateID = template.id.uuidString
+            return (true, [])
+        } catch {
+            return (false, [ParseError("Failed to load template: \(error.localizedDescription)")])
+        }
     }
 
     func loadInitialTemplateIfNeeded() {
+        refreshSavedTemplates()
+        migrateLegacyTemplateIfNeeded()
         guard rounds.isEmpty else { return }
         if loadLastGame() { return }
         applyStarterTemplate(StarterTemplateLibrary.defaultTemplate)
@@ -128,9 +156,14 @@ final class GameEditorViewModel: ObservableObject {
 
     func save(to url: URL) -> (Bool, [ParseError]) {
         let game = buildGameSequence()
-        let content = parser.serialize(game)
         do {
-            try content.write(to: url, atomically: true, encoding: .utf8)
+            if url.pathExtension.lowercased() == TemplateImportExport.fileExtension {
+                let document = templateLibrary.exportDocument(for: game, templateID: currentSavedTemplateID)
+                try TemplateDocumentCodec().write(document, to: url)
+            } else {
+                let content = parser.serialize(game)
+                try content.write(to: url, atomically: true, encoding: .utf8)
+            }
             return (true, [])
         } catch {
             return (false, [ParseError("Failed to save: \(error.localizedDescription)")])
@@ -138,34 +171,66 @@ final class GameEditorViewModel: ObservableObject {
     }
 
     func saveToDocuments(isProUnlocked: Bool) -> TemplateSaveResult {
+        refreshSavedTemplates()
+        let existingTemplateID = currentSavedTemplateID
+        let isUpdatingExistingTemplate = existingTemplateID.map { id in
+            savedTemplates.contains { $0.id == id }
+        } ?? false
+
         guard TemplateSavePolicy.canSaveTemplate(
             isProUnlocked: isProUnlocked,
-            lastSavedFileName: lastGameFileName,
-            proposedFileName: currentTemplateFileName
+            existingTemplateCount: savedTemplates.count,
+            isUpdatingExistingTemplate: isUpdatingExistingTemplate
         ) else {
             return .requiresPro
         }
 
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = docs.appendingPathComponent(currentTemplateFileName)
-        let result = save(to: url)
-        if result.0 {
-            lastGameFileName = currentTemplateFileName
+        do {
+            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            lastTemplateID = savedTemplate.id.uuidString
+            lastGameFileName = ""
+            refreshSavedTemplates()
             return .saved
+        } catch {
+            return .failed([ParseError("Failed to save: \(error.localizedDescription)")])
         }
-        return .failed(result.1)
     }
 
     /// Saves silently — no alert. Called automatically when tapping Play.
     func autoSave() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = docs.appendingPathComponent(currentTemplateFileName)
-        _ = save(to: url)
-        lastGameFileName = currentTemplateFileName
+        refreshSavedTemplates()
+        let existingTemplateID = currentSavedTemplateID
+        let shouldCreateFirstTemplate = existingTemplateID == nil && savedTemplates.isEmpty
+        guard existingTemplateID != nil || shouldCreateFirstTemplate else { return }
+
+        do {
+            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            lastTemplateID = savedTemplate.id.uuidString
+            lastGameFileName = ""
+            refreshSavedTemplates()
+        } catch {
+            return
+        }
     }
 
     /// Tries to load the most recently saved game. Returns true if successful.
     func loadLastGame() -> Bool {
+        refreshSavedTemplates()
+        if let id = currentSavedTemplateID,
+           savedTemplates.contains(where: { $0.id == id }) {
+            do {
+                let document = try templateLibrary.loadDocument(id: id)
+                applyDocument(document)
+                return true
+            } catch {
+                return false
+            }
+        }
+
+        if let firstTemplate = savedTemplates.first {
+            return applySavedTemplate(firstTemplate).0
+        }
+
         guard !lastGameFileName.isEmpty else { return false }
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent(lastGameFileName)
@@ -176,6 +241,12 @@ final class GameEditorViewModel: ObservableObject {
 
     func load(from url: URL) -> (Bool, [ParseError]) {
         do {
+            if url.pathExtension.lowercased() == TemplateImportExport.fileExtension {
+                let document = try TemplateDocumentCodec().decode(from: url)
+                applyDocument(document)
+                return (true, [])
+            }
+
             let content = try String(contentsOf: url, encoding: .utf8)
             let (game, errors) = parser.parse(content)
             self.gameTitle = game.title
@@ -187,11 +258,64 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    func importTemplate(from url: URL, isProUnlocked: Bool) -> TemplateImportResult {
+        refreshSavedTemplates()
+        guard TemplateSavePolicy.canSaveTemplate(
+            isProUnlocked: isProUnlocked,
+            existingTemplateCount: savedTemplates.count,
+            isUpdatingExistingTemplate: false
+        ) else {
+            return .requiresPro
+        }
+
+        do {
+            let savedTemplate = try templateLibrary.importTemplate(from: url)
+            refreshSavedTemplates()
+            _ = applySavedTemplate(savedTemplate)
+            return .imported(savedTemplate)
+        } catch {
+            return .failed([ParseError("Failed to import: \(error.localizedDescription)")])
+        }
+    }
+
+    func exportCurrentTemplateURL() -> URL? {
+        let document = templateLibrary.exportDocument(for: buildGameSequence(), templateID: currentSavedTemplateID)
+        return try? TemplateImportExport.exportURL(for: document)
+    }
+
+    func refreshSavedTemplates() {
+        savedTemplates = templateLibrary.listTemplates()
+    }
+
     // MARK: - Private
 
     private func reindex() {
         for i in rounds.indices {
             rounds[i].orderIndex = i
+        }
+    }
+
+    private func applyDocument(_ document: TurnTimerTemplateDocument) {
+        var game = document.game
+        game.reindexRounds()
+        gameTitle = document.title
+        rounds = game.rounds
+        roundCount = game.roundCount
+        expandedRoundId = nil
+    }
+
+    private func migrateLegacyTemplateIfNeeded() {
+        guard !hasMigratedLegacyTemplateLibrary else { return }
+        defer { hasMigratedLegacyTemplateLibrary = true }
+
+        do {
+            if let migratedTemplate = try templateLibrary.migrateLegacyTemplateIfNeeded(fileName: lastGameFileName) {
+                lastTemplateID = migratedTemplate.id.uuidString
+                lastGameFileName = ""
+                refreshSavedTemplates()
+            }
+        } catch {
+            return
         }
     }
 }

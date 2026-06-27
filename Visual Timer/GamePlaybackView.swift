@@ -6,6 +6,7 @@ struct GamePlaybackView: View {
     @ObservedObject var gameViewModel: GameViewModel
     @ObservedObject var soundManager: SoundManager
     @ObservedObject var proAccess: ProAccessViewModel
+    @ObservedObject var templateSync: TemplateCloudSyncEngine
 
     @State private var showSettings = false
 
@@ -33,7 +34,11 @@ struct GamePlaybackView: View {
             value: gameViewModel.gamePhase
         )
         .sheet(isPresented: $showSettings) {
-            SettingsView(soundManager: soundManager, proAccess: proAccess)
+            SettingsView(
+                soundManager: soundManager,
+                proAccess: proAccess,
+                templateSync: templateSync
+            )
         }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in

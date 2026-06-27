@@ -29,8 +29,31 @@ generic timer or only a board-game timer.
 Turn Timer uses a non-consumable StoreKit 2 Pro unlock with product ID
 `turntimer.pro.unlock`. Do not block quick timer, built-in starter templates, or
 basic session playback behind Pro. Pro gates reuse and portability: additional
-saved templates, full history/export, sync, sharing, widgets, and advanced
-customization.
+saved templates, full history/export, iCloud template sync, sharing, widgets,
+and advanced customization.
+
+## Template Files
+
+- New saved templates use portable `.turntimer` JSON documents in
+  `Documents/Templates/<templateID>.turntimer`.
+- Shared files are imports, not direct edits. Importing a `.turntimer` file must
+  duplicate it with a new local template ID and a conflict-safe title.
+- Legacy `.vtgame` files may be loaded only for migration and compatibility.
+  New saves should use `TemplateLibraryStore` and `TemplateDocumentCodec`.
+- Keep starter templates free. Free users may keep one custom saved template;
+  Pro users may save and sync unlimited templates.
+
+## CloudKit Sync
+
+- Template sync is Pro-only and local-first. The editor must remain usable when
+  iCloud is unavailable, restricted, offline, or signed out.
+- Use private CloudKit container `iCloud.Dan.Visual-Timer`, custom zone
+  `TurnTimerTemplates`, and record type `Template`.
+- `TemplateCloudSyncEngine` owns CKSyncEngine state, pending record changes, and
+  timestamp conflict handling. Avoid putting CloudKit behavior in SwiftUI views.
+- Selected sound syncs through `NSUbiquitousKeyValueStore`.
+- Before release, run a signed build with an iCloud account and deploy the
+  CloudKit development schema to production in CloudKit Dashboard.
 
 ## Adding a New View
 
@@ -84,3 +107,6 @@ customization.
 - UI tests live in `Visual TimerUITests/`.
 - Before submitting a PR, verify the app builds with `xcodebuild` and
   manually smoke-test the four timer states.
+- CloudKit runtime behavior cannot be fully proven by local simulator builds.
+  At minimum, compile the sync layer, unit-test the record mapper, and document
+  any live iCloud verification that still needs a signed build or TestFlight.

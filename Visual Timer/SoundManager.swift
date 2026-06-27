@@ -59,11 +59,14 @@ final class SoundManager: ObservableObject {
         set {
             objectWillChange.send()
             selectedSoundRaw = newValue.rawValue
+            ubiquitousSettingsStore?.updateSelectedSound(newValue)
         }
     }
 
     // MARK: - Private
 
+    private let ubiquitousSettingsStore: UbiquitousSettingsStore?
+    private var cancellables: Set<AnyCancellable> = []
     private var audioPlayer: AVAudioPlayer?
 
     private enum Playback {
@@ -82,8 +85,10 @@ final class SoundManager: ObservableObject {
 
     // MARK: - Lifecycle
 
-    init() {
+    init(ubiquitousSettingsStore: UbiquitousSettingsStore? = nil) {
+        self.ubiquitousSettingsStore = ubiquitousSettingsStore
         configureAudioSession()
+        bindUbiquitousSettings()
     }
 
     // MARK: - Audio Session
@@ -98,6 +103,18 @@ final class SoundManager: ObservableObject {
         } catch {
             print("Failed to configure audio session: \(error)")
         }
+    }
+
+    private func bindUbiquitousSettings() {
+        ubiquitousSettingsStore?.$selectedSound
+            .compactMap { $0 }
+            .removeDuplicates()
+            .sink { [weak self] sound in
+                guard let self, self.selectedSound != sound else { return }
+                self.objectWillChange.send()
+                self.selectedSoundRaw = sound.rawValue
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - Public API

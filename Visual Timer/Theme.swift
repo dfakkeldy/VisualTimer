@@ -90,6 +90,9 @@ enum Theme {
         static let history = "clock.arrow.circlepath"
         static let nextPlayer = "arrow.right"
         static let templates = "rectangle.stack.badge.play"
+        static let savedTemplates = "tray.full"
+        static let importTemplate = "square.and.arrow.down"
+        static let exportTemplate = "square.and.arrow.up"
         static let proUnlock = "lock.open"
         static let proTemplates = "rectangle.stack.badge.plus"
         static let proHistoryExport = "square.and.arrow.up"
@@ -117,6 +120,8 @@ enum Theme {
         static let nextPlayer = "Next"
         static let gameDuration = "Session time"
         static let export = "Export"
+        static let importTemplate = "Import template"
+        static let exportTemplate = "Export template"
         static let delete = "Delete"
     }
 
