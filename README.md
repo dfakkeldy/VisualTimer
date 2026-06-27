@@ -135,3 +135,17 @@ one.
 The watch app intentionally stays local and lightweight. It ships with watch
 starter templates and a crown-adjustable timer, but it does not sync saved
 templates or play the iPhone app's generated sounds yet.
+
+## App Store Launch Docs
+
+Phase 5 launch planning lives in `docs/app-store/`:
+
+- `app-store-copy.md` - App Store subtitle, description, What's New, keywords,
+  and review notes.
+- `screenshot-plan.md` - Default screenshot sequence and later campaign sets.
+- `privacy-policy.md` - Draft public privacy policy and App Store privacy label
+  mapping.
+- `support.md` - Draft public support page.
+- `featuring-nomination.md` - App Store editorial nomination draft.
+- `release-checklist.md` - App Store Connect, StoreKit, CloudKit, screenshot,
+  TestFlight, accessibility, and release verification checklist.

@@ -3,7 +3,7 @@ import Combine
 
 // MARK: - Game Phase
 
-enum GamePhase {
+enum GamePhase: Equatable {
     /// No game loaded or game ended — single-timer mode.
     case idle
     /// A game is loaded and ready to start.
