@@ -162,6 +162,11 @@
 			path = "Visual Timer Watch Watch App";
 			sourceTree = "<group>";
 		};
+		CD4200010000000000000001 /* WatchApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WatchApp;
+			sourceTree = "<group>";
+		};
 		CC56FE3D2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "Visual Timer Watch Watch AppTests";
@@ -239,6 +244,7 @@
 				CC56FE082FBA5A7200918D5A /* Visual Timer Watch Watch AppTests */,
 				CC56FE122FBA5A7200918D5A /* Visual Timer Watch Watch AppUITests */,
 				CC56FE2F2FBA5ABC00918D5A /* Visual Timer Watch Watch App */,
+				CD4200010000000000000001 /* WatchApp */,
 				CC56FE3D2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests */,
 				CC56FE472FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests */,
 				CC56F6C22FBA1C2200918D5A /* Products */,
@@ -368,6 +374,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CC56FE2F2FBA5ABC00918D5A /* Visual Timer Watch Watch App */,
+				CD4200010000000000000001 /* WatchApp */,
 			);
 			name = "Visual Timer Watch Watch App";
 			packageProductDependencies = (
