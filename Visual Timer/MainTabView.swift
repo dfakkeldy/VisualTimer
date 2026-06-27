@@ -1,8 +1,10 @@
+import StoreKit
 import SwiftUI
 
 struct MainTabView: View {
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.requestReview) private var requestReview
 
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var soundManager: SoundManager
@@ -12,6 +14,7 @@ struct MainTabView: View {
     @StateObject private var templateSync: TemplateCloudSyncEngine
     @StateObject private var ubiquitousSettingsStore: UbiquitousSettingsStore
     @StateObject private var favoriteTemplates: FavoriteTemplateStore
+    @StateObject private var reviewPromptController: ReviewPromptController
 
     @State private var selectedTab = 0
     @State private var showTemplateStartError = false
@@ -38,6 +41,7 @@ struct MainTabView: View {
         _templateSync = StateObject(wrappedValue: syncEngine)
         _ubiquitousSettingsStore = StateObject(wrappedValue: settingsStore)
         _favoriteTemplates = StateObject(wrappedValue: FavoriteTemplateStore())
+        _reviewPromptController = StateObject(wrappedValue: ReviewPromptController())
     }
 
     var body: some View {
@@ -96,6 +100,14 @@ struct MainTabView: View {
         .onChange(of: templateSync.changeRevision) { _, _ in
             gameEditorViewModel.refreshSavedTemplates()
             refreshWidgetSnapshots()
+        }
+        .onChange(of: gameViewModel.gamePhase) { _, phase in
+            guard phase == .gameOver,
+                  reviewPromptController.recordCompletedSessionAndShouldRequestReview()
+            else {
+                return
+            }
+            requestReview()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }

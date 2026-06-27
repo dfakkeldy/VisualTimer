@@ -401,6 +401,39 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.readPayload().favoriteTemplate, snapshot)
     }
 
+    // MARK: - ReviewPromptController
+
+    @MainActor
+    func testReviewPromptController_firstCompletedSessionDoesNotPrompt() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let controller = ReviewPromptController(userDefaults: defaults)
+
+        XCTAssertFalse(controller.recordCompletedSessionAndShouldRequestReview())
+    }
+
+    @MainActor
+    func testReviewPromptController_secondCompletedSessionPromptsOnce() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let requestDate = Date(timeIntervalSince1970: 1_234)
+        let controller = ReviewPromptController(userDefaults: defaults, now: { requestDate })
+
+        XCTAssertFalse(controller.recordCompletedSessionAndShouldRequestReview())
+        XCTAssertTrue(controller.recordCompletedSessionAndShouldRequestReview())
+        XCTAssertFalse(controller.recordCompletedSessionAndShouldRequestReview())
+    }
+
+    @MainActor
+    func testReviewPromptController_existingPromptStatePreventsFuturePrompts() throws {
+        let defaults = try makeIsolatedUserDefaults()
+        let firstController = ReviewPromptController(userDefaults: defaults)
+
+        XCTAssertFalse(firstController.recordCompletedSessionAndShouldRequestReview())
+        XCTAssertTrue(firstController.recordCompletedSessionAndShouldRequestReview())
+
+        let restoredController = ReviewPromptController(userDefaults: defaults)
+        XCTAssertFalse(restoredController.recordCompletedSessionAndShouldRequestReview())
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
