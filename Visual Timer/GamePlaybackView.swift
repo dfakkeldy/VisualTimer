@@ -194,12 +194,12 @@ struct GamePlaybackView: View {
 
     private var roundProgressFooter: some View {
         VStack(spacing: 4) {
-            Text("Player \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
+            Text("Turn \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
                 .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
             if gameViewModel.totalRoundCount > 1 {
-                Text("Round \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
+                Text("Sequence \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
                     .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
@@ -210,7 +210,7 @@ struct GamePlaybackView: View {
 
     private var gameOverView: some View {
         VStack(spacing: 8) {
-            Text("Game Over")
+            Text("Session Complete")
                 .font(.system(
                     size: Theme.GamePlayback.gameOverFontSize,
                     weight: .bold

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Expanded inline editor for a single player.
+/// Expanded inline editor for a single round.
 struct PlayerEditView: View {
 
     let round: Round
@@ -55,7 +55,7 @@ struct PlayerEditView: View {
             HStack {
                 Text("Name")
                     .foregroundStyle(Theme.ColorValue.textSecondary)
-                TextField("Player name", text: $nameText)
+                TextField("Round name", text: $nameText)
                     .textFieldStyle(.roundedBorder)
                     .onChange(of: nameText) { _, newValue in
                         onUpdateName(newValue)
