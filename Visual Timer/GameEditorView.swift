@@ -1,12 +1,18 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct GameEditorView: View {
 
     @ObservedObject var editor: GameEditorViewModel
+    @ObservedObject var proAccess: ProAccessViewModel
+    @ObservedObject var templateSync: TemplateCloudSyncEngine
     let onPlayGame: (GameSequence) -> Void
 
     @State private var showSaveAlert = false
     @State private var saveAlertMessage = ""
+    @State private var requestedProFeature: ProFeature?
+    @State private var showImportPicker = false
+    @State private var shareItem: TemplateShareItem?
     @FocusState private var titleFocused: Bool
 
     private var editingRound: Round? {
@@ -18,15 +24,34 @@ struct GameEditorView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 titleField
+                TemplateSyncStatusView(syncEngine: templateSync, isProUnlocked: proAccess.isProUnlocked)
+                templatePicker
                 roundCountStepper
                 roundsList
             }
             .background(Theme.ColorValue.appBackground)
-            .navigationTitle("Game Editor")
+            .navigationTitle("Templates")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    Button {
+                        showImportPicker = true
+                    } label: {
+                        Image(systemName: Theme.Symbol.importTemplate)
+                    }
+                    .accessibilityLabel(Theme.Label.importTemplate)
+
+                    Button {
+                        exportCurrentTemplate()
+                    } label: {
+                        Image(systemName: Theme.Symbol.exportTemplate)
+                    }
+                    .accessibilityLabel(Theme.Label.exportTemplate)
+                    .disabled(editor.rounds.isEmpty)
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Play") {
+                    Button("Start") {
                         editor.autoSave()
                         let game = editor.buildGameSequence()
                         onPlayGame(game)
@@ -35,14 +60,24 @@ struct GameEditorView: View {
                 }
             }
             .onAppear {
-                if editor.rounds.isEmpty {
-                    _ = editor.loadLastGame()
-                }
+                editor.loadInitialTemplateIfNeeded()
             }
+            .fileImporter(
+                isPresented: $showImportPicker,
+                allowedContentTypes: [.turnTimerTemplate],
+                allowsMultipleSelection: false,
+                onCompletion: handleImportResult
+            )
             .alert("Save Status", isPresented: $showSaveAlert) {
                 Button("OK") {}
             } message: {
                 Text(saveAlertMessage)
+            }
+            .sheet(item: $shareItem) { item in
+                ShareSheet(items: [item.url])
+            }
+            .sheet(item: $requestedProFeature) { feature in
+                ProPaywallView(feature: feature, proAccess: proAccess)
             }
             .sheet(item: Binding(
                 get: { editingRound },
@@ -67,7 +102,7 @@ struct GameEditorView: View {
 
     private var titleField: some View {
         HStack {
-            TextField("Game Title", text: $editor.gameTitle)
+            TextField("Template Name", text: $editor.gameTitle)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(Theme.ColorValue.textPrimary)
                 .focused($titleFocused)
@@ -83,11 +118,70 @@ struct GameEditorView: View {
         .padding(.vertical, 12)
     }
 
+    private var templatePicker: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(editor.savedTemplates) { template in
+                    Button {
+                        loadSavedTemplate(template)
+                    } label: {
+                        templateCard(
+                            title: template.title,
+                            subtitle: template.subtitle,
+                            systemImage: Theme.Symbol.savedTemplates
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ForEach(StarterTemplateLibrary.templates) { template in
+                    Button {
+                        editor.applyStarterTemplate(template)
+                    } label: {
+                        templateCard(
+                            title: template.title,
+                            subtitle: template.subtitle,
+                            systemImage: Theme.Symbol.templates
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
+            .padding(.vertical, 8)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private func templateCard(title: String, subtitle: String, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
+                    .lineLimit(1)
+            }
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .lineLimit(2)
+        }
+        .frame(width: 156, height: 66, alignment: .leading)
+        .padding(12)
+        .background(Theme.ColorValue.circleBackground)
+        .clipShape(.rect(cornerRadius: 8))
+    }
+
     // MARK: - Round Count Stepper
 
     private var roundCountStepper: some View {
         HStack {
-            Text("Number of Rounds")
+            Text("Repeat Sequence")
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Spacer()
             Button {
@@ -133,7 +227,7 @@ struct GameEditorView: View {
                 }
                 .listRowBackground(Theme.ColorValue.circleBackground)
             } header: {
-                Text("Players (\(editor.rounds.count))")
+                Text("Rounds (\(editor.rounds.count))")
                     .font(.system(size: Theme.Editor.sectionHeaderFontSize))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
@@ -145,14 +239,66 @@ struct GameEditorView: View {
     // MARK: - Helpers
 
     private func saveGame() {
-        let (success, errors) = editor.saveToDocuments()
-        if success {
-            saveAlertMessage = "Saved to Documents."
-        } else {
+        let result = editor.saveToDocuments(isProUnlocked: proAccess.isProUnlocked)
+        switch result {
+        case .saved:
+            saveAlertMessage = "Template saved."
+            showSaveAlert = true
+        case .requiresPro:
+            requestedProFeature = .unlimitedTemplates
+        case .failed(let errors):
             saveAlertMessage = errors.map(\.message).joined(separator: "\n")
+            showSaveAlert = true
         }
+    }
+
+    private func loadSavedTemplate(_ template: SavedTemplate) {
+        let result = editor.applySavedTemplate(template)
+        guard !result.0 else { return }
+        saveAlertMessage = result.1.map(\.message).joined(separator: "\n")
         showSaveAlert = true
     }
+
+    private func exportCurrentTemplate() {
+        guard let url = editor.exportCurrentTemplateURL() else {
+            saveAlertMessage = "Template export failed."
+            showSaveAlert = true
+            return
+        }
+        shareItem = TemplateShareItem(url: url)
+    }
+
+    private func handleImportResult(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            switch editor.importTemplate(from: url, isProUnlocked: proAccess.isProUnlocked) {
+            case .imported(let template):
+                saveAlertMessage = "Imported \(template.title)."
+                showSaveAlert = true
+            case .requiresPro:
+                requestedProFeature = .unlimitedTemplates
+            case .failed(let errors):
+                saveAlertMessage = errors.map(\.message).joined(separator: "\n")
+                showSaveAlert = true
+            }
+        case .failure(let error):
+            saveAlertMessage = "Import failed: \(error.localizedDescription)"
+            showSaveAlert = true
+        }
+    }
+}
+
+private struct TemplateShareItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 // MARK: - Player Edit Sheet
@@ -218,7 +364,7 @@ private struct PlayerEditSheet: View {
                         Text("Name")
                             .font(.caption)
                             .foregroundStyle(Theme.ColorValue.textSecondary)
-                        TextField("Player name", text: $nameText)
+                        TextField("Round name", text: $nameText)
                             .textFieldStyle(.roundedBorder)
                             .onChange(of: nameText) { _, newValue in
                                 onUpdateName(newValue)
@@ -319,9 +465,9 @@ private struct PlayerEditSheet: View {
                         onToggleStartPaused()
                     }
 
-                    // Counts as player toggle
+                    // Counts as turn toggle
                     Toggle(isOn: $countsAsPlayer) {
-                        Label("Counts as player", systemImage: "person.fill")
+                        Label("Counts as turn", systemImage: "person.fill")
                     }
                     .toggleStyle(.switch)
                     .onChange(of: countsAsPlayer) { _, newValue in

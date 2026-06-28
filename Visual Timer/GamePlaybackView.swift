@@ -5,6 +5,8 @@ struct GamePlaybackView: View {
     @ObservedObject var timerViewModel: TimerViewModel
     @ObservedObject var gameViewModel: GameViewModel
     @ObservedObject var soundManager: SoundManager
+    @ObservedObject var proAccess: ProAccessViewModel
+    @ObservedObject var templateSync: TemplateCloudSyncEngine
 
     @State private var showSettings = false
 
@@ -32,7 +34,11 @@ struct GamePlaybackView: View {
             value: gameViewModel.gamePhase
         )
         .sheet(isPresented: $showSettings) {
-            SettingsView(soundManager: soundManager)
+            SettingsView(
+                soundManager: soundManager,
+                proAccess: proAccess,
+                templateSync: templateSync
+            )
         }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
@@ -194,23 +200,23 @@ struct GamePlaybackView: View {
 
     private var roundProgressFooter: some View {
         VStack(spacing: 4) {
-            Text("Player \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
+            Text("Turn \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
                 .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
             if gameViewModel.totalRoundCount > 1 {
-                Text("Round \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
+                Text("Sequence \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
                     .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
         }
     }
 
-    // MARK: - Game Over
+    // MARK: - Session Complete
 
     private var gameOverView: some View {
         VStack(spacing: 8) {
-            Text("Game Over")
+            Text("Session Complete")
                 .font(.system(
                     size: Theme.GamePlayback.gameOverFontSize,
                     weight: .bold

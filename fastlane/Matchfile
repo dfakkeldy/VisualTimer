@@ -1,0 +1,8 @@
+storage_mode("git")
+git_url("TODO:MATCH_CERTIFICATES_REPOSITORY_SSH_URL")
+
+type("appstore")
+readonly(true)
+
+app_identifier(["TODO:APP_BUNDLE_IDENTIFIER"])
+team_id("TODO:APPLE_TEAM_ID")

@@ -3,13 +3,20 @@ import SwiftUI
 struct HistoryView: View {
 
     @ObservedObject var history: HistoryViewModel
+    @ObservedObject var proAccess: ProAccessViewModel
 
-    init(history: HistoryViewModel) {
+    init(history: HistoryViewModel, proAccess: ProAccessViewModel) {
         self.history = history
+        self.proAccess = proAccess
     }
 
     @State private var deleteTarget: GameRecord?
+    @State private var requestedProFeature: ProFeature?
     @State private var showDeleteConfirmation = false
+
+    private var visibleRecords: [GameRecord] {
+        HistoryAccessPolicy.visibleRecords(history.records, isProUnlocked: proAccess.isProUnlocked)
+    }
 
     var body: some View {
         NavigationStack {
@@ -26,13 +33,16 @@ struct HistoryView: View {
             .onAppear {
                 history.loadRecords()
             }
-            .alert("Delete Record", isPresented: $showDeleteConfirmation, presenting: deleteTarget) { record in
+            .alert("Delete Session", isPresented: $showDeleteConfirmation, presenting: deleteTarget) { record in
                 Button("Delete", role: .destructive) {
                     history.deleteRecord(id: record.id)
                 }
                 Button("Cancel", role: .cancel) {}
             } message: { record in
                 Text("Delete \"\(record.gameTitle)\" from history? This cannot be undone.")
+            }
+            .sheet(item: $requestedProFeature) { feature in
+                ProPaywallView(feature: feature, proAccess: proAccess)
             }
         }
     }
@@ -44,10 +54,10 @@ struct HistoryView: View {
             Image(systemName: Theme.Symbol.history)
                 .font(.system(size: 48))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("No games played yet")
+            Text("No sessions yet")
                 .font(.title3.weight(.medium))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("Complete a game to see it here.")
+            Text("Complete a session to see it here.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary.opacity(0.7))
         }
@@ -57,19 +67,30 @@ struct HistoryView: View {
 
     private var recordsList: some View {
         List {
-            ForEach(history.records) { record in
+            ForEach(visibleRecords) { record in
                 NavigationLink {
-                    SessionDetailView(record: record, history: history)
+                    SessionDetailView(record: record, history: history, proAccess: proAccess)
                 } label: {
                     recordRow(record)
                 }
                 .listRowBackground(Theme.ColorValue.circleBackground)
             }
             .onDelete { offsets in
-                for index in offsets {
-                    let record = history.records[index]
+                let recordsToDelete = offsets.compactMap { index in
+                    visibleRecords.indices.contains(index) ? visibleRecords[index] : nil
+                }
+                for record in recordsToDelete {
                     history.deleteRecord(id: record.id)
                 }
+            }
+
+            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
+                Button {
+                    requestedProFeature = .fullHistory
+                } label: {
+                    Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
+                }
+                .listRowBackground(Theme.ColorValue.circleBackground)
             }
         }
         .listStyle(.plain)
