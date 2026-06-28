@@ -15,6 +15,7 @@ final class GameEditorViewModel: ObservableObject {
 
     private let parser = GameFileParser()
     private let templateLibrary: TemplateLibraryStore
+    private let widgetSnapshotStore: WidgetSnapshotStore
 
     enum TemplateSaveResult {
         case saved
@@ -28,8 +29,12 @@ final class GameEditorViewModel: ObservableObject {
         case failed([ParseError])
     }
 
-    init(templateLibrary: TemplateLibraryStore = TemplateLibraryStore()) {
+    init(
+        templateLibrary: TemplateLibraryStore = TemplateLibraryStore(),
+        widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore()
+    ) {
         self.templateLibrary = templateLibrary
+        self.widgetSnapshotStore = widgetSnapshotStore
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -284,10 +289,16 @@ final class GameEditorViewModel: ObservableObject {
     }
 
     func refreshSavedTemplates() {
-        savedTemplates = templateLibrary.listTemplates()
+        let templates = templateLibrary.listTemplates()
+        savedTemplates = templates
+        publishWidgetSnapshots(for: templates)
     }
 
     // MARK: - Private
+
+    private func publishWidgetSnapshots(for templates: [SavedTemplate]) {
+        try? widgetSnapshotStore.writeSnapshots(savedTemplates: templates)
+    }
 
     private func reindex() {
         for i in rounds.indices {

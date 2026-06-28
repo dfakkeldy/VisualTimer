@@ -13,6 +13,7 @@ struct MainTabView: View {
 
     @State private var selectedTab = 0
 
+    private let templateLibrary: TemplateLibraryStore
     private var timerViewModel: TimerViewModel { gameViewModel.timerViewModel }
 
     init() {
@@ -23,6 +24,7 @@ struct MainTabView: View {
         let syncEngine = TemplateCloudSyncEngine(templateLibrary: templateLibrary)
         let historySyncEngine = HistoryCloudSyncEngine(historyStore: historyStore)
         let sm = SoundManager(ubiquitousSettingsStore: settingsStore)
+        self.templateLibrary = templateLibrary
         _soundManager = StateObject(wrappedValue: sm)
         _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm, soundManager: sm))
         _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary))
@@ -68,6 +70,7 @@ struct MainTabView: View {
                 }
                 .tag(2)
         }
+        .onOpenURL(perform: handleOpenURL)
         .task(id: proAccess.isProUnlocked) {
             await templateSync.setEnabled(proAccess.isProUnlocked)
             await historySync.setEnabled(proAccess.isProUnlocked)
@@ -86,5 +89,32 @@ struct MainTabView: View {
         .onChange(of: historySync.changeRevision) { _, _ in
             historyViewModel.loadRecords()
         }
+    }
+
+    private func handleOpenURL(_ url: URL) {
+        guard let deepLink = TurnTimerDeepLink(url: url) else { return }
+
+        switch deepLink {
+        case .template(let id):
+            startSavedTemplate(id: id)
+        case .starter(let id):
+            startStarterTemplate(id: id)
+        }
+    }
+
+    private func startSavedTemplate(id: UUID) {
+        guard let document = try? templateLibrary.loadDocument(id: id) else { return }
+        startGame(document.game)
+    }
+
+    private func startStarterTemplate(id: String) {
+        guard let template = StarterTemplateLibrary.template(id: id) else { return }
+        startGame(template.game)
+    }
+
+    private func startGame(_ game: GameSequence) {
+        gameViewModel.loadGame(game)
+        gameViewModel.startGame()
+        selectedTab = 0
     }
 }

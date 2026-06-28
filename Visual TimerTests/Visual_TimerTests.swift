@@ -304,6 +304,84 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    // MARK: - TurnTimerDeepLink
+
+    func testTurnTimerDeepLinkParsesSavedTemplateURL() throws {
+        let id = UUID()
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://template/\(id.uuidString)")!))
+
+        XCTAssertEqual(link, .template(id))
+    }
+
+    func testTurnTimerDeepLinkParsesStarterTemplateURL() throws {
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://starter/game-night")!))
+
+        XCTAssertEqual(link, .starter("game-night"))
+    }
+
+    // MARK: - WidgetSnapshotStore
+
+    func testWidgetSnapshotStoreWritesStarterAndSavedTemplateMetadata() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplateID = UUID(uuidString: "E80D978E-C9F9-4F1A-89DA-A1126FF69272")!
+        let savedURL = directory
+            .appendingPathComponent("Templates", isDirectory: true)
+            .appendingPathComponent("\(savedTemplateID.uuidString).turntimer")
+        let savedTemplate = SavedTemplate(
+            id: savedTemplateID,
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 3,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: savedURL
+        )
+        let store = WidgetSnapshotStore(
+            containerURLProvider: { directory },
+            dateProvider: { Date(timeIntervalSince1970: 1_000) }
+        )
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate])
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, StarterTemplateLibrary.templates.count + 1)
+
+        let starterSnapshot = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(starterSnapshot.id, "game-night")
+        XCTAssertEqual(starterSnapshot.source, .starter)
+        XCTAssertEqual(starterSnapshot.starterID, "game-night")
+        XCTAssertNil(starterSnapshot.templateID)
+        XCTAssertEqual(starterSnapshot.totalSeconds, 300)
+        XCTAssertEqual(starterSnapshot.roundCount, 4)
+        XCTAssertEqual(starterSnapshot.modifiedAt, Date(timeIntervalSince1970: 1_000))
+        XCTAssertEqual(starterSnapshot.launchURL, URL(string: "turntimer://starter/game-night")!)
+
+        let savedSnapshot = try XCTUnwrap(snapshots.last)
+        XCTAssertEqual(savedSnapshot.id, savedTemplateID.uuidString)
+        XCTAssertEqual(savedSnapshot.title, "Saved Game")
+        XCTAssertEqual(savedSnapshot.subtitle, "2 rounds • 3x")
+        XCTAssertEqual(savedSnapshot.source, .saved)
+        XCTAssertEqual(savedSnapshot.templateID, savedTemplateID)
+        XCTAssertNil(savedSnapshot.starterID)
+        XCTAssertEqual(savedSnapshot.totalSeconds, 0)
+        XCTAssertEqual(savedSnapshot.roundCount, 2)
+        XCTAssertEqual(savedSnapshot.modifiedAt, Date(timeIntervalSince1970: 2_000))
+        XCTAssertEqual(savedSnapshot.launchURL, URL(string: "turntimer://template/\(savedTemplateID.uuidString)")!)
+
+        let data = try Data(contentsOf: directory.appendingPathComponent("WidgetTemplates.json"))
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(json.contains(savedURL.path))
+    }
+
+    func testWidgetSnapshotStoreReadsEmptySnapshotsWhenFileIsMissing() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        XCTAssertEqual(try store.readSnapshots(), [])
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
