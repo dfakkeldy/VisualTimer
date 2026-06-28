@@ -9,12 +9,18 @@ struct HistorySyncConfiguration {
     static let stateSerializationKey = "turntimer.historySync.stateSerialization"
     static let pendingDeletedHistoryIDsKey = "turntimer.historySync.pendingDeletedHistoryIDs"
 
-    let container: CKContainer
-    let zoneID: CKRecordZone.ID
+    let containerIdentifier: String
 
-    init(container: CKContainer = CKContainer(identifier: Self.containerIdentifier)) {
-        self.container = container
-        self.zoneID = CKRecordZone.ID(zoneName: Self.zoneName, ownerName: CKCurrentUserDefaultName)
+    init(containerIdentifier: String = Self.containerIdentifier) {
+        self.containerIdentifier = containerIdentifier
+    }
+
+    var container: CKContainer {
+        CKContainer(identifier: containerIdentifier)
+    }
+
+    var zoneID: CKRecordZone.ID {
+        CKRecordZone.ID(zoneName: Self.zoneName, ownerName: CKCurrentUserDefaultName)
     }
 
     var privateDatabase: CKDatabase {

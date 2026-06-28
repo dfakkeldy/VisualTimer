@@ -142,4 +142,6 @@ jobs:
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -resultBundlePath ".build/results/VisualTimer-iOS-Tests.xcresult" \
             -only-testing:"Visual TimerTests" \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
             CODE_SIGNING_ALLOWED=NO

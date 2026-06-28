@@ -480,6 +480,14 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
     }
 
+    func testHistorySyncConfigurationDefersCloudKitContainerCreation() {
+        let configuration = HistorySyncConfiguration(containerIdentifier: "iCloud.Test.Container")
+        let storedPropertyLabels = Set(Mirror(reflecting: configuration).children.compactMap(\.label))
+
+        XCTAssertTrue(storedPropertyLabels.contains("containerIdentifier"))
+        XCTAssertFalse(storedPropertyLabels.contains("container"))
+    }
+
     @MainActor
     func testHistoryCloudSyncEnginePersistsDeletedHistoryIDsAcrossRelaunch() throws {
         let directory = try makeTemporaryDirectory()
