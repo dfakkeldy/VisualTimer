@@ -318,6 +318,20 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    func testHistoryCloudRecordMapper_roundTripPreservesHistoryPayload() throws {
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+        let mapper = HistoryCloudRecordMapper()
+
+        let cloudRecord = try mapper.record(from: document)
+        let decoded = try mapper.document(from: cloudRecord)
+
+        XCTAssertEqual(cloudRecord.recordType, HistorySyncConfiguration.recordType)
+        XCTAssertEqual(decoded.record.id, record.id)
+        XCTAssertEqual(decoded.record.gameTitle, record.gameTitle)
+        XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
+    }
+
     func testCloudKitValidationReportSummarizesFailures() {
         let report = CloudKitValidationReport(checks: [
             .init(name: "Account", status: .passed, detail: "Available"),
@@ -346,6 +360,37 @@ final class Visual_TimerTests: XCTestCase {
 
         XCTAssertEqual(visible.count, 7)
         XCTAssertFalse(HistoryAccessPolicy.isLimited(records: records, isProUnlocked: true))
+    }
+
+    func testHistoryStore_saveDocumentCanLoadRecordFromInjectedDirectory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+
+        store.save(document: document)
+
+        let loaded = try XCTUnwrap(store.load(id: record.id))
+        XCTAssertEqual(loaded.id, record.id)
+        XCTAssertEqual(loaded.gameTitle, record.gameTitle)
+        let loadedDocument = try XCTUnwrap(store.loadDocument(id: record.id))
+        XCTAssertEqual(loadedDocument.modifiedAt.timeIntervalSince1970, 2_000, accuracy: 1)
+        XCTAssertEqual(store.loadAll().map(\.id), [record.id])
+    }
+
+    func testHistoryViewModelLoadsRecordsFromInjectedStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+
+        let viewModel = HistoryViewModel(store: store)
+
+        XCTAssertEqual(viewModel.records.map(\.id), [record.id])
     }
 
     // MARK: - GameSequence

@@ -5,9 +5,10 @@ final class HistoryViewModel: ObservableObject {
 
     @Published var records: [GameRecord] = []
 
-    private let store = HistoryStore()
+    private let store: HistoryStore
 
-    init() {
+    init(store: HistoryStore = HistoryStore()) {
+        self.store = store
         loadRecords()
     }
 
