@@ -6,8 +6,14 @@ platform :ios do
     channel = options[:channel]
     UI.user_error!("Pass channel:nightly or channel:weekly") unless %w[nightly weekly].include?(channel)
 
-    api_key_path = ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
-    api_key = app_store_connect_api_key(api_key_path: api_key_path)
+    require "json"
+    api_key_data = JSON.parse(File.read(ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")))
+    api_key = app_store_connect_api_key(
+      key_id: api_key_data.fetch("key_id"),
+      issuer_id: api_key_data.fetch("issuer_id"),
+      key_content: api_key_data.fetch("key"),
+      in_house: api_key_data.fetch("in_house", false)
+    )
     app_identifier = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
 
     match(
