@@ -42,6 +42,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         self.configuration = configuration
         self.userDefaults = userDefaults
         self.mapper = HistoryCloudRecordMapper(configuration: configuration)
+        self.pendingDeletedHistoryIDs = Self.loadPendingDeletedHistoryIDs(from: userDefaults)
     }
 
     func setEnabled(_ isEnabled: Bool) async {
@@ -65,6 +66,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
 
     func queueDeletedHistory(id: UUID) {
         pendingDeletedHistoryIDs.insert(id)
+        savePendingDeletedHistoryIDs()
         guard syncEngine != nil, !needsInitialHistorySync else { return }
         queuePendingDeletedHistories()
     }
@@ -174,6 +176,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             let savedChanges = changes.savedRecords.map { CKSyncEngine.PendingRecordZoneChange.saveRecord($0.recordID) }
             let deletedChanges = changes.deletedRecordIDs.map { CKSyncEngine.PendingRecordZoneChange.deleteRecord($0) }
             syncEngine.state.remove(pendingRecordZoneChanges: savedChanges + deletedChanges)
+            removeConfirmedDeletedHistoryIDs(changes.deletedRecordIDs)
             if !changes.failedRecordSaves.isEmpty || !changes.failedRecordDeletes.isEmpty {
                 syncState = .failed("Some history did not sync.")
             }
@@ -266,11 +269,29 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         let pendingChanges = pendingDeletedHistoryIDs.map { historyID in
             CKSyncEngine.PendingRecordZoneChange.deleteRecord(mapper.recordID(for: historyID))
         }
-        pendingDeletedHistoryIDs.removeAll()
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
         Task {
             await sendChanges()
         }
+    }
+
+    private func removeConfirmedDeletedHistoryIDs(_ recordIDs: [CKRecord.ID]) {
+        let confirmedIDs = Set(recordIDs.compactMap { UUID(uuidString: $0.recordName) })
+        guard !confirmedIDs.isEmpty else { return }
+        pendingDeletedHistoryIDs.subtract(confirmedIDs)
+        savePendingDeletedHistoryIDs()
+    }
+
+    private func savePendingDeletedHistoryIDs() {
+        let ids = pendingDeletedHistoryIDs
+            .map(\.uuidString)
+            .sorted()
+        userDefaults.set(ids, forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey)
+    }
+
+    private static func loadPendingDeletedHistoryIDs(from userDefaults: UserDefaults) -> Set<UUID> {
+        let strings = userDefaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []
+        return Set(strings.compactMap(UUID.init(uuidString:)))
     }
 
     private func saveStateSerialization(_ serialization: CKSyncEngine.State.Serialization) {

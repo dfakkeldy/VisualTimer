@@ -480,6 +480,44 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
     }
 
+    @MainActor
+    func testHistoryCloudSyncEnginePersistsDeletedHistoryIDsAcrossRelaunch() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstDeletedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let secondDeletedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+
+        engine.queueDeletedHistory(id: firstDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString]
+        )
+
+        let relaunchedEngine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        relaunchedEngine.queueDeletedHistory(id: secondDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString, secondDeletedID.uuidString]
+        )
+    }
+
     func testCloudKitValidationReportSummarizesFailures() {
         let report = CloudKitValidationReport(checks: [
             .init(name: "Account", status: .passed, detail: "Available"),

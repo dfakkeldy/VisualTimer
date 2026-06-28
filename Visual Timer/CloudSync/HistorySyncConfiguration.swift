@@ -7,6 +7,7 @@ struct HistorySyncConfiguration {
     static let recordType = "HistoryRecord"
     static let subscriptionID = "turntimer-history-sync"
     static let stateSerializationKey = "turntimer.historySync.stateSerialization"
+    static let pendingDeletedHistoryIDsKey = "turntimer.historySync.pendingDeletedHistoryIDs"
 
     let container: CKContainer
     let zoneID: CKRecordZone.ID
