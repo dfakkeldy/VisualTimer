@@ -22,6 +22,27 @@ platform :ios do
       readonly: ENV["CI"].to_s.casecmp("true").zero?
     )
 
+    if ENV["CI"].to_s.casecmp("true").zero?
+      mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+      {
+        "Visual Timer" => "Dan.Visual-Timer",
+        "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
+        "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp"
+      }.each do |target, bundle_id|
+        profile = mapping[bundle_id]
+        next if profile.nil?
+
+        update_code_signing_settings(
+          path: "Visual Timer.xcodeproj",
+          use_automatic_signing: false,
+          targets: [target],
+          team_id: "8AXNA5B37R",
+          code_sign_identity: "Apple Distribution",
+          profile_name: profile
+        )
+      end
+    end
+
     latest_build_number = latest_testflight_build_number(
       app_identifier: app_identifier,
       api_key: api_key,
