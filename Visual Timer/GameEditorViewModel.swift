@@ -1,5 +1,8 @@
 import SwiftUI
 import Combine
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 final class GameEditorViewModel: ObservableObject {
 
@@ -297,7 +300,10 @@ final class GameEditorViewModel: ObservableObject {
     // MARK: - Private
 
     private func publishWidgetSnapshots(for templates: [SavedTemplate]) {
-        try? widgetSnapshotStore.writeSnapshots(savedTemplates: templates)
+        guard (try? widgetSnapshotStore.writeSnapshots(savedTemplates: templates)) != nil else { return }
+#if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: "TemplateStartWidget")
+#endif
     }
 
     private func reindex() {
