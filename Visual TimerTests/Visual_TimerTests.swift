@@ -318,6 +318,16 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    func testCloudKitValidationReportSummarizesFailures() {
+        let report = CloudKitValidationReport(checks: [
+            .init(name: "Account", status: .passed, detail: "Available"),
+            .init(name: "Probe", status: .failed, detail: "Missing Template schema"),
+        ])
+
+        XCTAssertFalse(report.isReadyForRelease)
+        XCTAssertEqual(report.failedChecks.map(\.name), ["Probe"])
+    }
+
     // MARK: - HistoryAccessPolicy
 
     func testHistoryAccessPolicy_freeLimitsRecords() {
