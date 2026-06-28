@@ -88,6 +88,24 @@ through callbacks.
 - Xcode 26.0+
 - Swift 5.0 project settings
 
+## Release Engineering - Promotion Ladder
+
+Release flow is one-way: `feature/*` -> `nightly` -> `weekly` -> `main`.
+`main` remains the GitHub default branch so scheduled workflows run from the
+default-branch copy. Feature work branches from `nightly`; pull requests target
+`nightly`.
+
+| Branch | Purpose | Merge gate | Required reviews | Promotion source |
+|---|---|---|---:|---|
+| `nightly` | Fast integration and daily TestFlight builds | `Build gate + tests` | 0 | `feature/*` |
+| `weekly` | Weekly beta train and Monday TestFlight builds | `Build gate + tests` | 0 | `nightly` |
+| `main` | Stable App Store release branch; tags `vX.Y.Z` cut releases | `Build gate + tests` | 0 | `weekly` |
+
+Hotfixes branch from `main`, merge back to `main` by pull request, then flow
+back down into `weekly` and `nightly`. TestFlight uploads require the
+`APP_STORE_CONNECT_API_KEY_JSON`, `MATCH_PASSWORD`, and `MATCH_GIT_SSH_KEY`
+repository secrets; without them, release-train runs compile only.
+
 ## Getting Started
 
 1. Clone the repository.

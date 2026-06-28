@@ -68,6 +68,17 @@ approach.
   architecture, file parsing rules, paid-app strategy, sync, sharing, or widgets
   change. Use file-editing tools to make the updates if approved.
 
+## Release Engineering
+
+* Use the promotion ladder `feature/*` -> `nightly` -> `weekly` -> `main`.
+  Feature work branches from `nightly`, and feature PRs target `nightly`.
+* `main` stays the GitHub default branch. Scheduled release-train workflows only
+  run from the default-branch copy after the workflow has been promoted there.
+* Protected branches require the `Build gate + tests` check and pull requests,
+  but this solo project requires zero approving reviews.
+* Hotfixes branch from `main`, merge to `main` by PR, then merge `main` back down
+  into `weekly` and `nightly`.
+
 ## Response Rules
 
 * When outputting code in chat, do not output entire files unless explicitly
