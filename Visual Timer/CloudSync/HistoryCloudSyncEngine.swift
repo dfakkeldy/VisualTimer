@@ -55,9 +55,11 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
 
     func queueLocalHistory(_ records: [GameRecord]) {
         guard let syncEngine else { return }
-        let pendingChanges = records.map { record in
-            CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: record.id))
-        }
+        let pendingChanges = records
+            .filter { !pendingDeletedHistoryIDs.contains($0.id) }
+            .map { record in
+                CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: record.id))
+            }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
         Task {
             await sendChanges()
@@ -174,10 +176,15 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             }
         case .sentRecordZoneChanges(let changes):
             let savedChanges = changes.savedRecords.map { CKSyncEngine.PendingRecordZoneChange.saveRecord($0.recordID) }
-            let deletedChanges = changes.deletedRecordIDs.map { CKSyncEngine.PendingRecordZoneChange.deleteRecord($0) }
+            let deleteResult = handleSentDeletedRecordResults(
+                deletedRecordIDs: changes.deletedRecordIDs,
+                failedRecordDeletes: changes.failedRecordDeletes
+            )
+            let deletedChanges = deleteResult.confirmedRecordIDs.map {
+                CKSyncEngine.PendingRecordZoneChange.deleteRecord($0)
+            }
             syncEngine.state.remove(pendingRecordZoneChanges: savedChanges + deletedChanges)
-            removeConfirmedDeletedHistoryIDs(changes.deletedRecordIDs)
-            if !changes.failedRecordSaves.isEmpty || !changes.failedRecordDeletes.isEmpty {
+            if !changes.failedRecordSaves.isEmpty || deleteResult.hasRetryableFailures {
                 syncState = .failed("Some history did not sync.")
             }
         case .willFetchChanges, .willSendChanges:
@@ -229,13 +236,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             guard modification.record.recordType == HistorySyncConfiguration.recordType else { continue }
             do {
                 let incomingDocument = try mapper.document(from: modification.record)
-                if let localDocument = historyStore.loadDocument(id: incomingDocument.record.id),
-                   localDocument.modifiedAt > incomingDocument.modifiedAt {
-                    queueLocalHistory([localDocument.record])
-                    continue
-                }
-                historyStore.save(document: incomingDocument)
-                appliedChanges = true
+                appliedChanges = applyFetchedHistoryDocument(incomingDocument) || appliedChanges
             } catch {
                 syncState = .failed(CloudSyncError.from(error).localizedDescription)
             }
@@ -244,6 +245,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         for deletion in changes.deletions where deletion.recordType == HistorySyncConfiguration.recordType {
             guard let historyID = UUID(uuidString: deletion.recordID.recordName) else { continue }
             historyStore.delete(id: historyID)
+            removeConfirmedDeletedHistoryIDs([deletion.recordID])
             appliedChanges = true
         }
 
@@ -262,6 +264,42 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         } catch {
             syncState = .failed(CloudSyncError.from(error).localizedDescription)
         }
+    }
+
+    @discardableResult
+    func applyFetchedHistoryDocument(_ incomingDocument: HistoryDocument) -> Bool {
+        let historyID = incomingDocument.record.id
+        if pendingDeletedHistoryIDs.contains(historyID) {
+            historyStore.delete(id: historyID)
+            queuePendingDeletedHistories()
+            return true
+        }
+
+        if let localDocument = historyStore.loadDocument(id: historyID),
+           localDocument.modifiedAt > incomingDocument.modifiedAt {
+            queueLocalHistory([localDocument.record])
+            return false
+        }
+
+        historyStore.save(document: incomingDocument)
+        return true
+    }
+
+    @discardableResult
+    func handleSentDeletedRecordResults(
+        deletedRecordIDs: [CKRecord.ID],
+        failedRecordDeletes: [CKRecord.ID: CKError]
+    ) -> (confirmedRecordIDs: [CKRecord.ID], hasRetryableFailures: Bool) {
+        let unknownItemRecordIDs = failedRecordDeletes.compactMap { recordID, error in
+            error.code == .unknownItem ? recordID : nil
+        }
+        let confirmedRecordIDs = deletedRecordIDs + unknownItemRecordIDs
+        removeConfirmedDeletedHistoryIDs(confirmedRecordIDs)
+
+        let hasRetryableFailures = failedRecordDeletes.contains { _, error in
+            error.code != .unknownItem
+        }
+        return (confirmedRecordIDs, hasRetryableFailures)
     }
 
     private func queuePendingDeletedHistories() {

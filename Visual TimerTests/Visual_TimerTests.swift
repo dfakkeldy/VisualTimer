@@ -518,6 +518,71 @@ final class Visual_TimerTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testHistoryCloudSyncEngineClearsUnknownItemDeleteTombstone() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        let recordID = HistoryCloudRecordMapper().recordID(for: deletedID)
+
+        engine.queueDeletedHistory(id: deletedID)
+        let result = engine.handleSentDeletedRecordResults(
+            deletedRecordIDs: [],
+            failedRecordDeletes: [recordID: CKError(.unknownItem)]
+        )
+
+        XCTAssertEqual(result.confirmedRecordIDs.map(\.recordName), [deletedID.uuidString])
+        XCTAssertFalse(result.hasRetryableFailures)
+        XCTAssertEqual(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey), [])
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEngineDoesNotApplyRemoteModificationForPendingDelete() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let store = HistoryStore(documentsDirectory: directory)
+        var localRecord = makeHistoryRecords(count: 1)[0]
+        localRecord.id = deletedID
+        store.save(localRecord)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        engine.queueDeletedHistory(id: deletedID)
+        store.delete(id: deletedID)
+
+        var remoteRecord = localRecord
+        remoteRecord.gameTitle = "Remote Resurrection"
+        let didApply = engine.applyFetchedHistoryDocument(
+            HistoryDocument(record: remoteRecord, modifiedAt: Date(timeIntervalSince1970: 10_000))
+        )
+
+        XCTAssertTrue(didApply)
+        XCTAssertNil(store.load(id: deletedID))
+        XCTAssertEqual(
+            defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey),
+            [deletedID.uuidString]
+        )
+    }
+
     func testCloudKitValidationReportSummarizesFailures() {
         let report = CloudKitValidationReport(checks: [
             .init(name: "Account", status: .passed, detail: "Available"),
