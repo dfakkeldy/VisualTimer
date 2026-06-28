@@ -41,12 +41,15 @@ timeline.xctimeline
 playground.xcworkspace
 
 # ── Fastlane ──────────────────────────────────────────
+fastlane/api_key.json
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # ── Misc ──────────────────────────────────────────────
+.env
+.env.local
 *.moved-aside
 *.xcodeproj/xcuserdata
 *.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
