@@ -12,6 +12,7 @@ platform :ios do
 
     match(
       type: "appstore",
+      api_key: api_key,
       readonly: ENV["CI"].to_s.casecmp("true").zero?
     )
 
