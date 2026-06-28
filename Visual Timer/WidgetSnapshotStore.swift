@@ -78,7 +78,7 @@ struct WidgetSnapshotStore {
             source: .saved,
             templateID: template.id,
             starterID: nil,
-            totalSeconds: 0,
+            totalSeconds: template.totalSeconds,
             roundCount: template.roundCount,
             modifiedAt: template.modifiedAt
         )

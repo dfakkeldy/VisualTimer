@@ -262,6 +262,9 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
                             title: localDocument.title,
                             roundCount: localDocument.game.rounds.count,
                             repeatCount: localDocument.game.roundCount,
+                            totalSeconds: localDocument.game.activeRounds.reduce(0) { total, round in
+                                total + round.durationSeconds
+                            } * localDocument.game.roundCount,
                             modifiedAt: localDocument.modifiedAt,
                             url: URL(fileURLWithPath: "")
                         ),

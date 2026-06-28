@@ -334,6 +334,7 @@ final class Visual_TimerTests: XCTestCase {
             title: "Saved Game",
             roundCount: 2,
             repeatCount: 3,
+            totalSeconds: 480,
             modifiedAt: Date(timeIntervalSince1970: 2_000),
             url: savedURL
         )
@@ -364,7 +365,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(savedSnapshot.source, .saved)
         XCTAssertEqual(savedSnapshot.templateID, savedTemplateID)
         XCTAssertNil(savedSnapshot.starterID)
-        XCTAssertEqual(savedSnapshot.totalSeconds, 0)
+        XCTAssertEqual(savedSnapshot.totalSeconds, 480)
         XCTAssertEqual(savedSnapshot.roundCount, 2)
         XCTAssertEqual(savedSnapshot.modifiedAt, Date(timeIntervalSince1970: 2_000))
         XCTAssertEqual(savedSnapshot.launchURL, URL(string: "turntimer://template/\(savedTemplateID.uuidString)")!)

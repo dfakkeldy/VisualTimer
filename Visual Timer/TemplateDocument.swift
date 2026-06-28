@@ -41,6 +41,7 @@ struct SavedTemplate: Identifiable, Equatable {
     let title: String
     let roundCount: Int
     let repeatCount: Int
+    let totalSeconds: Int
     let modifiedAt: Date
     let url: URL
 
