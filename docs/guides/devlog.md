@@ -19,3 +19,14 @@ This project is still being rebranded from Visual Timer, so update hand-written 
 ## Notes
 
 The generated weekly digest above is safe to refresh automatically. Hand-written launch notes can live below this section when there is a story worth telling in more detail.
+
+### Turn Timer Pro sync and widgets validation
+
+This branch adds the release-validation path for Pro iCloud sync and widgets:
+template sync has a live CloudKit probe, completed history can sync through the
+private `TurnTimerHistory` zone, and Home Screen plus Lock Screen widgets launch
+templates from App Group snapshots. Local simulator builds cover compilation,
+StoreKit JSON validity, mapper behavior, and extension embedding. A signed
+iCloud build is still required before release to prove account/container access,
+CloudKit subscriptions, schema deployment, cross-device propagation, and widget
+taps against an installed build.
