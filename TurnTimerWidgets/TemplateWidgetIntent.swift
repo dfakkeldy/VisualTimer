@@ -46,13 +46,13 @@ struct TemplateWidgetTemplateQuery: EntityQuery {
     }
 
     func defaultResult() async -> TemplateWidgetTemplate? {
-        options().first { $0.id == "game-night" } ?? TemplateWidgetTemplate(snapshot: .gameNightFallback)
+        options().first { $0.id == "game-night" } ?? options().first ?? TemplateWidgetTemplate(snapshot: .proLocked)
     }
 
     private func options() -> [TemplateWidgetTemplate] {
         let snapshots = TemplateStartTimelineProvider.availableSnapshots()
         guard !snapshots.isEmpty else {
-            return [TemplateWidgetTemplate(snapshot: .gameNightFallback)]
+            return [TemplateWidgetTemplate(snapshot: .proLocked)]
         }
         return snapshots.map(TemplateWidgetTemplate.init(snapshot:))
     }

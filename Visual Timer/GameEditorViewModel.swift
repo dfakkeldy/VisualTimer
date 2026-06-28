@@ -19,6 +19,7 @@ final class GameEditorViewModel: ObservableObject {
     private let parser = GameFileParser()
     private let templateLibrary: TemplateLibraryStore
     private let widgetSnapshotStore: WidgetSnapshotStore
+    private var isWidgetPublishingEnabled = false
 
     enum TemplateSaveResult {
         case saved
@@ -297,10 +298,20 @@ final class GameEditorViewModel: ObservableObject {
         publishWidgetSnapshots(for: templates)
     }
 
+    func setWidgetPublishingEnabled(_ isEnabled: Bool) {
+        guard isWidgetPublishingEnabled != isEnabled else { return }
+        isWidgetPublishingEnabled = isEnabled
+        publishWidgetSnapshots(for: savedTemplates)
+    }
+
     // MARK: - Private
 
     private func publishWidgetSnapshots(for templates: [SavedTemplate]) {
-        guard (try? widgetSnapshotStore.writeSnapshots(savedTemplates: templates)) != nil else { return }
+        let templatesToPublish = isWidgetPublishingEnabled ? templates : []
+        guard (try? widgetSnapshotStore.writeSnapshots(
+            savedTemplates: templatesToPublish,
+            isProUnlocked: isWidgetPublishingEnabled
+        )) != nil else { return }
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: "TemplateStartWidget")
 #endif

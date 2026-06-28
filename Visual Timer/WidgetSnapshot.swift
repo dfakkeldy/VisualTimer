@@ -4,6 +4,7 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
     enum Source: String, Codable {
         case starter
         case saved
+        case locked
     }
 
     var id: String
@@ -16,12 +17,14 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
     var roundCount: Int
     var modifiedAt: Date
 
-    var launchURL: URL {
+    var launchURL: URL? {
         switch source {
         case .starter:
             return URL(string: "turntimer://starter/\(starterID ?? id)")!
         case .saved:
             return URL(string: "turntimer://template/\(templateID?.uuidString ?? id)")!
+        case .locked:
+            return nil
         }
     }
 
@@ -36,5 +39,21 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
         }
 
         return "\(minutes):" + String(format: "%02d", seconds)
+    }
+}
+
+extension WidgetTemplateSnapshot {
+    nonisolated static var proLocked: WidgetTemplateSnapshot {
+        WidgetTemplateSnapshot(
+            id: "turn-timer-pro",
+            title: "Turn Timer Pro",
+            subtitle: "Unlock widgets in the app.",
+            source: .locked,
+            templateID: nil,
+            starterID: nil,
+            totalSeconds: 0,
+            roundCount: 0,
+            modifiedAt: Date(timeIntervalSince1970: 0)
+        )
     }
 }

@@ -23,6 +23,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     private let userDefaults: UserDefaults
     private var syncEngine: CKSyncEngine?
     private var needsInitialHistorySync = false
+    private var pendingDeletedHistoryIDs = Set<UUID>()
 
     convenience init() {
         self.init(historyStore: HistoryStore(), configuration: HistorySyncConfiguration())
@@ -62,6 +63,12 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         }
     }
 
+    func queueDeletedHistory(id: UUID) {
+        pendingDeletedHistoryIDs.insert(id)
+        guard syncEngine != nil, !needsInitialHistorySync else { return }
+        queuePendingDeletedHistories()
+    }
+
     func refreshNow() async {
         guard let syncEngine else { return }
         do {
@@ -78,6 +85,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     private func start() async {
         guard syncEngine == nil else {
             queueLocalHistory(historyStore.loadAll())
+            queuePendingDeletedHistories()
             await refreshNow()
             return
         }
@@ -159,6 +167,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             if needsInitialHistorySync,
                changes.savedZones.contains(where: { $0.zoneID == configuration.zoneID }) {
                 needsInitialHistorySync = false
+                queuePendingDeletedHistories()
                 queueLocalHistory(historyStore.loadAll())
             }
         case .sentRecordZoneChanges(let changes):
@@ -249,6 +258,18 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             syncState = .idle
         } catch {
             syncState = .failed(CloudSyncError.from(error).localizedDescription)
+        }
+    }
+
+    private func queuePendingDeletedHistories() {
+        guard let syncEngine, !pendingDeletedHistoryIDs.isEmpty else { return }
+        let pendingChanges = pendingDeletedHistoryIDs.map { historyID in
+            CKSyncEngine.PendingRecordZoneChange.deleteRecord(mapper.recordID(for: historyID))
+        }
+        pendingDeletedHistoryIDs.removeAll()
+        syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
+        Task {
+            await sendChanges()
         }
     }
 

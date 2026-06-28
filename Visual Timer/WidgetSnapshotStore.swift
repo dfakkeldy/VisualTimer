@@ -21,9 +21,11 @@ struct WidgetSnapshotStore {
         self.dateProvider = dateProvider
     }
 
-    func writeSnapshots(savedTemplates: [SavedTemplate]) throws {
+    func writeSnapshots(savedTemplates: [SavedTemplate], isProUnlocked: Bool) throws {
         let url = try snapshotsURL()
-        let snapshots = starterSnapshots() + savedTemplates.map(savedSnapshot)
+        let snapshots = isProUnlocked
+            ? starterSnapshots() + savedTemplates.map(savedSnapshot)
+            : [WidgetTemplateSnapshot.proLocked]
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

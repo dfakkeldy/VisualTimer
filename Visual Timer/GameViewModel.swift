@@ -35,6 +35,9 @@ final class GameViewModel: ObservableObject {
     /// Plays the finish sound when rounds complete.
     weak var soundManager: SoundManager?
 
+    private let historyStore: HistoryStore
+    private let onHistoryRecordSaved: ((GameRecord) -> Void)?
+
     /// Wall-clock time when the game started. Used for event timestamps.
     private var gameStartDate: Date?
     /// 1 Hz timer that increments `gameElapsedTime`.
@@ -102,9 +105,16 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init(timerViewModel: TimerViewModel, soundManager: SoundManager? = nil) {
+    init(
+        timerViewModel: TimerViewModel,
+        soundManager: SoundManager? = nil,
+        historyStore: HistoryStore = HistoryStore(),
+        onHistoryRecordSaved: ((GameRecord) -> Void)? = nil
+    ) {
         self.timerViewModel = timerViewModel
         self.soundManager = soundManager
+        self.historyStore = historyStore
+        self.onHistoryRecordSaved = onHistoryRecordSaved
     }
 
     // MARK: - Game Lifecycle
@@ -292,6 +302,7 @@ final class GameViewModel: ObservableObject {
             playerNames: activeRounds.map(\.name),
             playedAt: gameStartDate ?? Date()
         )
-        HistoryStore().save(record)
+        historyStore.save(record)
+        onHistoryRecordSaved?(record)
     }
 }

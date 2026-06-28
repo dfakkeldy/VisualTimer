@@ -23,12 +23,25 @@ struct MainTabView: View {
         let historyStore = HistoryStore()
         let syncEngine = TemplateCloudSyncEngine(templateLibrary: templateLibrary)
         let historySyncEngine = HistoryCloudSyncEngine(historyStore: historyStore)
+        let historyViewModel = HistoryViewModel(store: historyStore)
         let sm = SoundManager(ubiquitousSettingsStore: settingsStore)
+        historyViewModel.onRecordDeleted = { [weak historySyncEngine] id in
+            Task { @MainActor in
+                historySyncEngine?.queueDeletedHistory(id: id)
+            }
+        }
         self.templateLibrary = templateLibrary
         _soundManager = StateObject(wrappedValue: sm)
-        _gameViewModel = StateObject(wrappedValue: GameViewModel(timerViewModel: tvm, soundManager: sm))
+        _gameViewModel = StateObject(wrappedValue: GameViewModel(
+            timerViewModel: tvm,
+            soundManager: sm,
+            historyStore: historyStore,
+            onHistoryRecordSaved: { [weak historyViewModel] record in
+                historyViewModel?.recordSaved(record)
+            }
+        ))
         _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary))
-        _historyViewModel = StateObject(wrappedValue: HistoryViewModel(store: historyStore))
+        _historyViewModel = StateObject(wrappedValue: historyViewModel)
         _proAccess = StateObject(wrappedValue: ProAccessViewModel())
         _templateSync = StateObject(wrappedValue: syncEngine)
         _historySync = StateObject(wrappedValue: historySyncEngine)
@@ -75,6 +88,7 @@ struct MainTabView: View {
             gameEditorViewModel.refreshSavedTemplates()
         }
         .task(id: proAccess.isProUnlocked) {
+            gameEditorViewModel.setWidgetPublishingEnabled(proAccess.isProUnlocked)
             await templateSync.setEnabled(proAccess.isProUnlocked)
             await historySync.setEnabled(proAccess.isProUnlocked)
         }

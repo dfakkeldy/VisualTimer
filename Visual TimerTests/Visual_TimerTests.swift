@@ -343,7 +343,7 @@ final class Visual_TimerTests: XCTestCase {
             dateProvider: { Date(timeIntervalSince1970: 1_000) }
         )
 
-        try store.writeSnapshots(savedTemplates: [savedTemplate])
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: true)
 
         let snapshots = try store.readSnapshots()
         XCTAssertEqual(snapshots.count, StarterTemplateLibrary.templates.count + 1)
@@ -381,6 +381,59 @@ final class Visual_TimerTests: XCTestCase {
         let store = WidgetSnapshotStore(containerURLProvider: { directory })
 
         XCTAssertEqual(try store.readSnapshots(), [])
+    }
+
+    func testWidgetSnapshotStoreWritesLockedSnapshotWhenProUnavailable() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplate = SavedTemplate(
+            id: UUID(),
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 1,
+            totalSeconds: 120,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: directory.appendingPathComponent("Saved.turntimer")
+        )
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: false)
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, 1)
+        let locked = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(locked.source, .locked)
+        XCTAssertEqual(locked.title, "Turn Timer Pro")
+        XCTAssertNil(locked.launchURL)
+    }
+
+    func testGameEditorViewModelPublishesLockedWidgetSnapshotsUntilProEnabled() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let documentsDirectory = directory.appendingPathComponent("Documents", isDirectory: true)
+        let appGroupDirectory = directory.appendingPathComponent("AppGroup", isDirectory: true)
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: documentsDirectory)
+        _ = try templateLibrary.save(game: makeTemplateGame(title: "Pro Game"))
+        let snapshotStore = WidgetSnapshotStore(
+            containerURLProvider: { appGroupDirectory },
+            dateProvider: { Date(timeIntervalSince1970: 3_000) }
+        )
+        let viewModel = GameEditorViewModel(
+            templateLibrary: templateLibrary,
+            widgetSnapshotStore: snapshotStore
+        )
+
+        viewModel.refreshSavedTemplates()
+
+        XCTAssertEqual(try snapshotStore.readSnapshots().map(\.source), [.locked])
+
+        viewModel.setWidgetPublishingEnabled(true)
+
+        let unlockedSnapshots = try snapshotStore.readSnapshots()
+        XCTAssertFalse(unlockedSnapshots.contains { $0.source == .locked })
+        XCTAssertTrue(unlockedSnapshots.contains { $0.title == "Pro Game" })
     }
 
     func testWidgetTemplateSnapshotFormatsStaticDurationText() {
@@ -486,6 +539,46 @@ final class Visual_TimerTests: XCTestCase {
         let viewModel = HistoryViewModel(store: store)
 
         XCTAssertEqual(viewModel.records.map(\.id), [record.id])
+    }
+
+    func testHistoryViewModelNotifiesDeletedRecord() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+        let viewModel = HistoryViewModel(store: store)
+        var deletedIDs: [UUID] = []
+        viewModel.onRecordDeleted = { deletedIDs.append($0) }
+
+        viewModel.deleteRecord(id: record.id)
+
+        XCTAssertEqual(deletedIDs, [record.id])
+        XCTAssertTrue(viewModel.records.isEmpty)
+        XCTAssertNil(store.load(id: record.id))
+    }
+
+    func testGameViewModelSavesCompletedSessionThroughInjectedHistoryStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeTemplateGame(title: "Tracked Session"))
+        gameViewModel.startGame()
+        gameViewModel.endGame()
+
+        let records = store.loadAll()
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertEqual(records.first?.gameTitle, "Tracked Session")
     }
 
     // MARK: - GameSequence
