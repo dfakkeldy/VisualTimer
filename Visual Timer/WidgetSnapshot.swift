@@ -24,4 +24,17 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
             return URL(string: "turntimer://template/\(templateID?.uuidString ?? id)")!
         }
     }
+
+    var durationText: String {
+        let clampedSeconds = max(0, totalSeconds)
+        let hours = clampedSeconds / 3_600
+        let minutes = (clampedSeconds % 3_600) / 60
+        let seconds = clampedSeconds % 60
+
+        if hours > 0 {
+            return "\(hours):" + String(format: "%02d:%02d", minutes, seconds)
+        }
+
+        return "\(minutes):" + String(format: "%02d", seconds)
+    }
 }

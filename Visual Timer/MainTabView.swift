@@ -71,6 +71,9 @@ struct MainTabView: View {
                 .tag(2)
         }
         .onOpenURL(perform: handleOpenURL)
+        .task {
+            gameEditorViewModel.refreshSavedTemplates()
+        }
         .task(id: proAccess.isProUnlocked) {
             await templateSync.setEnabled(proAccess.isProUnlocked)
             await historySync.setEnabled(proAccess.isProUnlocked)

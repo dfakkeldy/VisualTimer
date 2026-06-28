@@ -383,6 +383,22 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(try store.readSnapshots(), [])
     }
 
+    func testWidgetTemplateSnapshotFormatsStaticDurationText() {
+        let snapshot = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "2 rounds",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 4_800,
+            roundCount: 2,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+
+        XCTAssertEqual(snapshot.durationText, "1:20:00")
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)

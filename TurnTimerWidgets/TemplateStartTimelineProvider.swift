@@ -39,15 +39,17 @@ struct TemplateStartTimelineProvider: AppIntentTimelineProvider {
 }
 
 extension WidgetTemplateSnapshot {
-    static let gameNightFallback = WidgetTemplateSnapshot(
-        id: "game-night",
-        title: "Game Night",
-        subtitle: "Player turns plus a table timeout.",
-        source: .starter,
-        templateID: nil,
-        starterID: "game-night",
-        totalSeconds: 300,
-        roundCount: 4,
-        modifiedAt: Date(timeIntervalSince1970: 0)
-    )
+    nonisolated static var gameNightFallback: WidgetTemplateSnapshot {
+        WidgetTemplateSnapshot(
+            id: "game-night",
+            title: "Game Night",
+            subtitle: "Player turns plus a table timeout.",
+            source: .starter,
+            templateID: nil,
+            starterID: "game-night",
+            totalSeconds: 300,
+            roundCount: 4,
+            modifiedAt: Date(timeIntervalSince1970: 0)
+        )
+    }
 }

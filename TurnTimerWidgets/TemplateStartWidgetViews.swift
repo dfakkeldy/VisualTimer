@@ -44,7 +44,7 @@ private struct TemplateStartSmallWidgetView: View {
                     .font(.headline)
                     .lineLimit(2)
 
-                Text(Date.now.addingTimeInterval(TimeInterval(snapshot.totalSeconds)), style: .timer)
+                Text(snapshot.durationText)
                     .font(.title2.monospacedDigit())
                     .bold()
             }
@@ -88,7 +88,7 @@ private struct TemplateStartMediumWidgetView: View {
                     .lineLimit(2)
 
                 HStack(spacing: 8) {
-                    Text(Date.now.addingTimeInterval(TimeInterval(snapshot.totalSeconds)), style: .timer)
+                    Text(snapshot.durationText)
                         .font(.title3.monospacedDigit())
                         .bold()
 
@@ -115,7 +115,7 @@ private struct TemplateStartCircularWidgetView: View {
                 Image(systemName: "timer")
                     .font(.caption)
 
-                Text(Date.now.addingTimeInterval(TimeInterval(snapshot.totalSeconds)), style: .timer)
+                Text(snapshot.durationText)
                     .font(.caption2.monospacedDigit())
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
@@ -133,7 +133,7 @@ private struct TemplateStartRectangularWidgetView: View {
                 .font(.headline)
                 .lineLimit(1)
 
-            Text(Date.now.addingTimeInterval(TimeInterval(snapshot.totalSeconds)), style: .timer)
+            Text(snapshot.durationText)
                 .font(.body.monospacedDigit())
                 .bold()
                 .lineLimit(1)
@@ -152,6 +152,6 @@ private struct TemplateStartInlineWidgetView: View {
     var body: some View {
         Text(snapshot.title)
         + Text(" ")
-        + Text(Date.now.addingTimeInterval(TimeInterval(snapshot.totalSeconds)), style: .timer)
+        + Text(snapshot.durationText)
     }
 }
