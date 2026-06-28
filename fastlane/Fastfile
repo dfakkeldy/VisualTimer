@@ -1,73 +1,160 @@
+APP_IDENTIFIER = "Dan.Visual-Timer"
+PROJECT_PATH = "Visual Timer.xcodeproj"
+IOS_SCHEME = "Visual Timer"
+TEAM_ID = "8AXNA5B37R"
+
+SIGNING_TARGETS = {
+  "Visual Timer" => "Dan.Visual-Timer",
+  "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
+  "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp",
+  "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets"
+}.freeze
+
+TESTFLIGHT_CHANNELS = {
+  "nightly" => {
+    group: "nightly",
+    external: false
+  },
+  "weekly" => {
+    group: "weekly",
+    external: true
+  }
+}.freeze
+
+def boolean_env(name, default:)
+  value = ENV[name]
+  return default if value.nil? || value.empty?
+
+  %w[1 true yes on].include?(value.downcase)
+end
+
+def app_store_connect_key
+  require "json"
+
+  api_key_data = JSON.parse(File.read(ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")))
+  app_store_connect_api_key(
+    key_id: api_key_data.fetch("key_id"),
+    issuer_id: api_key_data.fetch("issuer_id"),
+    key_content: api_key_data.fetch("key"),
+    in_house: api_key_data.fetch("in_house", false)
+  )
+end
+
+def project_target_names
+  require "xcodeproj"
+
+  Xcodeproj::Project.open(PROJECT_PATH).targets.map(&:name)
+end
+
+def signing_targets
+  target_names = project_target_names
+  SIGNING_TARGETS.select { |target, _| target_names.include?(target) }
+end
+
+def sync_release_signing(api_key)
+  refresh_profiles = boolean_env("MATCH_REFRESH_PROFILES", default: false)
+  readonly = ENV["CI"].to_s.casecmp("true").zero? && !refresh_profiles
+  targets = signing_targets
+
+  match(
+    type: "appstore",
+    api_key: api_key,
+    app_identifier: targets.values,
+    readonly: readonly,
+    force: refresh_profiles
+  )
+
+  return unless ENV["CI"].to_s.casecmp("true").zero?
+
+  mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
+  targets.each do |target, bundle_id|
+    profile = mapping[bundle_id]
+    next if profile.nil?
+
+    update_code_signing_settings(
+      path: PROJECT_PATH,
+      use_automatic_signing: false,
+      targets: [target],
+      team_id: TEAM_ID,
+      code_sign_identity: "Apple Distribution",
+      profile_name: profile
+    )
+  end
+end
+
+def increment_release_build_number(api_key)
+  latest_build_number = latest_testflight_build_number(
+    app_identifier: APP_IDENTIFIER,
+    api_key: api_key,
+    initial_build_number: 0
+  )
+
+  increment_build_number(
+    build_number: latest_build_number + 1,
+    xcodeproj: PROJECT_PATH
+  )
+end
+
+def release_changelog(channel)
+  sha = ENV.fetch("GITHUB_SHA", "local")
+  short_sha = sha == "local" ? sha : sha[0, 7]
+  "Automated #{channel} build from #{short_sha}."
+end
+
+def build_release(channel)
+  build_app(
+    project: PROJECT_PATH,
+    scheme: IOS_SCHEME,
+    export_method: "app-store",
+    clean: true,
+    output_directory: "fastlane/builds/#{channel}",
+    output_name: "TurnTimer-#{channel}.ipa"
+  )
+end
+
 default_platform(:ios)
 
 platform :ios do
-  desc "Build and upload a release train to TestFlight"
+  desc "Build and distribute nightly or weekly release trains to TestFlight"
   lane :beta do |options|
-    channel = options[:channel]
-    UI.user_error!("Pass channel:nightly or channel:weekly") unless %w[nightly weekly].include?(channel)
+    channel = options[:channel].to_s
+    config = TESTFLIGHT_CHANNELS[channel]
+    UI.user_error!("Pass channel:nightly or channel:weekly") if config.nil?
 
-    require "json"
-    api_key_data = JSON.parse(File.read(ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")))
-    api_key = app_store_connect_api_key(
-      key_id: api_key_data.fetch("key_id"),
-      issuer_id: api_key_data.fetch("issuer_id"),
-      key_content: api_key_data.fetch("key"),
-      in_house: api_key_data.fetch("in_house", false)
-    )
-    app_identifier = CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier)
-
-    match(
-      type: "appstore",
-      api_key: api_key,
-      readonly: ENV["CI"].to_s.casecmp("true").zero?
-    )
-
-    if ENV["CI"].to_s.casecmp("true").zero?
-      mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
-      {
-        "Visual Timer" => "Dan.Visual-Timer",
-        "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets",
-        "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
-        "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp"
-      }.each do |target, bundle_id|
-        profile = mapping[bundle_id]
-        next if profile.nil?
-
-        update_code_signing_settings(
-          path: "Visual Timer.xcodeproj",
-          use_automatic_signing: false,
-          targets: [target],
-          team_id: "8AXNA5B37R",
-          code_sign_identity: "Apple Distribution",
-          profile_name: profile
-        )
-      end
-    end
-
-    latest_build_number = latest_testflight_build_number(
-      app_identifier: app_identifier,
-      api_key: api_key,
-      initial_build_number: 0
-    )
-
-    increment_build_number(
-      build_number: latest_build_number + 1,
-      xcodeproj: "Visual Timer.xcodeproj"
-    )
-
-    build_app(
-      project: "Visual Timer.xcodeproj",
-      scheme: "Visual Timer",
-      export_method: "app-store",
-      clean: true,
-      output_directory: "fastlane/builds/#{channel}",
-      output_name: "TurnTimer-#{channel}.ipa"
-    )
+    api_key = app_store_connect_key
+    sync_release_signing(api_key)
+    increment_release_build_number(api_key)
+    ipa_path = build_release(channel)
 
     upload_to_testflight(
       api_key: api_key,
-      groups: [channel],
-      skip_waiting_for_build_processing: true
+      ipa: ipa_path,
+      groups: [config.fetch(:group)],
+      distribute_external: config.fetch(:external),
+      notify_external_testers: config.fetch(:external),
+      changelog: release_changelog(channel),
+      skip_waiting_for_build_processing: false
+    )
+  end
+
+  desc "Build and upload the main release train to App Store Connect"
+  lane :app_store do
+    api_key = app_store_connect_key
+    submit_for_review = boolean_env("APP_STORE_SUBMIT_FOR_REVIEW", default: true)
+    automatic_release = boolean_env("APP_STORE_AUTOMATIC_RELEASE", default: false)
+
+    sync_release_signing(api_key)
+    increment_release_build_number(api_key)
+    ipa_path = build_release("appstore")
+
+    upload_to_app_store(
+      api_key: api_key,
+      ipa: ipa_path,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: submit_for_review,
+      automatic_release: automatic_release,
+      force: true
     )
   end
 end

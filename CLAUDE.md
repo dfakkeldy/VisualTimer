@@ -74,6 +74,14 @@ approach.
   Feature work branches from `nightly`, and feature PRs target `nightly`.
 * `main` stays the GitHub default branch. Scheduled release-train workflows only
   run from the default-branch copy after the workflow has been promoted there.
+* Release automation restores the default-branch `fastlane` configuration after
+  checking out a train branch. Keep signing and distribution policy centralized
+  there instead of maintaining divergent fastlane files on `nightly` and
+  `weekly`.
+* Distribution policy: `nightly` goes to the internal TestFlight group named
+  `nightly`, `weekly` goes to the external TestFlight group named `weekly`, and
+  app-affecting pushes to `main` upload to App Store Connect and submit for
+  review by default.
 * Protected branches require the `Build gate + tests` check and pull requests,
   but this solo project requires zero approving reviews.
 * Hotfixes branch from `main`, merge to `main` by PR, then merge `main` back down

@@ -105,16 +105,26 @@ Release flow is one-way: `feature/*` -> `nightly` -> `weekly` -> `main`.
 default-branch copy. Feature work branches from `nightly`; pull requests target
 `nightly`.
 
-| Branch | Purpose | Merge gate | Required reviews | Promotion source |
-|---|---|---|---:|---|
-| `nightly` | Fast integration and daily TestFlight builds | `Build gate + tests` | 0 | `feature/*` |
-| `weekly` | Weekly beta train and Monday TestFlight builds | `Build gate + tests` | 0 | `nightly` |
-| `main` | Stable App Store release branch; tags `vX.Y.Z` cut releases | `Build gate + tests` | 0 | `weekly` |
+| Branch | Purpose | Distribution | Merge gate | Required reviews | Promotion source |
+|---|---|---|---|---:|---|
+| `nightly` | Fast integration | Daily 03:00 Halifax TestFlight build to the internal `nightly` group | `Build gate + tests` | 0 | `feature/*` |
+| `weekly` | Weekly beta train | Monday 09:00 Halifax TestFlight build to the external `weekly` group | `Build gate + tests` | 0 | `nightly` |
+| `main` | Stable App Store release branch | App Store Connect upload and review submission on app-affecting pushes | `Build gate + tests` | 0 | `weekly` |
 
 Hotfixes branch from `main`, merge back to `main` by pull request, then flow
-back down into `weekly` and `nightly`. TestFlight uploads require the
-`APP_STORE_CONNECT_API_KEY_JSON`, `MATCH_PASSWORD`, and `MATCH_GIT_SSH_KEY`
-repository secrets; without them, release-train runs compile only.
+back down into `weekly` and `nightly`.
+
+Release automation runs from the default-branch workflow, then checks out the
+selected train branch before building. The workflow restores the default-branch
+`fastlane` configuration after checkout so signing and distribution policy stay
+centralized while the app code comes from the selected train.
+
+Distribution requires the `APP_STORE_CONNECT_API_KEY_JSON`, `MATCH_PASSWORD`,
+and `MATCH_GIT_SSH_KEY` repository secrets; without them, release-train runs
+compile only. App Store review submission is enabled by default for `main`; set
+the `APP_STORE_SUBMIT_FOR_REVIEW` repository variable to `false` to upload
+without submitting. Set `APP_STORE_AUTOMATIC_RELEASE` to `true` only when
+approved builds should release automatically after App Review.
 
 ## Getting Started
 
