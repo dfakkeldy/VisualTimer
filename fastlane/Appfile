@@ -1,3 +1,2 @@
-app_identifier("TODO:APP_BUNDLE_IDENTIFIER")
-apple_team_id("TODO:APPLE_TEAM_ID")
-itc_team_id("TODO:APP_STORE_CONNECT_TEAM_ID")
+app_identifier("Dan.Visual-Timer")
+team_id("8AXNA5B37R")
