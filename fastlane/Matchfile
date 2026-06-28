@@ -1,8 +1,7 @@
 storage_mode("git")
-git_url("TODO:MATCH_CERTIFICATES_REPOSITORY_SSH_URL")
+git_url("git@github.com:dfakkeldy/echo-audiobooks-certificates.git")
 
 type("appstore")
 readonly(true)
 
-app_identifier(["TODO:APP_BUNDLE_IDENTIFIER"])
-team_id("TODO:APPLE_TEAM_ID")
+team_id("8AXNA5B37R")
