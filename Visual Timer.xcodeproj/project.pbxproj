@@ -8,6 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		CC56FE2C2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DD4401010000000000000001 /* TurnTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = DD4402010000000000000001 /* TurnTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DD4401020000000000000001 /* SharedAppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402020000000000000001 /* SharedAppGroup.swift */; };
+		DD4401030000000000000001 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402030000000000000001 /* WidgetSnapshot.swift */; };
+		DD4401040000000000000001 /* WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402040000000000000001 /* WidgetSnapshotStore.swift */; };
+		DD4401050000000000000001 /* TurnTimerDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402050000000000000001 /* TurnTimerDeepLink.swift */; };
+		DD4401060000000000000001 /* StarterTemplateLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402060000000000000001 /* StarterTemplateLibrary.swift */; };
+		DD4401070000000000000001 /* TemplateDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402070000000000000001 /* TemplateDocument.swift */; };
+		DD4401080000000000000001 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402080000000000000001 /* Round.swift */; };
+		DD4401090000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402090000000000000001 /* Theme.swift */; };
+		DD44010A0000000000000001 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020A0000000000000001 /* SoundManager.swift */; };
+		DD44010B0000000000000001 /* UbiquitousSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +57,13 @@
 			remoteGlobalIDString = CC56FE2A2FBA5ABC00918D5A;
 			remoteInfo = "Visual Timer Watch Watch App";
 		};
+		DD44030C0000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CC56F6B92FBA1C2200918D5A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD4403070000000000000001;
+			remoteInfo = TurnTimerWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -70,6 +88,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD44030B0000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DD4401010000000000000001 /* TurnTimerWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -80,12 +109,53 @@
 		CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Visual Timer Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56FE3A2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual Timer Watch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual Timer Watch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD4402010000000000000001 /* TurnTimerWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TurnTimerWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		DD4402020000000000000001 /* SharedAppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SharedAppGroup.swift"; sourceTree = "<group>"; };
+		DD4402030000000000000001 /* WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WidgetSnapshot.swift"; sourceTree = "<group>"; };
+		DD4402040000000000000001 /* WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WidgetSnapshotStore.swift"; sourceTree = "<group>"; };
+		DD4402050000000000000001 /* TurnTimerDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TurnTimerDeepLink.swift"; sourceTree = "<group>"; };
+		DD4402060000000000000001 /* StarterTemplateLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/StarterTemplateLibrary.swift"; sourceTree = "<group>"; };
+		DD4402070000000000000001 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TemplateDocument.swift"; sourceTree = "<group>"; };
+		DD4402080000000000000001 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Round.swift"; sourceTree = "<group>"; };
+		DD4402090000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
+		DD44020A0000000000000001 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SoundManager.swift"; sourceTree = "<group>"; };
+		DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/UbiquitousSettingsStore.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DD4404010000000000000001 /* Exceptions for "Visual Timer" folder in "Visual Timer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				"Visual Timer.entitlements",
+			);
+			target = CC56F6C02FBA1C2200918D5A /* Visual Timer */;
+		};
+		DD4404020000000000000001 /* Exceptions for "TurnTimerWidgets" folder in "TurnTimerWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				TurnTimerWidgets.entitlements,
+			);
+			target = DD4403070000000000000001 /* TurnTimerWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CC56F6C32FBA1C2200918D5A /* Visual Timer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD4404010000000000000001 /* Exceptions for "Visual Timer" folder in "Visual Timer" target */,
+			);
 			path = "Visual Timer";
+			sourceTree = "<group>";
+		};
+		DD4403030000000000000001 /* TurnTimerWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DD4404020000000000000001 /* Exceptions for "TurnTimerWidgets" folder in "TurnTimerWidgets" target */,
+			);
+			path = TurnTimerWidgets;
 			sourceTree = "<group>";
 		};
 		CC56F6D12FBA1C2400918D5A /* Visual TimerTests */ = {
@@ -173,6 +243,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD4403040000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -180,6 +257,7 @@
 			isa = PBXGroup;
 			children = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
+				DD4403030000000000000001 /* TurnTimerWidgets */,
 				CC56F6D12FBA1C2400918D5A /* Visual TimerTests */,
 				CC56F6DB2FBA1C2400918D5A /* Visual TimerUITests */,
 				CC56FDFA2FBA5A7000918D5A /* Visual Timer Watch Watch App */,
@@ -202,6 +280,7 @@
 				CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */,
 				CC56FE3A2FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests.xctest */,
 				CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */,
+				DD4402010000000000000001 /* TurnTimerWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -216,11 +295,13 @@
 				CC56F6BD2FBA1C2200918D5A /* Sources */,
 				CC56F6BE2FBA1C2200918D5A /* Frameworks */,
 				CC56F6BF2FBA1C2200918D5A /* Resources */,
+				DD44030B0000000000000001 /* Embed App Extensions */,
 				CC56FE1D2FBA5A7200918D5A /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DD44030D0000000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
@@ -365,6 +446,28 @@
 			productReference = CC56FE442FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		DD4403070000000000000001 /* TurnTimerWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DD44030A0000000000000001 /* Build configuration list for PBXNativeTarget "TurnTimerWidgets" */;
+			buildPhases = (
+				DD4403060000000000000001 /* Sources */,
+				DD4403040000000000000001 /* Frameworks */,
+				DD4403050000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DD4403030000000000000001 /* TurnTimerWidgets */,
+			);
+			name = TurnTimerWidgets;
+			packageProductDependencies = (
+			);
+			productName = TurnTimerWidgets;
+			productReference = DD4402010000000000000001 /* TurnTimerWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -400,6 +503,9 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = CC56FE2A2FBA5ABC00918D5A;
 					};
+					DD4403070000000000000001 = {
+						CreatedOnToolsVersion = 26.6;
+					};
 				};
 			};
 			buildConfigurationList = CC56F6BC2FBA1C2200918D5A /* Build configuration list for PBXProject "Visual Timer" */;
@@ -423,6 +529,7 @@
 				CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */,
 				CC56FE392FBA5ABE00918D5A /* Visual Timer Watch Watch AppTests */,
 				CC56FE432FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests */,
+				DD4403070000000000000001 /* TurnTimerWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -477,6 +584,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD4403050000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -522,6 +636,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DD4403060000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DD4401020000000000000001 /* SharedAppGroup.swift in Sources */,
+				DD4401030000000000000001 /* WidgetSnapshot.swift in Sources */,
+				DD4401040000000000000001 /* WidgetSnapshotStore.swift in Sources */,
+				DD4401050000000000000001 /* TurnTimerDeepLink.swift in Sources */,
+				DD4401060000000000000001 /* StarterTemplateLibrary.swift in Sources */,
+				DD4401070000000000000001 /* TemplateDocument.swift in Sources */,
+				DD4401080000000000000001 /* Round.swift in Sources */,
+				DD4401090000000000000001 /* Theme.swift in Sources */,
+				DD44010A0000000000000001 /* SoundManager.swift in Sources */,
+				DD44010B0000000000000001 /* UbiquitousSettingsStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -549,6 +680,11 @@
 			isa = PBXTargetDependency;
 			target = CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */;
 			targetProxy = CC56FE452FBA5ABE00918D5A /* PBXContainerItemProxy */;
+		};
+		DD44030D0000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD4403070000000000000001 /* TurnTimerWidgets */;
+			targetProxy = DD44030C0000000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -684,15 +820,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8AXNA5B37R;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Turn Timer";
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Visual Timer/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -720,15 +849,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8AXNA5B37R;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Turn Timer";
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Visual Timer/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1018,6 +1140,72 @@
 			};
 			name = Release;
 		};
+		DD4403080000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TurnTimerWidgets/TurnTimerWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8AXNA5B37R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TurnTimerWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Dan.Visual-Timer.TurnTimerWidgets";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DD4403090000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = TurnTimerWidgets/TurnTimerWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8AXNA5B37R;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TurnTimerWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Dan.Visual-Timer.TurnTimerWidgets";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = "XPC!";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1089,6 +1277,15 @@
 			buildConfigurations = (
 				CC56FE572FBA5ABE00918D5A /* Debug */,
 				CC56FE582FBA5ABE00918D5A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DD44030A0000000000000001 /* Build configuration list for PBXNativeTarget "TurnTimerWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DD4403080000000000000001 /* Debug */,
+				DD4403090000000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -171,9 +171,17 @@ final class TemplateLibraryStore {
             title: document.title,
             roundCount: document.game.rounds.count,
             repeatCount: document.game.roundCount,
+            totalSeconds: totalSeconds(for: document.game),
             modifiedAt: document.modifiedAt,
             url: url
         )
+    }
+
+    private func totalSeconds(for game: GameSequence) -> Int {
+        let sequenceSeconds = game.activeRounds.reduce(0) { total, round in
+            total + round.durationSeconds
+        }
+        return sequenceSeconds * game.roundCount
     }
 
     private func ensureTemplatesDirectoryExists() throws {

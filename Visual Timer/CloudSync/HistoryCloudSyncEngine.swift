@@ -3,7 +3,7 @@ import Combine
 import Foundation
 
 @MainActor
-final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unchecked Sendable {
+final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unchecked Sendable {
     enum SyncState: Equatable {
         case disabled
         case checkingAccount
@@ -17,67 +17,32 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var changeRevision = 0
 
-    private let configuration: TemplateSyncConfiguration
-    private let templateLibrary: TemplateLibraryStore
-    private let mapper: TemplateCloudRecordMapper
+    private let configuration: HistorySyncConfiguration
+    private let historyStore: HistoryStore
+    private let mapper: HistoryCloudRecordMapper
     private let userDefaults: UserDefaults
     private var syncEngine: CKSyncEngine?
-    private var needsInitialTemplateSync = false
-
-    var statusText: String {
-        switch syncState {
-        case .disabled:
-            return "Sync off"
-        case .checkingAccount:
-            return "Checking iCloud..."
-        case .idle:
-            if let lastSyncDate {
-                return "Synced \(lastSyncDate.formatted(date: .omitted, time: .shortened))"
-            }
-            return "Sync ready"
-        case .syncing:
-            return "Syncing..."
-        case .failed(let message):
-            return message
-        }
-    }
-
-    var statusSymbol: String {
-        switch syncState {
-        case .disabled:
-            return "icloud.slash"
-        case .checkingAccount, .syncing:
-            return "icloud.and.arrow.up"
-        case .idle:
-            return "icloud"
-        case .failed:
-            return "exclamationmark.icloud"
-        }
-    }
+    private var needsInitialHistorySync = false
+    private var pendingDeletedHistoryIDs = Set<UUID>()
 
     convenience init() {
-        self.init(
-            templateLibrary: TemplateLibraryStore(),
-            configuration: TemplateSyncConfiguration()
-        )
+        self.init(historyStore: HistoryStore(), configuration: HistorySyncConfiguration())
     }
 
-    convenience init(templateLibrary: TemplateLibraryStore) {
-        self.init(
-            templateLibrary: templateLibrary,
-            configuration: TemplateSyncConfiguration()
-        )
+    convenience init(historyStore: HistoryStore) {
+        self.init(historyStore: historyStore, configuration: HistorySyncConfiguration())
     }
 
     init(
-        templateLibrary: TemplateLibraryStore,
-        configuration: TemplateSyncConfiguration,
+        historyStore: HistoryStore,
+        configuration: HistorySyncConfiguration,
         userDefaults: UserDefaults = .standard
     ) {
-        self.templateLibrary = templateLibrary
+        self.historyStore = historyStore
         self.configuration = configuration
         self.userDefaults = userDefaults
-        self.mapper = TemplateCloudRecordMapper(configuration: configuration)
+        self.mapper = HistoryCloudRecordMapper(configuration: configuration)
+        self.pendingDeletedHistoryIDs = Self.loadPendingDeletedHistoryIDs(from: userDefaults)
     }
 
     func setEnabled(_ isEnabled: Bool) async {
@@ -88,15 +53,24 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         }
     }
 
-    func queueLocalTemplates(_ templates: [SavedTemplate]) {
+    func queueLocalHistory(_ records: [GameRecord]) {
         guard let syncEngine else { return }
-        let pendingChanges = templates.map { template in
-            CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: template.id))
-        }
+        let pendingChanges = records
+            .filter { !pendingDeletedHistoryIDs.contains($0.id) }
+            .map { record in
+                CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: record.id))
+            }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
         Task {
             await sendChanges()
         }
+    }
+
+    func queueDeletedHistory(id: UUID) {
+        pendingDeletedHistoryIDs.insert(id)
+        savePendingDeletedHistoryIDs()
+        guard syncEngine != nil, !needsInitialHistorySync else { return }
+        queuePendingDeletedHistories()
     }
 
     func refreshNow() async {
@@ -114,7 +88,8 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
 
     private func start() async {
         guard syncEngine == nil else {
-            queueLocalTemplates(templateLibrary.listTemplates())
+            queueLocalHistory(historyStore.loadAll())
+            queuePendingDeletedHistories()
             await refreshNow()
             return
         }
@@ -129,11 +104,11 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
             delegate: self
         )
         engineConfiguration.automaticallySync = true
-        engineConfiguration.subscriptionID = TemplateSyncConfiguration.subscriptionID
+        engineConfiguration.subscriptionID = HistorySyncConfiguration.subscriptionID
 
         let engine = CKSyncEngine(engineConfiguration)
         syncEngine = engine
-        needsInitialTemplateSync = true
+        needsInitialHistorySync = true
         engine.state.add(pendingDatabaseChanges: [
             .saveZone(CKRecordZone(zoneID: configuration.zoneID)),
         ])
@@ -193,17 +168,24 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         case .sentDatabaseChanges(let changes):
             let savedZoneChanges = changes.savedZones.map { CKSyncEngine.PendingDatabaseChange.saveZone($0) }
             syncEngine.state.remove(pendingDatabaseChanges: savedZoneChanges)
-            if needsInitialTemplateSync,
+            if needsInitialHistorySync,
                changes.savedZones.contains(where: { $0.zoneID == configuration.zoneID }) {
-                needsInitialTemplateSync = false
-                queueLocalTemplates(templateLibrary.listTemplates())
+                needsInitialHistorySync = false
+                queuePendingDeletedHistories()
+                queueLocalHistory(historyStore.loadAll())
             }
         case .sentRecordZoneChanges(let changes):
             let savedChanges = changes.savedRecords.map { CKSyncEngine.PendingRecordZoneChange.saveRecord($0.recordID) }
-            let deletedChanges = changes.deletedRecordIDs.map { CKSyncEngine.PendingRecordZoneChange.deleteRecord($0) }
+            let deleteResult = handleSentDeletedRecordResults(
+                deletedRecordIDs: changes.deletedRecordIDs,
+                failedRecordDeletes: changes.failedRecordDeletes
+            )
+            let deletedChanges = deleteResult.confirmedRecordIDs.map {
+                CKSyncEngine.PendingRecordZoneChange.deleteRecord($0)
+            }
             syncEngine.state.remove(pendingRecordZoneChanges: savedChanges + deletedChanges)
-            if !changes.failedRecordSaves.isEmpty || !changes.failedRecordDeletes.isEmpty {
-                syncState = .failed("Some templates did not sync.")
+            if !changes.failedRecordSaves.isEmpty || deleteResult.hasRetryableFailures {
+                syncState = .failed("Some history did not sync.")
             }
         case .willFetchChanges, .willSendChanges:
             syncState = .syncing
@@ -228,11 +210,11 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         for change in pendingChanges {
             switch change {
             case .saveRecord(let recordID):
-                guard let templateID = UUID(uuidString: recordID.recordName),
-                      let document = try? templateLibrary.loadDocument(id: templateID),
-                      let record = try? mapper.record(from: document)
+                guard let historyID = UUID(uuidString: recordID.recordName),
+                      let document = historyStore.loadDocument(id: historyID),
+                      let cloudRecord = try? mapper.record(from: document)
                 else { continue }
-                recordsToSave.append(record)
+                recordsToSave.append(cloudRecord)
             case .deleteRecord(let recordID):
                 recordIDsToDelete.append(recordID)
             @unknown default:
@@ -251,36 +233,19 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         var appliedChanges = false
 
         for modification in changes.modifications {
-            guard modification.record.recordType == TemplateSyncConfiguration.recordType else { continue }
+            guard modification.record.recordType == HistorySyncConfiguration.recordType else { continue }
             do {
                 let incomingDocument = try mapper.document(from: modification.record)
-                if let localDocument = try? templateLibrary.loadDocument(id: incomingDocument.templateID),
-                   localDocument.modifiedAt > incomingDocument.modifiedAt {
-                    queueLocalTemplates([
-                        SavedTemplate(
-                            id: localDocument.templateID,
-                            title: localDocument.title,
-                            roundCount: localDocument.game.rounds.count,
-                            repeatCount: localDocument.game.roundCount,
-                            totalSeconds: localDocument.game.activeRounds.reduce(0) { total, round in
-                                total + round.durationSeconds
-                            } * localDocument.game.roundCount,
-                            modifiedAt: localDocument.modifiedAt,
-                            url: URL(fileURLWithPath: "")
-                        ),
-                    ])
-                    continue
-                }
-                _ = try templateLibrary.save(document: incomingDocument)
-                appliedChanges = true
+                appliedChanges = applyFetchedHistoryDocument(incomingDocument) || appliedChanges
             } catch {
                 syncState = .failed(CloudSyncError.from(error).localizedDescription)
             }
         }
 
-        for deletion in changes.deletions where deletion.recordType == TemplateSyncConfiguration.recordType {
-            guard let templateID = UUID(uuidString: deletion.recordID.recordName) else { continue }
-            try? templateLibrary.deleteTemplate(id: templateID)
+        for deletion in changes.deletions where deletion.recordType == HistorySyncConfiguration.recordType {
+            guard let historyID = UUID(uuidString: deletion.recordID.recordName) else { continue }
+            historyStore.delete(id: historyID)
+            removeConfirmedDeletedHistoryIDs([deletion.recordID])
             appliedChanges = true
         }
 
@@ -301,17 +266,83 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         }
     }
 
+    @discardableResult
+    func applyFetchedHistoryDocument(_ incomingDocument: HistoryDocument) -> Bool {
+        let historyID = incomingDocument.record.id
+        if pendingDeletedHistoryIDs.contains(historyID) {
+            historyStore.delete(id: historyID)
+            queuePendingDeletedHistories()
+            return true
+        }
+
+        if let localDocument = historyStore.loadDocument(id: historyID),
+           localDocument.modifiedAt > incomingDocument.modifiedAt {
+            queueLocalHistory([localDocument.record])
+            return false
+        }
+
+        historyStore.save(document: incomingDocument)
+        return true
+    }
+
+    @discardableResult
+    func handleSentDeletedRecordResults(
+        deletedRecordIDs: [CKRecord.ID],
+        failedRecordDeletes: [CKRecord.ID: CKError]
+    ) -> (confirmedRecordIDs: [CKRecord.ID], hasRetryableFailures: Bool) {
+        let unknownItemRecordIDs = failedRecordDeletes.compactMap { recordID, error in
+            error.code == .unknownItem ? recordID : nil
+        }
+        let confirmedRecordIDs = deletedRecordIDs + unknownItemRecordIDs
+        removeConfirmedDeletedHistoryIDs(confirmedRecordIDs)
+
+        let hasRetryableFailures = failedRecordDeletes.contains { _, error in
+            error.code != .unknownItem
+        }
+        return (confirmedRecordIDs, hasRetryableFailures)
+    }
+
+    private func queuePendingDeletedHistories() {
+        guard let syncEngine, !pendingDeletedHistoryIDs.isEmpty else { return }
+        let pendingChanges = pendingDeletedHistoryIDs.map { historyID in
+            CKSyncEngine.PendingRecordZoneChange.deleteRecord(mapper.recordID(for: historyID))
+        }
+        syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
+        Task {
+            await sendChanges()
+        }
+    }
+
+    private func removeConfirmedDeletedHistoryIDs(_ recordIDs: [CKRecord.ID]) {
+        let confirmedIDs = Set(recordIDs.compactMap { UUID(uuidString: $0.recordName) })
+        guard !confirmedIDs.isEmpty else { return }
+        pendingDeletedHistoryIDs.subtract(confirmedIDs)
+        savePendingDeletedHistoryIDs()
+    }
+
+    private func savePendingDeletedHistoryIDs() {
+        let ids = pendingDeletedHistoryIDs
+            .map(\.uuidString)
+            .sorted()
+        userDefaults.set(ids, forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey)
+    }
+
+    private static func loadPendingDeletedHistoryIDs(from userDefaults: UserDefaults) -> Set<UUID> {
+        let strings = userDefaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []
+        return Set(strings.compactMap(UUID.init(uuidString:)))
+    }
+
     private func saveStateSerialization(_ serialization: CKSyncEngine.State.Serialization) {
         do {
             let data = try JSONEncoder().encode(serialization)
-            userDefaults.set(data, forKey: TemplateSyncConfiguration.stateSerializationKey)
+            userDefaults.set(data, forKey: HistorySyncConfiguration.stateSerializationKey)
         } catch {
             syncState = .failed("Could not save sync state.")
         }
     }
 
     private func loadStateSerialization() -> CKSyncEngine.State.Serialization? {
-        guard let data = userDefaults.data(forKey: TemplateSyncConfiguration.stateSerializationKey) else {
+        guard let data = userDefaults.data(forKey: HistorySyncConfiguration.stateSerializationKey) else {
             return nil
         }
         return try? JSONDecoder().decode(CKSyncEngine.State.Serialization.self, from: data)

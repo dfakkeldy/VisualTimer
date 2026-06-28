@@ -304,6 +304,154 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    // MARK: - TurnTimerDeepLink
+
+    func testTurnTimerDeepLinkParsesSavedTemplateURL() throws {
+        let id = UUID()
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://template/\(id.uuidString)")!))
+
+        XCTAssertEqual(link, .template(id))
+    }
+
+    func testTurnTimerDeepLinkParsesStarterTemplateURL() throws {
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://starter/game-night")!))
+
+        XCTAssertEqual(link, .starter("game-night"))
+    }
+
+    // MARK: - WidgetSnapshotStore
+
+    func testWidgetSnapshotStoreWritesStarterAndSavedTemplateMetadata() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplateID = UUID(uuidString: "E80D978E-C9F9-4F1A-89DA-A1126FF69272")!
+        let savedURL = directory
+            .appendingPathComponent("Templates", isDirectory: true)
+            .appendingPathComponent("\(savedTemplateID.uuidString).turntimer")
+        let savedTemplate = SavedTemplate(
+            id: savedTemplateID,
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 3,
+            totalSeconds: 480,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: savedURL
+        )
+        let store = WidgetSnapshotStore(
+            containerURLProvider: { directory },
+            dateProvider: { Date(timeIntervalSince1970: 1_000) }
+        )
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: true)
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, StarterTemplateLibrary.templates.count + 1)
+
+        let starterSnapshot = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(starterSnapshot.id, "game-night")
+        XCTAssertEqual(starterSnapshot.source, .starter)
+        XCTAssertEqual(starterSnapshot.starterID, "game-night")
+        XCTAssertNil(starterSnapshot.templateID)
+        XCTAssertEqual(starterSnapshot.totalSeconds, 300)
+        XCTAssertEqual(starterSnapshot.roundCount, 4)
+        XCTAssertEqual(starterSnapshot.modifiedAt, Date(timeIntervalSince1970: 1_000))
+        XCTAssertEqual(starterSnapshot.launchURL, URL(string: "turntimer://starter/game-night")!)
+
+        let savedSnapshot = try XCTUnwrap(snapshots.last)
+        XCTAssertEqual(savedSnapshot.id, savedTemplateID.uuidString)
+        XCTAssertEqual(savedSnapshot.title, "Saved Game")
+        XCTAssertEqual(savedSnapshot.subtitle, "2 rounds • 3x")
+        XCTAssertEqual(savedSnapshot.source, .saved)
+        XCTAssertEqual(savedSnapshot.templateID, savedTemplateID)
+        XCTAssertNil(savedSnapshot.starterID)
+        XCTAssertEqual(savedSnapshot.totalSeconds, 480)
+        XCTAssertEqual(savedSnapshot.roundCount, 2)
+        XCTAssertEqual(savedSnapshot.modifiedAt, Date(timeIntervalSince1970: 2_000))
+        XCTAssertEqual(savedSnapshot.launchURL, URL(string: "turntimer://template/\(savedTemplateID.uuidString)")!)
+
+        let data = try Data(contentsOf: directory.appendingPathComponent("WidgetTemplates.json"))
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(json.contains(savedURL.path))
+    }
+
+    func testWidgetSnapshotStoreReadsEmptySnapshotsWhenFileIsMissing() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        XCTAssertEqual(try store.readSnapshots(), [])
+    }
+
+    func testWidgetSnapshotStoreWritesLockedSnapshotWhenProUnavailable() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplate = SavedTemplate(
+            id: UUID(),
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 1,
+            totalSeconds: 120,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: directory.appendingPathComponent("Saved.turntimer")
+        )
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: false)
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, 1)
+        let locked = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(locked.source, .locked)
+        XCTAssertEqual(locked.title, "Turn Timer Pro")
+        XCTAssertNil(locked.launchURL)
+    }
+
+    func testGameEditorViewModelPublishesLockedWidgetSnapshotsUntilProEnabled() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let documentsDirectory = directory.appendingPathComponent("Documents", isDirectory: true)
+        let appGroupDirectory = directory.appendingPathComponent("AppGroup", isDirectory: true)
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: documentsDirectory)
+        _ = try templateLibrary.save(game: makeTemplateGame(title: "Pro Game"))
+        let snapshotStore = WidgetSnapshotStore(
+            containerURLProvider: { appGroupDirectory },
+            dateProvider: { Date(timeIntervalSince1970: 3_000) }
+        )
+        let viewModel = GameEditorViewModel(
+            templateLibrary: templateLibrary,
+            widgetSnapshotStore: snapshotStore
+        )
+
+        viewModel.refreshSavedTemplates()
+
+        XCTAssertEqual(try snapshotStore.readSnapshots().map(\.source), [.locked])
+
+        viewModel.setWidgetPublishingEnabled(true)
+
+        let unlockedSnapshots = try snapshotStore.readSnapshots()
+        XCTAssertFalse(unlockedSnapshots.contains { $0.source == .locked })
+        XCTAssertTrue(unlockedSnapshots.contains { $0.title == "Pro Game" })
+    }
+
+    func testWidgetTemplateSnapshotFormatsStaticDurationText() {
+        let snapshot = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "2 rounds",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 4_800,
+            roundCount: 2,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+
+        XCTAssertEqual(snapshot.durationText, "1:20:00")
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
@@ -316,6 +464,141 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.templateID, document.templateID)
         XCTAssertEqual(decoded.title, "Synced Template")
         XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
+    }
+
+    func testHistoryCloudRecordMapper_roundTripPreservesHistoryPayload() throws {
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+        let mapper = HistoryCloudRecordMapper()
+
+        let cloudRecord = try mapper.record(from: document)
+        let decoded = try mapper.document(from: cloudRecord)
+
+        XCTAssertEqual(cloudRecord.recordType, HistorySyncConfiguration.recordType)
+        XCTAssertEqual(decoded.record.id, record.id)
+        XCTAssertEqual(decoded.record.gameTitle, record.gameTitle)
+        XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
+    }
+
+    func testHistorySyncConfigurationDefersCloudKitContainerCreation() {
+        let configuration = HistorySyncConfiguration(containerIdentifier: "iCloud.Test.Container")
+        let storedPropertyLabels = Set(Mirror(reflecting: configuration).children.compactMap(\.label))
+
+        XCTAssertTrue(storedPropertyLabels.contains("containerIdentifier"))
+        XCTAssertFalse(storedPropertyLabels.contains("container"))
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEnginePersistsDeletedHistoryIDsAcrossRelaunch() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstDeletedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let secondDeletedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+
+        engine.queueDeletedHistory(id: firstDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString]
+        )
+
+        let relaunchedEngine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        relaunchedEngine.queueDeletedHistory(id: secondDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString, secondDeletedID.uuidString]
+        )
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEngineClearsUnknownItemDeleteTombstone() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        let recordID = HistoryCloudRecordMapper().recordID(for: deletedID)
+
+        engine.queueDeletedHistory(id: deletedID)
+        let result = engine.handleSentDeletedRecordResults(
+            deletedRecordIDs: [],
+            failedRecordDeletes: [recordID: CKError(.unknownItem)]
+        )
+
+        XCTAssertEqual(result.confirmedRecordIDs.map(\.recordName), [deletedID.uuidString])
+        XCTAssertFalse(result.hasRetryableFailures)
+        XCTAssertEqual(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey), [])
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEngineDoesNotApplyRemoteModificationForPendingDelete() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let store = HistoryStore(documentsDirectory: directory)
+        var localRecord = makeHistoryRecords(count: 1)[0]
+        localRecord.id = deletedID
+        store.save(localRecord)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        engine.queueDeletedHistory(id: deletedID)
+        store.delete(id: deletedID)
+
+        var remoteRecord = localRecord
+        remoteRecord.gameTitle = "Remote Resurrection"
+        let didApply = engine.applyFetchedHistoryDocument(
+            HistoryDocument(record: remoteRecord, modifiedAt: Date(timeIntervalSince1970: 10_000))
+        )
+
+        XCTAssertTrue(didApply)
+        XCTAssertNil(store.load(id: deletedID))
+        XCTAssertEqual(
+            defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey),
+            [deletedID.uuidString]
+        )
+    }
+
+    func testCloudKitValidationReportSummarizesFailures() {
+        let report = CloudKitValidationReport(checks: [
+            .init(name: "Account", status: .passed, detail: "Available"),
+            .init(name: "Probe", status: .failed, detail: "Missing Template schema"),
+        ])
+
+        XCTAssertFalse(report.isReadyForRelease)
+        XCTAssertEqual(report.failedChecks.map(\.name), ["Probe"])
     }
 
     // MARK: - HistoryAccessPolicy
@@ -336,6 +619,77 @@ final class Visual_TimerTests: XCTestCase {
 
         XCTAssertEqual(visible.count, 7)
         XCTAssertFalse(HistoryAccessPolicy.isLimited(records: records, isProUnlocked: true))
+    }
+
+    func testHistoryStore_saveDocumentCanLoadRecordFromInjectedDirectory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+
+        store.save(document: document)
+
+        let loaded = try XCTUnwrap(store.load(id: record.id))
+        XCTAssertEqual(loaded.id, record.id)
+        XCTAssertEqual(loaded.gameTitle, record.gameTitle)
+        let loadedDocument = try XCTUnwrap(store.loadDocument(id: record.id))
+        XCTAssertEqual(loadedDocument.modifiedAt.timeIntervalSince1970, 2_000, accuracy: 1)
+        XCTAssertEqual(store.loadAll().map(\.id), [record.id])
+    }
+
+    func testHistoryViewModelLoadsRecordsFromInjectedStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+
+        let viewModel = HistoryViewModel(store: store)
+
+        XCTAssertEqual(viewModel.records.map(\.id), [record.id])
+    }
+
+    func testHistoryViewModelNotifiesDeletedRecord() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+        let viewModel = HistoryViewModel(store: store)
+        var deletedIDs: [UUID] = []
+        viewModel.onRecordDeleted = { deletedIDs.append($0) }
+
+        viewModel.deleteRecord(id: record.id)
+
+        XCTAssertEqual(deletedIDs, [record.id])
+        XCTAssertTrue(viewModel.records.isEmpty)
+        XCTAssertNil(store.load(id: record.id))
+    }
+
+    func testGameViewModelSavesCompletedSessionThroughInjectedHistoryStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeTemplateGame(title: "Tracked Session"))
+        gameViewModel.startGame()
+        gameViewModel.endGame()
+
+        let records = store.loadAll()
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertEqual(records.first?.gameTitle, "Tracked Session")
     }
 
     // MARK: - GameSequence

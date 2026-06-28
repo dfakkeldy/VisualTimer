@@ -15,13 +15,19 @@ starter templates for common timed sessions.
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
   restart, or do over a turn.
 - **History** - Review completed timer sessions, with recent sessions free and
-  full local history available with Pro.
-- **Turn Timer Pro** - Unlock unlimited saved templates and history export with
-  a one-time $4.99 StoreKit purchase.
+  full local history, export, and iCloud sync available with Pro.
+- **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
+  iCloud sync, sharing, widgets, and advanced customization with a one-time
+  $4.99 StoreKit purchase.
 - **Shared template files** - Import and export portable `.turntimer` template
   files without overwriting existing local work.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
   own devices through the private CloudKit database.
+- **Pro iCloud history sync** - Pro users can sync completed session history
+  across their own devices while keeping local history usable offline.
+- **Template widgets** - Home Screen and Lock Screen widgets read compact App
+  Group snapshots and launch starter or saved templates through `turntimer://`
+  deep links.
 - **Watch app** - Keep companion watch target support.
 
 ## Core Features
@@ -43,9 +49,12 @@ starter templates for common timed sessions.
 - **Portable template documents** - Saved templates live in
   `Documents/Templates/<templateID>.turntimer` as JSON. Legacy `.vtgame` files
   still load for migration, but new saves use the `.turntimer` document format.
-- **iCloud sync** - `CKSyncEngine` syncs Pro template records in the private
-  CloudKit database under container `iCloud.Dan.Visual-Timer`. Selected sound
-  syncs through `NSUbiquitousKeyValueStore`.
+- **iCloud sync** - `CKSyncEngine` syncs Pro template and history records in the
+  private CloudKit database under container `iCloud.Dan.Visual-Timer`. Selected
+  sound syncs through `NSUbiquitousKeyValueStore`.
+- **Widget snapshots** - The app writes small Codable template snapshots to the
+  shared App Group container `group.Dan.Visual-Timer`; widgets never read the
+  app's Documents directory directly.
 
 ## Product Roadmap
 
@@ -56,7 +65,7 @@ free. Pro value is built around reuse and portability:
 - Additional saved templates.
 - Full local history and history export.
 - iCloud sync for saved templates.
-- Future iCloud sync for history.
+- iCloud sync for history.
 - Shared templates for families, classrooms, kitchens, meetings, and game
   nights.
 - Home Screen and Lock Screen widgets for one-tap template starts.
@@ -71,7 +80,8 @@ state owners.
 | Timer core | `TimerViewModel`, `TimerState`, `TimerSound`, `SoundManager` | Countdown state, audio, sleep prevention |
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
-| Sync | `TemplateCloudSyncEngine`, `TemplateCloudRecordMapper`, `UbiquitousSettingsStore` | Pro iCloud template sync and lightweight settings sync |
+| Sync | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, CloudKit mappers, `UbiquitousSettingsStore` | Pro iCloud template/history sync and lightweight settings sync |
+| Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, widget timelines, and template launch URLs |
 | History | `HistoryViewModel`, session models and views | Completed session storage and review |
 | Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
@@ -117,16 +127,49 @@ No additional dependencies are required. The project uses only system
 frameworks, including SwiftUI, Combine, AVFoundation, StoreKit, and WatchKit
 support.
 
-## CloudKit Setup
+## CloudKit and Widget Setup
 
 Template sync uses CloudKit container `iCloud.Dan.Visual-Timer`, custom zone
-`TurnTimerTemplates`, and record type `Template`. The record stores a `title`,
-the encoded `.turntimer` JSON `payload`, and `createdAt`, `modifiedAt`, and
-`exportedAt` dates.
+`TurnTimerTemplates`, and record type `Template`. History sync uses the same
+container, custom zone `TurnTimerHistory`, and record type `HistoryRecord`.
+Both sync engines are Pro-only and local-first: local templates and history must
+remain usable while offline, signed out, restricted, or before CloudKit schema
+deployment.
+
+The app and widget extension share `group.Dan.Visual-Timer`. The app writes
+compact `WidgetTemplateSnapshot` payloads into that App Group after starter or
+saved templates change. Widgets read only those snapshots, and taps launch
+`turntimer://starter/<id>` or `turntimer://template/<uuid>` deep links back into
+the app.
 
 Before shipping sync to TestFlight or the App Store, confirm the container is
 enabled for the app identifier, run the app with a signed build and an iCloud
-account, create or sync at least one template, then deploy the CloudKit
-development schema to production in CloudKit Dashboard. Local simulator builds
-verify compilation and record mapping, but they do not prove live iCloud account,
-container, subscription, or production-schema behavior.
+account, create or sync at least one template and one history record, then deploy
+the CloudKit development schema to production in CloudKit Dashboard. Local
+simulator builds verify compilation and record mapping, but they do not prove
+live iCloud account, container, subscription, schema, or production-environment
+behavior.
+
+Local validation commands:
+
+```bash
+python3 -m json.tool TurnTimer.storekit >/dev/null
+xcodebuild build-for-testing -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer' -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild build -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer' -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild build -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer Watch Watch App' -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm)'
+```
+
+Signed-device validation checklist:
+
+1. Unlock Pro with local StoreKit or a sandbox purchase.
+2. Create one saved template and one completed history record.
+3. Run `CloudKitValidationRunner.run()` from a temporary debug hook or LLDB
+   expression.
+4. Confirm the template probe save/fetch/delete passes.
+5. Confirm template and history records appear in `TurnTimerTemplates` and
+   `TurnTimerHistory`.
+6. On a second signed device or simulator using the same iCloud account, confirm
+   template and history records appear locally after sync.
+7. Add Home Screen and Lock Screen widgets, confirm starter and saved templates
+   render with the expected durations, and tap each widget to confirm the app
+   opens the matching template.
