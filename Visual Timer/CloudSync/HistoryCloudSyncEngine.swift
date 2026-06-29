@@ -25,6 +25,24 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     private var needsInitialHistorySync = false
     private var pendingDeletedHistoryIDs = Set<UUID>()
 
+    var statusText: String {
+        switch syncState {
+        case .disabled:
+            return "Sync off"
+        case .checkingAccount:
+            return "Checking iCloud..."
+        case .idle:
+            if let lastSyncDate {
+                return "Synced \(lastSyncDate.formatted(date: .omitted, time: .shortened))"
+            }
+            return "Sync ready"
+        case .syncing:
+            return "Syncing..."
+        case .failed(let message):
+            return message
+        }
+    }
+
     convenience init() {
         self.init(historyStore: HistoryStore(), configuration: HistorySyncConfiguration())
     }
@@ -244,9 +262,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
 
         for deletion in changes.deletions where deletion.recordType == HistorySyncConfiguration.recordType {
             guard let historyID = UUID(uuidString: deletion.recordID.recordName) else { continue }
-            historyStore.delete(id: historyID)
-            removeConfirmedDeletedHistoryIDs([deletion.recordID])
-            appliedChanges = true
+            appliedChanges = applyRemoteHistoryDeletion(id: historyID) || appliedChanges
         }
 
         if appliedChanges {
@@ -286,6 +302,27 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     }
 
     @discardableResult
+    func applyRemoteHistoryDeletion(id historyID: UUID, lastSuccessfulSyncDate: Date? = nil) -> Bool {
+        let recordID = mapper.recordID(for: historyID)
+        if pendingDeletedHistoryIDs.contains(historyID) {
+            historyStore.delete(id: historyID)
+            removeConfirmedDeletedHistoryIDs([recordID])
+            return true
+        }
+
+        let syncDate = lastSuccessfulSyncDate ?? lastSyncDate
+        if let localDocument = historyStore.loadDocument(id: historyID),
+           shouldPreserveLocalChange(modifiedAt: localDocument.modifiedAt, lastSuccessfulSyncDate: syncDate) {
+            queueLocalHistory([localDocument.record])
+            return false
+        }
+
+        historyStore.delete(id: historyID)
+        removeConfirmedDeletedHistoryIDs([recordID])
+        return true
+    }
+
+    @discardableResult
     func handleSentDeletedRecordResults(
         deletedRecordIDs: [CKRecord.ID],
         failedRecordDeletes: [CKRecord.ID: CKError]
@@ -311,6 +348,11 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         Task {
             await sendChanges()
         }
+    }
+
+    private func shouldPreserveLocalChange(modifiedAt: Date, lastSuccessfulSyncDate: Date?) -> Bool {
+        guard let lastSuccessfulSyncDate else { return true }
+        return modifiedAt > lastSuccessfulSyncDate
     }
 
     private func removeConfirmedDeletedHistoryIDs(_ recordIDs: [CKRecord.ID]) {

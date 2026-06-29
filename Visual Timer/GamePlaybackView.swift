@@ -7,6 +7,7 @@ struct GamePlaybackView: View {
     @ObservedObject var soundManager: SoundManager
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
+    @ObservedObject var historySync: HistoryCloudSyncEngine
 
     @State private var showSettings = false
 
@@ -37,7 +38,8 @@ struct GamePlaybackView: View {
             SettingsView(
                 soundManager: soundManager,
                 proAccess: proAccess,
-                templateSync: templateSync
+                templateSync: templateSync,
+                historySync: historySync
             )
         }
         .onAppear {
