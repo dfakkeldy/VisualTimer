@@ -554,6 +554,19 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    func testTemplateCloudRecordMapperRejectsPayloadIDMismatch() throws {
+        let document = TurnTimerTemplateDocument(title: "Synced Template", game: makeTemplateGame(title: "Synced Template"))
+        let mapper = TemplateCloudRecordMapper()
+        let wrongID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+        let record = CKRecord(
+            recordType: TemplateSyncConfiguration.recordType,
+            recordID: mapper.recordID(for: wrongID)
+        )
+        try mapper.apply(document: document, to: record)
+
+        XCTAssertThrowsError(try mapper.document(from: record))
+    }
+
     func testHistoryCloudRecordMapper_roundTripPreservesHistoryPayload() throws {
         let record = makeHistoryRecords(count: 1)[0]
         let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
@@ -568,12 +581,72 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
     }
 
+    func testHistoryCloudRecordMapperRejectsPayloadIDMismatch() throws {
+        let history = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: history, modifiedAt: Date(timeIntervalSince1970: 2_000))
+        let mapper = HistoryCloudRecordMapper()
+        let validRecord = try mapper.record(from: document)
+        let wrongID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+        let mismatchedRecord = CKRecord(
+            recordType: HistorySyncConfiguration.recordType,
+            recordID: mapper.recordID(for: wrongID)
+        )
+        mismatchedRecord["payload"] = validRecord["payload"]
+
+        XCTAssertThrowsError(try mapper.document(from: mismatchedRecord))
+    }
+
+    func testHistoryCloudRecordMapperRejectsFutureSchemaVersion() throws {
+        let history = makeHistoryRecords(count: 1)[0]
+        let futureDocument = HistoryDocument(
+            schemaVersion: HistoryDocument.currentSchemaVersion + 1,
+            record: history,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        let mapper = HistoryCloudRecordMapper()
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let record = CKRecord(
+            recordType: HistorySyncConfiguration.recordType,
+            recordID: mapper.recordID(for: history.id)
+        )
+        record["payload"] = try encoder.encode(futureDocument) as NSData
+
+        XCTAssertThrowsError(try mapper.document(from: record))
+    }
+
     func testHistorySyncConfigurationDefersCloudKitContainerCreation() {
         let configuration = HistorySyncConfiguration(containerIdentifier: "iCloud.Test.Container")
         let storedPropertyLabels = Set(Mirror(reflecting: configuration).children.compactMap(\.label))
 
         XCTAssertTrue(storedPropertyLabels.contains("containerIdentifier"))
         XCTAssertFalse(storedPropertyLabels.contains("container"))
+    }
+
+    @MainActor
+    func testTemplateCloudSyncEnginePreservesNewerLocalTemplateWhenRemoteDeletionArrives() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let document = TurnTimerTemplateDocument(
+            title: "Local Edit",
+            game: makeTemplateGame(title: "Local Edit"),
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        let saved = try store.save(document: document)
+        let engine = TemplateCloudSyncEngine(
+            templateLibrary: store,
+            configuration: TemplateSyncConfiguration()
+        )
+
+        let didApplyDeletion = engine.applyRemoteTemplateDeletion(
+            id: saved.id,
+            lastSuccessfulSyncDate: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertFalse(didApplyDeletion)
+        XCTAssertNotNil(try store.loadDocument(id: saved.id))
     }
 
     @MainActor
@@ -679,6 +752,28 @@ final class Visual_TimerTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testHistoryCloudSyncEnginePreservesNewerLocalHistoryWhenRemoteDeletionArrives() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(document: HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000)))
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration()
+        )
+
+        let didApplyDeletion = engine.applyRemoteHistoryDeletion(
+            id: record.id,
+            lastSuccessfulSyncDate: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertFalse(didApplyDeletion)
+        XCTAssertNotNil(store.load(id: record.id))
+    }
+
     func testCloudKitValidationReportSummarizesFailures() {
         let report = CloudKitValidationReport(checks: [
             .init(name: "Account", status: .passed, detail: "Available"),
@@ -687,6 +782,42 @@ final class Visual_TimerTests: XCTestCase {
 
         XCTAssertFalse(report.isReadyForRelease)
         XCTAssertEqual(report.failedChecks.map(\.name), ["Probe"])
+    }
+
+    func testCloudSyncZoneNotFoundMessageIsNotTemplateSpecific() {
+        XCTAssertEqual(CloudSyncError.zoneNotFound.localizedDescription, "Cloud sync zone was not found.")
+    }
+
+    func testCloudKitValidationRunnerChecksTemplateAndHistoryResources() async {
+        final class ValidationProbe {
+            var savedZoneNames: [String] = []
+            var recordTypes: [String] = []
+        }
+
+        let probe = ValidationProbe()
+        let operations = CloudKitValidationRunner.Operations(
+            accountStatus: { .available },
+            saveZone: { zoneID in
+                probe.savedZoneNames.append(zoneID.zoneName)
+            },
+            saveFetchDeleteRecord: { record in
+                probe.recordTypes.append(record.recordType)
+            }
+        )
+        let runner = CloudKitValidationRunner(operations: operations)
+
+        let report = await runner.run()
+
+        XCTAssertEqual(probe.savedZoneNames, [
+            TemplateSyncConfiguration.zoneName,
+            HistorySyncConfiguration.zoneName,
+        ])
+        XCTAssertEqual(probe.recordTypes, [
+            TemplateSyncConfiguration.recordType,
+            HistorySyncConfiguration.recordType,
+        ])
+        XCTAssertTrue(report.checks.contains { $0.name == "History zone" && $0.status == .passed })
+        XCTAssertTrue(report.checks.contains { $0.name == "History schema" && $0.status == .passed })
     }
 
     // MARK: - HistoryAccessPolicy
