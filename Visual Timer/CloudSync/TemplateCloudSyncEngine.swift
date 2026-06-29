@@ -280,13 +280,25 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
 
         for deletion in changes.deletions where deletion.recordType == TemplateSyncConfiguration.recordType {
             guard let templateID = UUID(uuidString: deletion.recordID.recordName) else { continue }
-            try? templateLibrary.deleteTemplate(id: templateID)
-            appliedChanges = true
+            appliedChanges = applyRemoteTemplateDeletion(id: templateID) || appliedChanges
         }
 
         if appliedChanges {
             changeRevision += 1
         }
+    }
+
+    @discardableResult
+    func applyRemoteTemplateDeletion(id templateID: UUID, lastSuccessfulSyncDate: Date? = nil) -> Bool {
+        let syncDate = lastSuccessfulSyncDate ?? lastSyncDate
+        if let localDocument = try? templateLibrary.loadDocument(id: templateID),
+           shouldPreserveLocalChange(modifiedAt: localDocument.modifiedAt, lastSuccessfulSyncDate: syncDate) {
+            queueLocalTemplateDocument(localDocument)
+            return false
+        }
+
+        try? templateLibrary.deleteTemplate(id: templateID)
+        return true
     }
 
     private func sendChanges() async {
@@ -299,6 +311,28 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         } catch {
             syncState = .failed(CloudSyncError.from(error).localizedDescription)
         }
+    }
+
+    private func shouldPreserveLocalChange(modifiedAt: Date, lastSuccessfulSyncDate: Date?) -> Bool {
+        guard let lastSuccessfulSyncDate else { return true }
+        return modifiedAt > lastSuccessfulSyncDate
+    }
+
+    private func queueLocalTemplateDocument(_ document: TurnTimerTemplateDocument) {
+        let game = document.game
+        queueLocalTemplates([
+            SavedTemplate(
+                id: document.templateID,
+                title: document.title,
+                roundCount: game.activeRounds.count,
+                repeatCount: game.roundCount,
+                totalSeconds: game.activeRounds.reduce(0) { total, round in
+                    total + round.durationSeconds
+                } * game.roundCount,
+                modifiedAt: document.modifiedAt,
+                url: URL(fileURLWithPath: "")
+            ),
+        ])
     }
 
     private func saveStateSerialization(_ serialization: CKSyncEngine.State.Serialization) {

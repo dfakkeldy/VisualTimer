@@ -24,8 +24,12 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
         case .saved:
             return URL(string: "turntimer://template/\(templateID?.uuidString ?? id)")!
         case .locked:
-            return nil
+            return URL(string: "turntimer://pro")!
         }
+    }
+
+    var roundCountText: String {
+        TurnTimerCountText.label(for: roundCount, singular: "round")
     }
 
     var durationText: String {
@@ -39,6 +43,10 @@ struct WidgetTemplateSnapshot: Identifiable, Codable, Equatable {
         }
 
         return "\(minutes):" + String(format: "%02d", seconds)
+    }
+
+    static func selectableSnapshots(from snapshots: [WidgetTemplateSnapshot]) -> [WidgetTemplateSnapshot] {
+        snapshots.filter { $0.source != .locked }
     }
 }
 
@@ -55,5 +63,12 @@ extension WidgetTemplateSnapshot {
             roundCount: 0,
             modifiedAt: Date(timeIntervalSince1970: 0)
         )
+    }
+}
+
+enum TurnTimerCountText {
+    static func label(for count: Int, singular: String, plural: String? = nil) -> String {
+        let noun = count == 1 ? singular : (plural ?? "\(singular)s")
+        return "\(count) \(noun)"
     }
 }

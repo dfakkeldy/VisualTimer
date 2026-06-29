@@ -51,6 +51,13 @@ struct TemplateCloudRecordMapper {
         }
 
         var document = try codec.decode(payload as Data)
+        guard document.templateID.uuidString == record.recordID.recordName else {
+            throw CloudSyncError.recordIDMismatch(
+                recordName: record.recordID.recordName,
+                payloadID: document.templateID.uuidString
+            )
+        }
+
         if let title = record[Field.title] as? String {
             document.title = title
             document.game.title = title
