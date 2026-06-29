@@ -6,21 +6,25 @@ struct ShareSheet: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let viewController = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        configurePopover(for: viewController)
+        return viewController
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        configurePopover(for: uiViewController)
+    }
+
+    private func configurePopover(for viewController: UIActivityViewController) {
         if let popover = viewController.popoverPresentationController {
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            let rootView = windowScene?.windows.first?.rootViewController?.view
-            let screen = rootView?.window?.windowScene?.screen
-            popover.sourceView = rootView
+            let sourceView = viewController.view
+            popover.sourceView = sourceView
             popover.sourceRect = CGRect(
-                x: (screen?.bounds.midX) ?? 0,
-                y: (screen?.bounds.midY) ?? 0,
+                x: sourceView?.bounds.midX ?? 0,
+                y: sourceView?.bounds.midY ?? 0,
                 width: 0,
                 height: 0
             )
             popover.permittedArrowDirections = []
         }
-        return viewController
     }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

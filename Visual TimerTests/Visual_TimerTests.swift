@@ -306,6 +306,7 @@ final class Visual_TimerTests: XCTestCase {
 
     // MARK: - TurnTimerDeepLink
 
+    @MainActor
     func testTurnTimerDeepLinkParsesSavedTemplateURL() throws {
         let id = UUID()
         let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://template/\(id.uuidString)")!))
@@ -313,6 +314,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(link, .template(id))
     }
 
+    @MainActor
     func testTurnTimerDeepLinkParsesStarterTemplateURL() throws {
         let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://starter/game-night")!))
 
@@ -405,7 +407,28 @@ final class Visual_TimerTests: XCTestCase {
         let locked = try XCTUnwrap(snapshots.first)
         XCTAssertEqual(locked.source, .locked)
         XCTAssertEqual(locked.title, "Turn Timer Pro")
-        XCTAssertNil(locked.launchURL)
+        XCTAssertEqual(locked.launchURL, URL(string: "turntimer://pro")!)
+    }
+
+    func testWidgetTemplateSelectionFiltersLockedPlaceholders() {
+        let saved = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "1 round",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 60,
+            roundCount: 1,
+            modifiedAt: Date(timeIntervalSince1970: 1_000)
+        )
+
+        let selectable = WidgetTemplateSnapshot.selectableSnapshots(from: [
+            .proLocked,
+            saved,
+        ])
+
+        XCTAssertEqual(selectable.map(\.id), [saved.id])
     }
 
     func testGameEditorViewModelPublishesLockedWidgetSnapshotsUntilProEnabled() throws {
@@ -450,6 +473,25 @@ final class Visual_TimerTests: XCTestCase {
         )
 
         XCTAssertEqual(snapshot.durationText, "1:20:00")
+    }
+
+    func testWidgetTemplateSnapshotFormatsRoundCountText() {
+        var snapshot = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "1 round",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 60,
+            roundCount: 1,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+
+        XCTAssertEqual(snapshot.roundCountText, "1 round")
+
+        snapshot.roundCount = 2
+        XCTAssertEqual(snapshot.roundCountText, "2 rounds")
     }
 
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
@@ -639,6 +681,18 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().map(\.id), [record.id])
     }
 
+    func testHistoryStoreExportURLSanitizesRecordTitle() throws {
+        let store = HistoryStore()
+        var record = makeHistoryRecords(count: 1)[0]
+        record.gameTitle = "A/B:C"
+
+        let url = try XCTUnwrap(store.exportURL(for: record))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertEqual(url.lastPathComponent, "A-B-C.vtlog")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    }
+
     func testHistoryViewModelLoadsRecordsFromInjectedStore() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -690,6 +744,37 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(records.count, 1)
         XCTAssertEqual(savedIDs, records.map(\.id))
         XCTAssertEqual(records.first?.gameTitle, "Tracked Session")
+    }
+
+    @MainActor
+    func testTimerViewModelSetDurationClampsToMinimumDuration() {
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+        let viewModel = TimerViewModel()
+
+        viewModel.setDuration(0)
+
+        XCTAssertEqual(viewModel.totalDuration, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(viewModel.timeRemaining, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "savedTimerDuration"), Theme.TimerMechanic.minimumDuration)
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    @MainActor
+    func testProAccessRefreshResetsPurchaseStateWhenEntitlementIsRevoked() {
+        let proAccess = ProAccessViewModel(automaticallyStartsStoreKitTasks: false)
+
+        proAccess.applyEntitlementRefreshResult(isUnlocked: true)
+        proAccess.applyEntitlementRefreshResult(isUnlocked: false)
+
+        XCTAssertFalse(proAccess.isProUnlocked)
+        XCTAssertEqual(proAccess.purchaseState, .idle)
+    }
+
+    func testTurnTimerCountTextUsesSingularForOne() {
+        XCTAssertEqual(TurnTimerCountText.label(for: 1, singular: "round"), "1 round")
+        XCTAssertEqual(TurnTimerCountText.label(for: 2, singular: "round"), "2 rounds")
+        XCTAssertEqual(TurnTimerCountText.label(for: 1, singular: "do-over"), "1 do-over")
+        XCTAssertEqual(TurnTimerCountText.label(for: 2, singular: "do-over"), "2 do-overs")
     }
 
     // MARK: - GameSequence

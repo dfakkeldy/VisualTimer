@@ -84,7 +84,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Turn Timer Pro")
                 } footer: {
-                    Text("Pro unlocks unlimited templates, full history export, iCloud template sync, sharing, and widgets.")
+                    Text("Pro unlocks unlimited templates, full history export, iCloud template and history sync, sharing, and widgets.")
                 }
             }
             .navigationTitle("Settings")

@@ -167,7 +167,8 @@ struct HistoryStore {
             return nil
         }
         let tempURL = fileManager.temporaryDirectory
-            .appendingPathComponent("\(record.gameTitle).vtlog")
+            .appendingPathComponent(TemplateImportExport.safeFileName(for: record.gameTitle))
+            .appendingPathExtension("vtlog")
         do {
             try data.write(to: tempURL)
             return tempURL

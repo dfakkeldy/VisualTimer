@@ -23,15 +23,16 @@ struct TemplateStartTimelineProvider: AppIntentTimelineProvider {
 
     private func selectedSnapshot(for configuration: TemplateWidgetIntent) -> WidgetTemplateSnapshot {
         let snapshots = Self.availableSnapshots()
+        let selectableSnapshots = WidgetTemplateSnapshot.selectableSnapshots(from: snapshots)
         guard !snapshots.isEmpty else { return .proLocked }
 
         if let selectedID = configuration.template?.id,
-           let selected = snapshots.first(where: { $0.id == selectedID }) {
+           let selected = selectableSnapshots.first(where: { $0.id == selectedID }) {
             return selected
         }
 
-        return snapshots.first(where: { $0.id == WidgetTemplateSnapshot.gameNightFallback.id })
-            ?? snapshots.first(where: { $0.source != .locked })
+        return selectableSnapshots.first(where: { $0.id == WidgetTemplateSnapshot.gameNightFallback.id })
+            ?? selectableSnapshots.first
             ?? snapshots.first
             ?? .proLocked
     }
