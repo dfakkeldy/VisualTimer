@@ -6,6 +6,7 @@ readonly(true)
 
 app_identifier([
   "Dan.Visual-Timer",
+  "Dan.Visual-Timer.TurnTimerWidgets",
   "Dan.Visual-Timer-Watch",
   "Dan.Visual-Timer-Watch.watchkitapp"
 ])
