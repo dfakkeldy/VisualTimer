@@ -25,30 +25,39 @@ struct PlayerRowView: View {
                         ? round.color.swiftUIColor
                         : Theme.ColorValue.textSecondary)
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(round.isActive ? "Mark round inactive" : "Mark round active")
+            .accessibilityValue(round.isActive ? "Active" : "Inactive")
 
             // Emoji
             if !round.emoji.isEmpty {
                 Text(round.emoji)
                     .font(.title3)
+                    .fixedSize()
             }
 
             // Name
             Text(round.name)
                 .font(.body.weight(.medium))
                 .foregroundStyle(Theme.ColorValue.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             // Duration
             Text(round.durationDisplay)
                 .font(.body.monospacedDigit())
                 .foregroundStyle(Theme.ColorValue.textSecondary)
+                .fixedSize(horizontal: true, vertical: false)
 
             // Start paused indicator
             if round.startPaused {
                 Image(systemName: Theme.Symbol.startPaused)
                     .font(.caption)
                     .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .frame(width: 16)
             }
         }
         .opacity(round.isActive ? 1 : 0.4)

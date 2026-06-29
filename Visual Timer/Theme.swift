@@ -41,6 +41,10 @@ enum Theme {
         static let gearTopPadding: CGFloat = 8
         static let controlButtonSpacing: CGFloat = 24
         static let durationStepperSpacing: CGFloat = 20
+        static let compactContentVerticalPadding: CGFloat = 16
+        static let compactTimerCircleMaxSize: CGFloat = 280
+        static let landscapeTimerCircleMaxSize: CGFloat = 240
+        static let landscapeControlColumnWidth: CGFloat = 240
     }
 
     // MARK: - Animation
@@ -154,5 +158,6 @@ enum Theme {
         static let roundProgressFontSize: CGFloat = 13
         static let gameOverFontSize: CGFloat = 28
         static let playbackSpacing: CGFloat = 12
+        static let nextPlayerMaxWidth: CGFloat = 140
     }
 }
