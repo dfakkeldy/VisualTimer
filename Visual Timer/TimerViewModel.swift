@@ -115,6 +115,17 @@ final class TimerViewModel: ObservableObject {
         timeRemaining = totalDuration
     }
 
+    /// Cancels countdown work and restores the timer to its current full duration.
+    /// Used when a containing session ends or is abandoned outside the button flow.
+    func stopAndReset() {
+        endCountdown()
+        state = .notStarted
+#if !os(watchOS)
+        UIApplication.shared.isIdleTimerDisabled = false
+#endif
+        timeRemaining = totalDuration
+    }
+
     /// Reconfigures the timer in-place for a new game round.
     /// Bypasses state-machine guards — only call from `GameViewModel`
     /// when transitioning between rounds.
