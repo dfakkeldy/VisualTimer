@@ -160,6 +160,22 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(round.isActive, true)
     }
 
+    func testParser_roundTripPreservesCountsAsPlayer() {
+        let parser = GameFileParser()
+        var game = GameSequence(title: "Routine")
+        game.rounds = [
+            Round(name: "Turn", durationSeconds: 30, orderIndex: 0, countsAsPlayer: true),
+            Round(name: "Timeout", durationSeconds: 60, orderIndex: 1, countsAsPlayer: false),
+        ]
+
+        let serialized = parser.serialize(game)
+        let (parsed, errors) = parser.parse(serialized)
+
+        XCTAssertTrue(errors.isEmpty, "Unexpected parse errors: \(errors.map(\.message))")
+        XCTAssertTrue(serialized.contains("countsAsPlayer: false"))
+        XCTAssertEqual(parsed.rounds.map(\.countsAsPlayer), [true, false])
+    }
+
     // MARK: - StarterTemplateLibrary
 
     func testStarterTemplateLibrary_containsPhaseOneTemplates() {
@@ -269,6 +285,22 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.game.rounds.map(\.durationSeconds), [60, 300])
     }
 
+    func testTemplateDocumentCodec_decodingNormalizesUnsafeGameFields() throws {
+        let codec = TemplateDocumentCodec()
+        let document = TurnTimerTemplateDocument(title: "Unsafe", game: makeTemplateGame(title: "Unsafe"))
+        let data = try codec.encode(document)
+        var json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        json = json.replacingOccurrences(of: "\"index\" : 0", with: "\"index\" : -3")
+        json = json.replacingOccurrences(of: "\"durationSeconds\" : 60", with: "\"durationSeconds\" : 0")
+        json = json.replacingOccurrences(of: "\"roundCount\" : 1", with: "\"roundCount\" : 0")
+
+        let decoded = try codec.decode(Data(json.utf8))
+
+        XCTAssertEqual(decoded.game.roundCount, 1)
+        XCTAssertEqual(decoded.game.rounds.first?.durationSeconds, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(decoded.game.rounds.first?.color, .default)
+    }
+
     func testTemplateLibraryStore_importTemplateDuplicatesWithoutOverwriting() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -287,6 +319,20 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: imported.url.path))
     }
 
+    func testTemplateLibraryStore_savedMetadataCountsActiveRounds() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var game = makeTemplateGame(title: "Active Count")
+        game.rounds[1].isActive = false
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+
+        let saved = try store.save(game: game)
+
+        XCTAssertEqual(saved.roundCount, 1)
+        XCTAssertEqual(saved.totalSeconds, 60)
+        XCTAssertEqual(saved.subtitle, "1 round • once")
+    }
+
     func testTemplateLibraryStore_migratesLegacyVTGameToTurnTimerFile() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -302,6 +348,48 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(migrated.title, "Legacy Template")
         XCTAssertEqual(migrated.url.pathExtension, "turntimer")
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
+    }
+
+    func testGameEditorViewModel_loadLegacyTemplatePreservesDraftOnParseFailure() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("Broken.vtgame")
+        try """
+        title: Broken Import
+
+        [round]
+        name: Bad Round
+        time: nope
+        """.write(to: url, atomically: true, encoding: .utf8)
+        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory))
+        editor.gameTitle = "Current Draft"
+        editor.rounds = [Round(name: "Keep Me", durationSeconds: 30, orderIndex: 0)]
+        editor.roundCount = 3
+
+        let (didLoad, errors) = editor.load(from: url)
+
+        XCTAssertFalse(didLoad)
+        XCTAssertFalse(errors.isEmpty)
+        XCTAssertEqual(editor.gameTitle, "Current Draft")
+        XCTAssertEqual(editor.rounds.map(\.name), ["Keep Me"])
+        XCTAssertEqual(editor.roundCount, 3)
+    }
+
+    func testGameEditorViewModel_saveToDocumentsRejectsTemplatesWithoutActiveRounds() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: directory)
+        let editor = GameEditorViewModel(templateLibrary: templateLibrary)
+        editor.gameTitle = "Inactive Routine"
+        editor.rounds = [Round(name: "Hidden", durationSeconds: 30, isActive: false, orderIndex: 0)]
+
+        let result = editor.saveToDocuments(isProUnlocked: true)
+
+        guard case .failed(let errors) = result else {
+            return XCTFail("Expected saving to fail")
+        }
+        XCTAssertEqual(errors.map(\.message), ["Add at least one active round before saving."])
+        XCTAssertTrue(templateLibrary.listTemplates().isEmpty)
     }
 
     // MARK: - TurnTimerDeepLink
