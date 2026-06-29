@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var soundManager: SoundManager
     @StateObject private var proAccess = ProAccessViewModel()
     @StateObject private var templateSync = TemplateCloudSyncEngine()
+    @StateObject private var historySync = HistoryCloudSyncEngine()
 
     @State private var showSettings = false
 
@@ -55,7 +56,8 @@ struct ContentView: View {
             SettingsView(
                 soundManager: soundManager,
                 proAccess: proAccess,
-                templateSync: templateSync
+                templateSync: templateSync,
+                historySync: historySync
             )
         }
         .onAppear {

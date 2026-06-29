@@ -103,6 +103,13 @@ final class GameViewModel: ObservableObject {
         return max(count, 1)
     }
 
+    var roundProgressText: String {
+        if countingPlayerCount > 0 {
+            return "Turn \(countingPlayerIndex) of \(countingPlayerCount)"
+        }
+        return "Round \(currentRoundNumber) of \(totalRounds)"
+    }
+
     // MARK: - Init
 
     init(
@@ -120,7 +127,8 @@ final class GameViewModel: ObservableObject {
     // MARK: - Game Lifecycle
 
     func loadGame(_ game: GameSequence) {
-        endGame(clearState: true)
+        resetSession(clearState: true, saveRecord: false)
+        guard !game.activeRounds.isEmpty else { return }
         gameSequence = game
         currentRoundIndex = 0
         gamePhase = .ready
@@ -133,7 +141,7 @@ final class GameViewModel: ObservableObject {
         gamePhase = .playing
         currentRoundIndex = 0
         currentOverallRound = 1
-        totalRoundCount = game.roundCount
+        totalRoundCount = max(game.roundCount, 1)
         gameStartDate = Date()
         gameElapsedTime = 0
         sessionEvents = []
@@ -143,23 +151,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func endGame(clearState: Bool = false) {
-        sessionEvents.append(.gameEnded(timestamp: Date()))
-        stopElapsedTimer()
-        // Only persist a record if a game was actually played.
-        if gameStartDate != nil {
-            saveGameRecord()
-        }
-        gameStartDate = nil
-        timerViewModel.pause()
-        timerViewModel.reset()
-        timerViewModel.timerColorOverride = nil
-        gamePhase = .idle
-        currentRoundIndex = 0
-        currentOverallRound = 1
-        currentRound = nil
-        if clearState {
-            gameSequence = nil
-        }
+        resetSession(clearState: clearState, saveRecord: true)
     }
 
     // MARK: - Round Advancement
@@ -185,9 +177,7 @@ final class GameViewModel: ObservableObject {
             currentRoundIndex = 0
             configureTimerForCurrentRound(autoStart: true)
         } else {
-            gamePhase = .gameOver
-            currentRound = nil
-            timerViewModel.timerColorOverride = nil
+            completeGame()
         }
     }
 
@@ -224,6 +214,37 @@ final class GameViewModel: ObservableObject {
         if autoStart && !round.startPaused {
             timerViewModel.play()
         }
+    }
+
+    private func completeGame() {
+        recordSessionEnd(saveRecord: true)
+        timerViewModel.stopAndReset()
+        timerViewModel.timerColorOverride = nil
+        gamePhase = .gameOver
+        currentRound = nil
+    }
+
+    private func resetSession(clearState: Bool, saveRecord: Bool) {
+        recordSessionEnd(saveRecord: saveRecord)
+        timerViewModel.stopAndReset()
+        timerViewModel.timerColorOverride = nil
+        gamePhase = .idle
+        currentRoundIndex = 0
+        currentOverallRound = 1
+        currentRound = nil
+        if clearState {
+            gameSequence = nil
+        }
+    }
+
+    private func recordSessionEnd(saveRecord: Bool) {
+        guard gameStartDate != nil else { return }
+        sessionEvents.append(.gameEnded(timestamp: Date()))
+        stopElapsedTimer()
+        if saveRecord {
+            saveGameRecord()
+        }
+        gameStartDate = nil
     }
 
     /// User taps the play button on a paused-start round.

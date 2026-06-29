@@ -55,7 +55,8 @@ struct MainTabView: View {
                 gameViewModel: gameViewModel,
                 soundManager: soundManager,
                 proAccess: proAccess,
-                templateSync: templateSync
+                templateSync: templateSync,
+                historySync: historySync
             )
             .tabItem {
                 Label(Theme.Tab.timerTabTitle, systemImage: Theme.Tab.timerTabSymbol)

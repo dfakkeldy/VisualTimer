@@ -47,6 +47,10 @@ final class GameEditorViewModel: ObservableObject {
         UUID(uuidString: lastTemplateID)
     }
 
+    var canSaveOrStartTemplate: Bool {
+        rounds.contains { $0.isActive }
+    }
+
     // MARK: - Round CRUD
 
     func addRound() {
@@ -126,7 +130,7 @@ final class GameEditorViewModel: ObservableObject {
 
     func applyStarterTemplate(_ template: StarterTemplate) {
         var game = template.game
-        game.reindexRounds()
+        game.normalizeTemplateFields()
         gameTitle = game.title
         rounds = game.rounds
         roundCount = game.roundCount
@@ -157,7 +161,7 @@ final class GameEditorViewModel: ObservableObject {
 
     func buildGameSequence() -> GameSequence {
         var game = GameSequence(title: gameTitle, rounds: rounds, roundCount: roundCount)
-        game.reindexRounds()
+        game.normalizeTemplateFields()
         return game
     }
 
@@ -165,6 +169,9 @@ final class GameEditorViewModel: ObservableObject {
 
     func save(to url: URL) -> (Bool, [ParseError]) {
         let game = buildGameSequence()
+        let errors = validationErrors(for: game)
+        guard errors.isEmpty else { return (false, errors) }
+
         do {
             if url.pathExtension.lowercased() == TemplateImportExport.fileExtension {
                 let document = templateLibrary.exportDocument(for: game, templateID: currentSavedTemplateID)
@@ -181,6 +188,10 @@ final class GameEditorViewModel: ObservableObject {
 
     func saveToDocuments(isProUnlocked: Bool) -> TemplateSaveResult {
         refreshSavedTemplates()
+        let game = buildGameSequence()
+        let errors = validationErrors(for: game)
+        guard errors.isEmpty else { return .failed(errors) }
+
         let existingTemplateID = currentSavedTemplateID
         let isUpdatingExistingTemplate = existingTemplateID.map { id in
             savedTemplates.contains { $0.id == id }
@@ -195,7 +206,7 @@ final class GameEditorViewModel: ObservableObject {
         }
 
         do {
-            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
             refreshSavedTemplates()
@@ -208,12 +219,15 @@ final class GameEditorViewModel: ObservableObject {
     /// Saves silently — no alert. Called automatically when tapping Play.
     func autoSave() {
         refreshSavedTemplates()
+        let game = buildGameSequence()
+        guard validationErrors(for: game).isEmpty else { return }
+
         let existingTemplateID = currentSavedTemplateID
         let shouldCreateFirstTemplate = existingTemplateID == nil && savedTemplates.isEmpty
         guard existingTemplateID != nil || shouldCreateFirstTemplate else { return }
 
         do {
-            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
             refreshSavedTemplates()
@@ -258,9 +272,9 @@ final class GameEditorViewModel: ObservableObject {
 
             let content = try String(contentsOf: url, encoding: .utf8)
             let (game, errors) = parser.parse(content)
-            self.gameTitle = game.title
-            self.rounds = game.rounds
-            self.roundCount = game.roundCount
+            guard errors.isEmpty else { return (false, errors) }
+
+            applyGame(game, title: game.title)
             return (errors.isEmpty, errors)
         } catch {
             return (false, [ParseError("Failed to load: \(error.localizedDescription)")])
@@ -288,7 +302,10 @@ final class GameEditorViewModel: ObservableObject {
     }
 
     func exportCurrentTemplateURL() -> URL? {
-        let document = templateLibrary.exportDocument(for: buildGameSequence(), templateID: currentSavedTemplateID)
+        let game = buildGameSequence()
+        guard validationErrors(for: game).isEmpty else { return nil }
+
+        let document = templateLibrary.exportDocument(for: game, templateID: currentSavedTemplateID)
         return try? TemplateImportExport.exportURL(for: document)
     }
 
@@ -323,10 +340,18 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    private func validationErrors(for game: GameSequence) -> [ParseError] {
+        game.activeRounds.isEmpty ? [ParseError("Add at least one active round before saving.")] : []
+    }
+
     private func applyDocument(_ document: TurnTimerTemplateDocument) {
-        var game = document.game
-        game.reindexRounds()
-        gameTitle = document.title
+        applyGame(document.game, title: document.title)
+    }
+
+    private func applyGame(_ game: GameSequence, title: String) {
+        var game = game
+        game.normalizeTemplateFields()
+        gameTitle = title
         rounds = game.rounds
         roundCount = game.roundCount
         expandedRoundId = nil

@@ -10,13 +10,14 @@ struct HistoryCloudRecordMapper {
     }
 
     private let configuration: HistorySyncConfiguration
-    private let encoder = JSONEncoder()
-    private let decoder = JSONDecoder()
+    private let codec: HistoryDocumentCodec
 
-    init(configuration: HistorySyncConfiguration = HistorySyncConfiguration()) {
+    init(
+        configuration: HistorySyncConfiguration = HistorySyncConfiguration(),
+        codec: HistoryDocumentCodec = HistoryDocumentCodec()
+    ) {
         self.configuration = configuration
-        encoder.dateEncodingStrategy = .iso8601
-        decoder.dateDecodingStrategy = .iso8601
+        self.codec = codec
     }
 
     func recordID(for historyID: UUID) -> CKRecord.ID {
@@ -28,7 +29,7 @@ struct HistoryCloudRecordMapper {
             recordType: HistorySyncConfiguration.recordType,
             recordID: recordID(for: document.record.id)
         )
-        record[Field.payload] = try encoder.encode(document) as NSData
+        record[Field.payload] = try codec.encode(document) as NSData
         record[Field.gameTitle] = document.record.gameTitle as CKRecordValue
         record[Field.playedAt] = document.record.playedAt as CKRecordValue
         record[Field.modifiedAt] = document.modifiedAt as CKRecordValue
@@ -36,10 +37,23 @@ struct HistoryCloudRecordMapper {
     }
 
     func document(from record: CKRecord) throws -> HistoryDocument {
-        guard record.recordType == HistorySyncConfiguration.recordType,
-              let payload = record[Field.payload] as? NSData else {
+        guard record.recordType == HistorySyncConfiguration.recordType else {
             throw CloudSyncError.unknownRecordType(record.recordType)
         }
-        return try decoder.decode(HistoryDocument.self, from: payload as Data)
+        guard let payload = record[Field.payload] as? NSData else {
+            throw HistoryDocumentError.invalidHistoryFile
+        }
+
+        var document = try codec.decode(payload as Data)
+        guard document.record.id.uuidString == record.recordID.recordName else {
+            throw CloudSyncError.recordIDMismatch(
+                recordName: record.recordID.recordName,
+                payloadID: document.record.id.uuidString
+            )
+        }
+        if let modifiedAt = record[Field.modifiedAt] as? Date {
+            document.modifiedAt = modifiedAt
+        }
+        return document
     }
 }
