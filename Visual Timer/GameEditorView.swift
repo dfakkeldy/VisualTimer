@@ -47,7 +47,7 @@ struct GameEditorView: View {
                         Image(systemName: Theme.Symbol.exportTemplate)
                     }
                     .accessibilityLabel(Theme.Label.exportTemplate)
-                    .disabled(editor.rounds.isEmpty)
+                    .disabled(!editor.canSaveOrStartTemplate)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -56,7 +56,7 @@ struct GameEditorView: View {
                         let game = editor.buildGameSequence()
                         onPlayGame(game)
                     }
-                    .disabled(editor.rounds.isEmpty)
+                    .disabled(!editor.canSaveOrStartTemplate)
                 }
             }
             .onAppear {
@@ -113,6 +113,7 @@ struct GameEditorView: View {
                 saveGame()
             }
             .font(.body.weight(.medium))
+            .disabled(!editor.canSaveOrStartTemplate)
         }
         .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
         .padding(.vertical, 12)
@@ -379,19 +380,23 @@ private struct PlayerEditSheet: View {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Editor.colorSwatchSpacing), count: 8), spacing: Theme.Editor.colorSwatchSpacing) {
                             ForEach(0..<Theme.ColorValue.timerPalette.count, id: \.self) { index in
                                 let color = Theme.ColorValue.timerPalette[index]
-                                Circle()
-                                    .fill(color)
-                                    .frame(width: Theme.Editor.colorSwatchSize, height: Theme.Editor.colorSwatchSize)
-                                    .overlay {
-                                        if selectedColorIndex == index {
-                                            Circle()
-                                                .strokeBorder(.white, lineWidth: 3)
+                                Button {
+                                    selectedColorIndex = index
+                                    onUpdateColor(.palette(index: index))
+                                } label: {
+                                    Circle()
+                                        .fill(color)
+                                        .frame(width: Theme.Editor.colorSwatchSize, height: Theme.Editor.colorSwatchSize)
+                                        .overlay {
+                                            if selectedColorIndex == index {
+                                                Circle()
+                                                    .strokeBorder(.white, lineWidth: 3)
+                                            }
                                         }
-                                    }
-                                    .onTapGesture {
-                                        selectedColorIndex = index
-                                        onUpdateColor(.palette(index: index))
-                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("\(RoundColor.paletteNames[index]) color")
+                                .accessibilityValue(selectedColorIndex == index ? "Selected" : "Not selected")
                             }
                         }
                     }
