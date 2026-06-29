@@ -154,9 +154,30 @@ Local validation commands:
 
 ```bash
 python3 -m json.tool TurnTimer.storekit >/dev/null
-xcodebuild build-for-testing -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer' -destination 'platform=iOS Simulator,name=iPhone 17'
-xcodebuild build -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer' -destination 'platform=iOS Simulator,name=iPhone 17'
-xcodebuild build -project 'Visual Timer.xcodeproj' -scheme 'Visual Timer Watch Watch App' -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm)'
+xcodebuild build-for-testing \
+  -project 'Visual Timer.xcodeproj' \
+  -scheme 'Visual Timer' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -derivedDataPath .build/DerivedData \
+  CODE_SIGNING_ALLOWED=NO
+xcodebuild test-without-building \
+  -project 'Visual Timer.xcodeproj' \
+  -scheme 'Visual Timer' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -derivedDataPath .build/DerivedData \
+  -parallel-testing-enabled NO \
+  -maximum-concurrent-test-simulator-destinations 1 \
+  CODE_SIGNING_ALLOWED=NO
+xcodebuild build \
+  -project 'Visual Timer.xcodeproj' \
+  -scheme 'Visual Timer' \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  CODE_SIGNING_ALLOWED=NO
+xcodebuild build \
+  -project 'Visual Timer.xcodeproj' \
+  -scheme 'Visual Timer Watch Watch App' \
+  -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm)' \
+  CODE_SIGNING_ALLOWED=NO
 ```
 
 Signed-device validation checklist:

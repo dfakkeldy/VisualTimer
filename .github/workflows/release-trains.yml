@@ -151,7 +151,7 @@ jobs:
               echo "ios_destination=generic/platform=iOS Simulator"
               echo "ios_simulator_udid="
             } >> "$GITHUB_OUTPUT"
-            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and unit tests will be skipped."
+            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and iOS tests will be skipped."
           fi
 
       - name: Prepare result bundles
@@ -187,21 +187,21 @@ jobs:
             -resultBundlePath ".build/results/VisualTimer-watchOS-Build.xcresult" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run iOS unit tests
+      - name: Run iOS tests
         shell: bash
         run: |
           set -euo pipefail
 
           simulator_id="${{ steps.destinations.outputs.ios_simulator_udid }}"
           if [ -z "$simulator_id" ]; then
-            echo "::notice title=Unit tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
+            echo "::notice title=iOS tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
             exit 0
           fi
 
           xcrun simctl boot "$simulator_id" >/tmp/visualtimer-simctl-boot.log 2>&1 || true
           if ! xcrun simctl bootstatus "$simulator_id" -b; then
             cat /tmp/visualtimer-simctl-boot.log
-            echo "::notice title=Unit tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
+            echo "::notice title=iOS tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
             exit 0
           fi
 
@@ -212,7 +212,8 @@ jobs:
             -destination "${{ steps.destinations.outputs.ios_destination }}" \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -resultBundlePath ".build/results/VisualTimer-iOS-Tests.xcresult" \
-            -only-testing:"Visual TimerTests" \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Configure match SSH key

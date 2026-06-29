@@ -306,6 +306,7 @@ final class Visual_TimerTests: XCTestCase {
 
     // MARK: - TurnTimerDeepLink
 
+    @MainActor
     func testTurnTimerDeepLinkParsesSavedTemplateURL() throws {
         let id = UUID()
         let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://template/\(id.uuidString)")!))
@@ -313,6 +314,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(link, .template(id))
     }
 
+    @MainActor
     func testTurnTimerDeepLinkParsesStarterTemplateURL() throws {
         let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://starter/game-night")!))
 

@@ -26,6 +26,7 @@ platform :ios do
       mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
       {
         "Visual Timer" => "Dan.Visual-Timer",
+        "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets",
         "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
         "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp"
       }.each do |target, bundle_id|
