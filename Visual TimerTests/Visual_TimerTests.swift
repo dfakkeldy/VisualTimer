@@ -692,6 +692,123 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(records.first?.gameTitle, "Tracked Session")
     }
 
+    func testGameViewModelSavesNaturalCompletionImmediately() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Natural Finish"))
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+
+        let records = store.loadAll()
+        assertGamePhase(gameViewModel, is: .gameOver)
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertEqual(records.first?.gameTitle, "Natural Finish")
+        XCTAssertTrue(records.first?.session.events.contains {
+            if case .gameEnded = $0 { return true }
+            return false
+        } ?? false)
+    }
+
+    func testGameViewModelEndAfterNaturalCompletionDoesNotDuplicateHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "One Save"))
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.endGame()
+
+        XCTAssertEqual(store.loadAll().count, 1)
+    }
+
+    func testGameViewModelLoadGameAbandonsActiveSessionWithoutSavingHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Abandoned"))
+        gameViewModel.startGame()
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Replacement"))
+
+        XCTAssertTrue(store.loadAll().isEmpty)
+        XCTAssertTrue(savedIDs.isEmpty)
+        assertGamePhase(gameViewModel, is: .ready)
+        XCTAssertEqual(gameViewModel.gameSequence?.title, "Replacement")
+    }
+
+    func testGameViewModelRejectsGameWithNoActiveRounds() {
+        let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
+        var emptyGame = GameSequence(title: "Inactive")
+        emptyGame.rounds = [
+            Round(name: "Muted", durationSeconds: 30, isActive: false, orderIndex: 0),
+        ]
+
+        gameViewModel.loadGame(emptyGame)
+        gameViewModel.startGame()
+
+        assertGamePhase(gameViewModel, is: .idle)
+        XCTAssertNil(gameViewModel.gameSequence)
+        XCTAssertNil(gameViewModel.currentRound)
+    }
+
+    func testGameViewModelSkipFinalRoundStopsTimerAndSavesHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let timerViewModel = TimerViewModel()
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: timerViewModel,
+            historyStore: store
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Skipped Finish"))
+        gameViewModel.startGame()
+        gameViewModel.skipCurrentRound()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+        assertTimerState(timerViewModel, is: .notStarted)
+        XCTAssertEqual(store.loadAll().count, 1)
+    }
+
+    func testGameViewModelUsesRoundProgressForNonTurnRoutines() {
+        let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
+        var routine = GameSequence(title: "Recipe", roundCount: 1)
+        routine.rounds = [
+            Round(name: "Prep", durationSeconds: 60, orderIndex: 0, countsAsPlayer: false),
+            Round(name: "Bake", durationSeconds: 300, orderIndex: 1, countsAsPlayer: false),
+        ]
+
+        gameViewModel.loadGame(routine)
+        gameViewModel.startGame()
+
+        XCTAssertEqual(gameViewModel.roundProgressText, "Round 1 of 2")
+        XCTAssertEqual(gameViewModel.countingPlayerCount, 0)
+    }
+
     // MARK: - GameSequence
 
     func testGameSequence_reindexRounds() {
@@ -716,6 +833,42 @@ final class Visual_TimerTests: XCTestCase {
         ]
         game.reindexRounds()
         return game
+    }
+
+    private func makeSingleRoundGame(title: String) -> GameSequence {
+        var game = GameSequence(title: title, roundCount: 1)
+        game.rounds = [
+            Round(name: "Solo", durationSeconds: 60, orderIndex: 0),
+        ]
+        return game
+    }
+
+    private func assertGamePhase(
+        _ gameViewModel: GameViewModel,
+        is expectedPhase: GamePhase,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        switch (gameViewModel.gamePhase, expectedPhase) {
+        case (.idle, .idle), (.ready, .ready), (.playing, .playing), (.gameOver, .gameOver):
+            break
+        default:
+            XCTFail("Expected game phase \(expectedPhase), got \(gameViewModel.gamePhase)", file: file, line: line)
+        }
+    }
+
+    private func assertTimerState(
+        _ timerViewModel: TimerViewModel,
+        is expectedState: TimerState,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        switch (timerViewModel.state, expectedState) {
+        case (.notStarted, .notStarted), (.running, .running), (.paused, .paused), (.finished, .finished):
+            break
+        default:
+            XCTFail("Expected timer state \(expectedState), got \(timerViewModel.state)", file: file, line: line)
+        }
     }
 
     private func makeTemporaryDirectory() throws -> URL {
