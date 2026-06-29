@@ -59,7 +59,7 @@ final class TimerViewModel: ObservableObject {
 
     /// Persists the chosen duration across app launches.
     /// Defaults to 25 seconds when no previous value exists.
-    @AppStorage("savedTimerDuration") private var savedDuration: Int = 25
+    @AppStorage("savedTimerDuration") private var savedDuration: Int = Theme.TimerMechanic.defaultDuration
 
     // MARK: - Private
 
@@ -71,7 +71,9 @@ final class TimerViewModel: ObservableObject {
 
     init() {
         let stored = UserDefaults.standard.integer(forKey: "savedTimerDuration")
-        let duration = stored > 0 ? stored : 25
+        let duration = stored > 0
+            ? max(Theme.TimerMechanic.minimumDuration, stored)
+            : Theme.TimerMechanic.defaultDuration
         self.totalDuration = duration
         self.timeRemaining = duration
     }
@@ -142,9 +144,10 @@ final class TimerViewModel: ObservableObject {
     /// the timer starts, so the running or paused timer is never disrupted.
     func setDuration(_ duration: Int) {
         guard case .notStarted = state else { return }
-        totalDuration = duration
-        timeRemaining = duration
-        savedDuration = duration
+        let clampedDuration = max(Theme.TimerMechanic.minimumDuration, duration)
+        totalDuration = clampedDuration
+        timeRemaining = clampedDuration
+        savedDuration = clampedDuration
     }
 
     // MARK: - Countdown Engine

@@ -58,7 +58,7 @@ private struct TemplateStartSmallWidgetView: View {
     }
 
     private var metadata: String {
-        "\(snapshot.roundCount) rounds"
+        snapshot.roundCountText
     }
 }
 
@@ -92,7 +92,7 @@ private struct TemplateStartMediumWidgetView: View {
                         .font(.title3.monospacedDigit())
                         .bold()
 
-                    Text("\(snapshot.roundCount) rounds")
+                    Text(snapshot.roundCountText)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -138,7 +138,7 @@ private struct TemplateStartRectangularWidgetView: View {
                 .bold()
                 .lineLimit(1)
 
-            Text("\(snapshot.roundCount) rounds")
+            Text(snapshot.roundCountText)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
