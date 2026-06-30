@@ -71,7 +71,6 @@ jobs:
           else
             schedule="${{ github.event.schedule }}"
             scheduled_hour="$(printf '%s\n' "$schedule" | awk '{ print $2 }')"
-            local_slot="$(TZ=America/Halifax date +%u-%H)"
             offset="$(TZ=America/Halifax date +%z)"
 
             case "$offset" in
@@ -89,9 +88,9 @@ jobs:
                 ;;
             esac
 
-            if [ "$scheduled_hour" = "$nightly_hour" ] && [ "$local_slot" = "$(TZ=America/Halifax date +%u)-03" ]; then
+            if [ "$scheduled_hour" = "$nightly_hour" ]; then
               channel="nightly"
-            elif [ "$scheduled_hour" = "$weekly_hour" ] && [ "$local_slot" = "1-09" ]; then
+            elif [ "$scheduled_hour" = "$weekly_hour" ]; then
               channel="weekly"
             else
               should_run=false
