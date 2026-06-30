@@ -54,3 +54,6 @@ fastlane/test_output
 *.xcodeproj/xcuserdata
 *.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 Thumbs.db
+
+# ── Git worktrees ─────────────────────────────────────
+.worktrees/
