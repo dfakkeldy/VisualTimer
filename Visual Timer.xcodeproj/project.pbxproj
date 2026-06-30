@@ -19,6 +19,20 @@
 		DD4401090000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402090000000000000001 /* Theme.swift */; };
 		DD44010A0000000000000001 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020A0000000000000001 /* SoundManager.swift */; };
 		DD44010B0000000000000001 /* UbiquitousSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */; };
+		EE0001010000000000000001 /* TimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002010000000000000001 /* TimerViewModel.swift */; };
+		EE0001020000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002020000000000000001 /* Theme.swift */; };
+		EE0001030000000000000001 /* Round.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002030000000000000001 /* Round.swift */; };
+		EE0001040000000000000001 /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002040000000000000001 /* GameViewModel.swift */; };
+		EE0001050000000000000001 /* StarterTemplateLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002050000000000000001 /* StarterTemplateLibrary.swift */; };
+		EE0001060000000000000001 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002060000000000000001 /* SoundManager.swift */; };
+		EE0001070000000000000001 /* UbiquitousSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002070000000000000001 /* UbiquitousSettingsStore.swift */; };
+		EE0001080000000000000001 /* GameRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002080000000000000001 /* GameRecord.swift */; };
+		EE0001090000000000000001 /* SessionEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002090000000000000001 /* SessionEvent.swift */; };
+		EE00010A0000000000000001 /* SharedAppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020A0000000000000001 /* SharedAppGroup.swift */; };
+		EE00010B0000000000000001 /* WatchTemplateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020B0000000000000001 /* WatchTemplateStore.swift */; };
+		EE00010C0000000000000001 /* HistoryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020C0000000000000001 /* HistoryDocument.swift */; };
+		EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020D0000000000000001 /* TemplateImportExport.swift */; };
+		EE00010E0000000000000001 /* TemplateDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020E0000000000000001 /* TemplateDocument.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +134,20 @@
 		DD4402090000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
 		DD44020A0000000000000001 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SoundManager.swift"; sourceTree = "<group>"; };
 		DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/UbiquitousSettingsStore.swift"; sourceTree = "<group>"; };
+		EE0002010000000000000001 /* TimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TimerViewModel.swift"; sourceTree = "<group>"; };
+		EE0002020000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
+		EE0002030000000000000001 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Round.swift"; sourceTree = "<group>"; };
+		EE0002040000000000000001 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/GameViewModel.swift"; sourceTree = "<group>"; };
+		EE0002050000000000000001 /* StarterTemplateLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/StarterTemplateLibrary.swift"; sourceTree = "<group>"; };
+		EE0002060000000000000001 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SoundManager.swift"; sourceTree = "<group>"; };
+		EE0002070000000000000001 /* UbiquitousSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/UbiquitousSettingsStore.swift"; sourceTree = "<group>"; };
+		EE0002080000000000000001 /* GameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/GameRecord.swift"; sourceTree = "<group>"; };
+		EE0002090000000000000001 /* SessionEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SessionEvent.swift"; sourceTree = "<group>"; };
+		EE00020A0000000000000001 /* SharedAppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SharedAppGroup.swift"; sourceTree = "<group>"; };
+		EE00020B0000000000000001 /* WatchTemplateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WatchTemplateStore.swift"; sourceTree = "<group>"; };
+		EE00020C0000000000000001 /* HistoryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/HistoryDocument.swift"; sourceTree = "<group>"; };
+		EE00020D0000000000000001 /* TemplateImportExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TemplateImportExport.swift"; sourceTree = "<group>"; };
+		EE00020E0000000000000001 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TemplateDocument.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -138,6 +166,13 @@
 				TurnTimerWidgets.entitlements,
 			);
 			target = DD4403070000000000000001 /* TurnTimerWidgets */;
+		};
+		EE0004010000000000000001 /* Exceptions for "Visual Timer Watch Watch App" folder in "Visual Timer Watch Watch App" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Visual Timer Watch Watch App.entitlements",
+			);
+			target = CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -185,6 +220,9 @@
 		};
 		CC56FE2F2FBA5ABC00918D5A /* Visual Timer Watch Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EE0004010000000000000001 /* Exceptions for "Visual Timer Watch Watch App" folder in "Visual Timer Watch Watch App" target */,
+			);
 			path = "Visual Timer Watch Watch App";
 			sourceTree = "<group>";
 		};
@@ -619,6 +657,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE0001010000000000000001 /* TimerViewModel.swift in Sources */,
+				EE0001020000000000000001 /* Theme.swift in Sources */,
+				EE0001030000000000000001 /* Round.swift in Sources */,
+				EE0001040000000000000001 /* GameViewModel.swift in Sources */,
+				EE0001050000000000000001 /* StarterTemplateLibrary.swift in Sources */,
+				EE0001060000000000000001 /* SoundManager.swift in Sources */,
+				EE0001070000000000000001 /* UbiquitousSettingsStore.swift in Sources */,
+				EE0001080000000000000001 /* GameRecord.swift in Sources */,
+				EE0001090000000000000001 /* SessionEvent.swift in Sources */,
+				EE00010A0000000000000001 /* SharedAppGroup.swift in Sources */,
+				EE00010B0000000000000001 /* WatchTemplateStore.swift in Sources */,
+				EE00010C0000000000000001 /* HistoryDocument.swift in Sources */,
+				EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */,
+				EE00010E0000000000000001 /* TemplateDocument.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -957,6 +1009,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Visual Timer Watch Watch App/Visual Timer Watch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8AXNA5B37R;
@@ -990,6 +1043,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "Visual Timer Watch Watch App/Visual Timer Watch Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8AXNA5B37R;

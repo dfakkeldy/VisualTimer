@@ -19,6 +19,7 @@ final class GameEditorViewModel: ObservableObject {
     private let parser = GameFileParser()
     private let templateLibrary: TemplateLibraryStore
     private let widgetSnapshotStore: WidgetSnapshotStore
+    private let watchTemplateStore: WatchTemplateStore
     private var isWidgetPublishingEnabled = false
 
     enum TemplateSaveResult {
@@ -35,10 +36,12 @@ final class GameEditorViewModel: ObservableObject {
 
     init(
         templateLibrary: TemplateLibraryStore = TemplateLibraryStore(),
-        widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore()
+        widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore(),
+        watchTemplateStore: WatchTemplateStore = WatchTemplateStore()
     ) {
         self.templateLibrary = templateLibrary
         self.widgetSnapshotStore = widgetSnapshotStore
+        self.watchTemplateStore = watchTemplateStore
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -313,12 +316,14 @@ final class GameEditorViewModel: ObservableObject {
         let templates = templateLibrary.listTemplates()
         savedTemplates = templates
         publishWidgetSnapshots(for: templates)
+        publishWatchTemplates(for: templates)
     }
 
     func setWidgetPublishingEnabled(_ isEnabled: Bool) {
         guard isWidgetPublishingEnabled != isEnabled else { return }
         isWidgetPublishingEnabled = isEnabled
         publishWidgetSnapshots(for: savedTemplates)
+        publishWatchTemplates(for: savedTemplates)
     }
 
     // MARK: - Private
@@ -332,6 +337,23 @@ final class GameEditorViewModel: ObservableObject {
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: "TemplateStartWidget")
 #endif
+    }
+
+    /// Publishes full `GameSequence` payloads for saved templates into the
+    /// shared App Group so the watchOS app can play them back. Gated by the
+    /// same Pro/widget flag: when disabled the watch sees no saved templates.
+    private func publishWatchTemplates(for templates: [SavedTemplate]) {
+        let templatesToPublish = isWidgetPublishingEnabled ? templates : []
+        let watchTemplates = templatesToPublish.compactMap { saved -> WatchTemplate? in
+            guard let document = try? templateLibrary.loadDocument(id: saved.id) else { return nil }
+            return WatchTemplate(
+                templateID: saved.id,
+                title: saved.title,
+                game: document.game,
+                modifiedAt: saved.modifiedAt
+            )
+        }
+        _ = try? watchTemplateStore.write(templates: watchTemplates)
     }
 
     private func reindex() {

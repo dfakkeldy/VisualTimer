@@ -1,6 +1,15 @@
 name: Release Trains
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "TurnTimerWidgets/**"
+      - "Visual Timer/**"
+      - "Visual Timer.xcodeproj/**"
+      - "Visual Timer Watch Watch App/**"
+      - "WatchApp/**"
   schedule:
     - cron: "0 6 * * *" # Daily nightly at 03:00 America/Halifax during daylight time
     - cron: "0 7 * * *" # Daily nightly at 03:00 America/Halifax during standard time
@@ -15,6 +24,12 @@ on:
         options:
           - nightly
           - weekly
+          - appstore
+      refresh_signing_profiles:
+        description: "Regenerate App Store signing profiles before building"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,6 +49,7 @@ jobs:
       should_run: ${{ steps.release_train.outputs.should_run }}
       channel: ${{ steps.release_train.outputs.channel }}
       branch: ${{ steps.release_train.outputs.branch }}
+      refresh_signing_profiles: ${{ steps.release_train.outputs.refresh_signing_profiles }}
     steps:
       - name: Map trigger to channel and branch
         id: release_train
@@ -43,13 +59,18 @@ jobs:
 
           should_run=true
           channel=""
+          branch=""
+          refresh_signing_profiles="false"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "push" ]; then
+            channel="appstore"
+            branch="main"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             channel="${{ inputs.channel }}"
+            refresh_signing_profiles="${{ inputs.refresh_signing_profiles }}"
           else
             schedule="${{ github.event.schedule }}"
             scheduled_hour="$(printf '%s\n' "$schedule" | awk '{ print $2 }')"
-            local_slot="$(TZ=America/Halifax date +%u-%H)"
             offset="$(TZ=America/Halifax date +%z)"
 
             case "$offset" in
@@ -67,9 +88,9 @@ jobs:
                 ;;
             esac
 
-            if [ "$scheduled_hour" = "$nightly_hour" ] && [ "$local_slot" = "$(TZ=America/Halifax date +%u)-03" ]; then
+            if [ "$scheduled_hour" = "$nightly_hour" ]; then
               channel="nightly"
-            elif [ "$scheduled_hour" = "$weekly_hour" ] && [ "$local_slot" = "1-09" ]; then
+            elif [ "$scheduled_hour" = "$weekly_hour" ]; then
               channel="weekly"
             else
               should_run=false
@@ -78,10 +99,27 @@ jobs:
             fi
           fi
 
+          case "$channel" in
+            nightly|weekly)
+              branch="$channel"
+              ;;
+            appstore)
+              branch="main"
+              ;;
+            skipped)
+              branch="skipped"
+              ;;
+            *)
+              echo "::error title=Unknown release channel::Unsupported channel '$channel'."
+              exit 1
+              ;;
+          esac
+
           {
             echo "should_run=$should_run"
             echo "channel=$channel"
-            echo "branch=$channel"
+            echo "branch=$branch"
+            echo "refresh_signing_profiles=$refresh_signing_profiles"
           } >> "$GITHUB_OUTPUT"
 
   ship:
@@ -96,6 +134,9 @@ jobs:
       CHANNEL: ${{ needs.resolve.outputs.channel }}
       TRAIN_BRANCH: ${{ needs.resolve.outputs.branch }}
       APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+      APP_STORE_AUTOMATIC_RELEASE: ${{ vars.APP_STORE_AUTOMATIC_RELEASE }}
+      APP_STORE_SUBMIT_FOR_REVIEW: ${{ vars.APP_STORE_SUBMIT_FOR_REVIEW }}
+      MATCH_REFRESH_PROFILES: ${{ needs.resolve.outputs.refresh_signing_profiles }}
       MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
       MATCH_GIT_SSH_KEY: ${{ secrets.MATCH_GIT_SSH_KEY }}
     steps:
@@ -104,6 +145,15 @@ jobs:
         with:
           ref: ${{ env.TRAIN_BRANCH }}
           fetch-depth: 0
+
+      - name: Use release automation from workflow ref
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout "$GITHUB_SHA" -- .ruby-version Gemfile fastlane
+          if git cat-file -e "$GITHUB_SHA:Gemfile.lock" 2>/dev/null; then
+            git checkout "$GITHUB_SHA" -- Gemfile.lock
+          fi
 
       - name: Pin Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -235,7 +285,7 @@ jobs:
           ruby-version: .ruby-version
           bundler-cache: true
 
-      - name: Upload to TestFlight
+      - name: Ship release channel
         if: env.APP_STORE_CONNECT_API_KEY_JSON != '' && env.MATCH_PASSWORD != '' && env.MATCH_GIT_SSH_KEY != ''
         shell: bash
         run: |
@@ -243,9 +293,20 @@ jobs:
           api_key_path="$RUNNER_TEMP/app-store-connect-api-key.json"
           printf '%s' "$APP_STORE_CONNECT_API_KEY_JSON" > "$api_key_path"
           export APP_STORE_CONNECT_API_KEY_PATH="$api_key_path"
-          bundle exec fastlane beta channel:"$CHANNEL"
+          case "$CHANNEL" in
+            nightly|weekly)
+              bundle exec fastlane beta channel:"$CHANNEL"
+              ;;
+            appstore)
+              bundle exec fastlane app_store
+              ;;
+            *)
+              echo "::error title=Unknown release channel::Unsupported channel '$CHANNEL'."
+              exit 1
+              ;;
+          esac
 
-      - name: Skip TestFlight upload without secrets
+      - name: Skip distribution without secrets
         if: env.APP_STORE_CONNECT_API_KEY_JSON == '' || env.MATCH_PASSWORD == '' || env.MATCH_GIT_SSH_KEY == ''
         shell: bash
         run: |
@@ -256,4 +317,4 @@ jobs:
           [ -n "$MATCH_GIT_SSH_KEY" ] || missing+=("MATCH_GIT_SSH_KEY")
           printf -v missing_csv '%s, ' "${missing[@]}"
           missing_csv="${missing_csv%, }"
-          echo "::notice title=Compile-only release train::Skipping TestFlight upload for $CHANNEL; missing secrets: $missing_csv."
+          echo "::notice title=Compile-only release train::Skipping distribution for $CHANNEL; missing secrets: $missing_csv."

@@ -4,7 +4,7 @@ import SwiftUI
 struct Visual_Timer_Watch_App: App {
     var body: some Scene {
         WindowGroup {
-            WatchTimerView()
+            WatchRootView()
         }
     }
 }
