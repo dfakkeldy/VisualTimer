@@ -1,5 +1,6 @@
 APP_IDENTIFIER = "Dan.Visual-Timer"
-PROJECT_PATH = "Visual Timer.xcodeproj"
+REPO_ROOT = File.expand_path("..", __dir__)
+PROJECT_PATH = File.join(REPO_ROOT, "Visual Timer.xcodeproj")
 IOS_SCHEME = "Visual Timer"
 TEAM_ID = "8AXNA5B37R"
 
@@ -107,7 +108,7 @@ def build_release(channel)
     scheme: IOS_SCHEME,
     export_method: "app-store",
     clean: true,
-    output_directory: "fastlane/builds/#{channel}",
+    output_directory: File.join(REPO_ROOT, "fastlane", "builds", channel),
     output_name: "TurnTimer-#{channel}.ipa"
   )
 end
