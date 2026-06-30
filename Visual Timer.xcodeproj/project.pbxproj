@@ -19,6 +19,8 @@
 		DD4401090000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402090000000000000001 /* Theme.swift */; };
 		DD44010A0000000000000001 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020A0000000000000001 /* SoundManager.swift */; };
 		DD44010B0000000000000001 /* UbiquitousSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */; };
+		EE0001010000000000000001 /* TimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002010000000000000001 /* TimerViewModel.swift */; };
+		EE0001020000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002020000000000000001 /* Theme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -120,6 +122,8 @@
 		DD4402090000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
 		DD44020A0000000000000001 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SoundManager.swift"; sourceTree = "<group>"; };
 		DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/UbiquitousSettingsStore.swift"; sourceTree = "<group>"; };
+		EE0002010000000000000001 /* TimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TimerViewModel.swift"; sourceTree = "<group>"; };
+		EE0002020000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -619,6 +623,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EE0001010000000000000001 /* TimerViewModel.swift in Sources */,
+				EE0001020000000000000001 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
