@@ -80,7 +80,7 @@ jobs:
               echo "ios_destination=generic/platform=iOS Simulator"
               echo "ios_simulator_udid="
             } >> "$GITHUB_OUTPUT"
-            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and iOS tests will be skipped."
+            echo "::warning title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination. The 'Run iOS tests' step will then fail the gate, because a runnable simulator is required."
           fi
 
       - name: Prepare result bundles
@@ -123,15 +123,15 @@ jobs:
 
           simulator_id="${{ steps.destinations.outputs.ios_simulator_udid }}"
           if [ -z "$simulator_id" ]; then
-            echo "::notice title=iOS tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
-            exit 0
+            echo "::error title=iOS tests not run::No concrete iOS simulator was available on this runner, so the test gate cannot run. Provision a runnable iPhone simulator (macOS runner image) or pin one explicitly."
+            exit 1
           fi
 
           xcrun simctl boot "$simulator_id" >/tmp/visualtimer-simctl-boot.log 2>&1 || true
           if ! xcrun simctl bootstatus "$simulator_id" -b; then
             cat /tmp/visualtimer-simctl-boot.log
-            echo "::notice title=iOS tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
-            exit 0
+            echo "::error title=iOS tests not run::The runner's iOS simulator runtime did not boot, so the test gate cannot run. Check the runner image / simulator runtime availability."
+            exit 1
           fi
 
           xcodebuild test-without-building \
