@@ -66,7 +66,7 @@ struct WatchGamePlaybackView: View {
                 .trim(from: elapsed, to: 1.0)
                 .stroke(timerViewModel.timerColor, lineWidth: 8)
                 .rotationEffect(.degrees(-90))
-                .animation(.easeInOut(duration: 0.3), value: elapsed)
+                .animation(.linear(duration: 1.0), value: elapsed)
         }
         .frame(width: 84, height: 84)
         .overlay {
