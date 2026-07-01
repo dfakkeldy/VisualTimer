@@ -1,5 +1,9 @@
 # Turn Timer Phase 3: Sync and Shared Templates Implementation Plan
 
+> Status update, 2026-07-01: archival plan. Phase 3 was merged into the stacked
+> phase branch through PR #5, with follow-up sync/widget work now staged on
+> `nightly`. Use `Roadmap.md` and `docs/repo-cleanup.md` for current status.
+
 > **For Dan / Codex:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to work this plan task by task. This branch is stacked on `codex/turn-timer-phase2`; open the PR against that branch unless Phase 2 has merged forward.
 
 **Goal:** Make Turn Timer templates portable across devices and people. Pro users get iCloud-backed template sync. Everyone can import/export `.turntimer` files safely, and imports are duplicated into local work instead of overwriting existing templates.

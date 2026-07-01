@@ -4,6 +4,23 @@ Turn Timer is a visual sequence timer for turns, routines, and real-world countd
 It keeps the one-tap visual countdown from the original app and adds editable
 starter templates for common timed sessions.
 
+## Status
+
+`main` is the deployable GitHub Pages and App Store release branch. `nightly`
+currently carries newer app work that is staged for promotion, including widget,
+watch, history-sync, and release-validation improvements. Keep user-facing docs
+honest about which branch is being described, and promote app changes through
+`nightly` -> `weekly` -> `main` before treating them as App Store-ready.
+
+Useful docs:
+
+- [Architecture](Architecture.md)
+- [Roadmap](Roadmap.md)
+- [App Store readiness](docs/app-store/readiness.md)
+- [Fastlane release docs](fastlane/README.md)
+- [Branch and worktree cleanup map](docs/repo-cleanup.md)
+- [Public devlog](docs/guides/devlog.md)
+
 ## Current Scope
 
 - **Quick timer** - Start a standalone visual countdown with the existing timer
@@ -23,6 +40,10 @@ starter templates for common timed sessions.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
   own devices through the private CloudKit database.
 - **Watch app** - Keep companion watch target support.
+
+Staged on `nightly` ahead of the next release promotion: Pro iCloud history
+sync, widget snapshots/deep links, watch template playback, and release-train
+validation updates.
 
 ## Core Features
 
@@ -51,20 +72,19 @@ starter templates for common timed sessions.
 
 Turn Timer is planned as a free timer with a $4.99 one-time Pro unlock. The
 core timer, built-in starter templates, and one custom saved template remain
-free. Pro value is built around reuse and portability:
+free. Pro value is built around reuse and portability: unlimited templates,
+history/export, iCloud sync, sharing, widgets, and Apple Watch convenience.
 
-- Additional saved templates.
-- Full local history and history export.
-- iCloud sync for saved templates.
-- Future iCloud sync for history.
-- Shared templates for families, classrooms, kitchens, meetings, and game
-  nights.
-- Home Screen and Lock Screen widgets for one-tap template starts.
+See [Roadmap](Roadmap.md) for the current release phases, staged branch work,
+and the next ten App Store steps.
 
 ## Architecture
 
 The app follows an MVVM architecture with small SwiftUI views and centralized
 state owners.
+
+See [Architecture](Architecture.md) for the full architecture map, branch
+status, data formats, sync boundaries, and release-engineering notes.
 
 | Layer | Files | Responsibility |
 |---|---|---|
@@ -115,6 +135,16 @@ compile only. App Store review submission is enabled by default for `main`; set
 the `APP_STORE_SUBMIT_FOR_REVIEW` repository variable to `false` to upload
 without submitting. Set `APP_STORE_AUTOMATIC_RELEASE` to `true` only when
 approved builds should release automatically after App Review.
+
+Fastlane lane behavior and local validation are documented in
+[fastlane/README.md](fastlane/README.md).
+
+## GitHub Pages and Devlog
+
+The public website is served from `main` at `docs/`. The site root is
+`docs/index.html`, and the build-in-public devlog lives at
+`docs/devlog.html`. Weekly devlog automation opens a PR against `main`; it does
+not publish social posts automatically.
 
 ## Getting Started
 
