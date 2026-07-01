@@ -291,7 +291,7 @@ jobs:
           set -euo pipefail
           api_key_path="$RUNNER_TEMP/app-store-connect-api-key.json"
           printf '%s' "$APP_STORE_CONNECT_API_KEY_JSON" > "$api_key_path"
-          export APP_STORE_CONNECT_API_KEY_PATH="$api_key_path"
+          export VISUAL_TIMER_APP_STORE_CONNECT_API_KEY_PATH="$api_key_path"
           case "$CHANNEL" in
             nightly|weekly)
               bundle exec fastlane beta channel:"$CHANNEL"
