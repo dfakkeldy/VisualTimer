@@ -1,5 +1,10 @@
 # Turn Timer Phase 2: $4.99 Pro Unlock Implementation Plan
 
+> Status update, 2026-07-01: archival plan. Phase 2 was merged through PR #8,
+> and later stacked launch assets still need salvage from
+> `origin/codex/turn-timer-phase2`. Use `Roadmap.md` and
+> `docs/repo-cleanup.md` for current status.
+
 > **For Dan / Codex:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to work this plan task by task. Do not skip verification gates. This branch is stacked on `codex/turn-timer-phase1`; open the PR against that branch unless Phase 1 has merged into `main`.
 
 **Goal:** Add a StoreKit 2 non-consumable Pro unlock for Turn Timer without blocking basic timer use. Free users keep quick timer, starter templates, and one custom saved template. Pro unlocks additional saved templates, full history/export, and provides the purchase/restore foundation for later sync, sharing, and widgets.

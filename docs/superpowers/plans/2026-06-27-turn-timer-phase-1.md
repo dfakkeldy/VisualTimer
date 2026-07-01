@@ -1,5 +1,9 @@
 # Turn Timer Phase 1 Implementation Plan
 
+> Status update, 2026-07-01: archival plan. Phase 1 was merged through PR #2.
+> Use `Roadmap.md` and `docs/repo-cleanup.md` for current release status and
+> branch cleanup instead of treating the unchecked boxes below as live work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebrand the existing app as Turn Timer and make the core template experience ship-ready with starter templates and first-run Game Night behavior.
