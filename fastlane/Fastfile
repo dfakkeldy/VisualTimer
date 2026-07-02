@@ -29,6 +29,10 @@ def boolean_env(name, default:)
   %w[1 true yes on].include?(value.downcase)
 end
 
+def ci_environment?
+  ENV["CI"].to_s.casecmp("true").zero?
+end
+
 def app_store_connect_key
   require "json"
 
@@ -54,8 +58,10 @@ end
 
 def sync_release_signing(api_key)
   refresh_profiles = boolean_env("MATCH_REFRESH_PROFILES", default: false)
-  readonly = ENV["CI"].to_s.casecmp("true").zero? && !refresh_profiles
+  readonly = ci_environment? && !refresh_profiles
   targets = signing_targets
+
+  setup_ci if ci_environment?
 
   match(
     type: "appstore",
@@ -65,7 +71,7 @@ def sync_release_signing(api_key)
     force: refresh_profiles
   )
 
-  return unless ENV["CI"].to_s.casecmp("true").zero?
+  return unless ci_environment?
 
   mapping = lane_context[SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING] || {}
   targets.each do |target, bundle_id|
