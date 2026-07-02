@@ -36,7 +36,10 @@ end
 def app_store_connect_key
   require "json"
 
-  api_key_data = JSON.parse(File.read(ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")))
+  api_key_path = ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
+  api_key_data = JSON.parse(File.read(api_key_path))
+  ENV.delete("APP_STORE_CONNECT_API_KEY_PATH")
+
   app_store_connect_api_key(
     key_id: api_key_data.fetch("key_id"),
     issuer_id: api_key_data.fetch("issuer_id"),
