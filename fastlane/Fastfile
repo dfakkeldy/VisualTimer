@@ -111,6 +111,10 @@ def release_changelog(channel)
   "Automated #{channel} build from #{short_sha}."
 end
 
+def beta_app_description
+  "Turn Timer is a visual sequence timer for turns, routines, and real-world countdowns."
+end
+
 def build_release(channel)
   build_app(
     project: PROJECT_PATH,
@@ -141,6 +145,8 @@ platform :ios do
       ipa: ipa_path,
       groups: [config.fetch(:group)],
       distribute_external: config.fetch(:external),
+      submit_beta_review: config.fetch(:external),
+      beta_app_description: beta_app_description,
       notify_external_testers: config.fetch(:external),
       changelog: release_changelog(channel),
       skip_waiting_for_build_processing: false
