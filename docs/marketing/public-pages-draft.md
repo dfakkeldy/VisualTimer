@@ -1,84 +1,47 @@
-# Public Support and Privacy Page Drafts
+# Public Support and Privacy Pages
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 
-These are launch-page source drafts. Replace placeholders and get legal review
-before publishing the privacy policy.
+These are the public support and privacy URLs for App Store Connect. Verify
+before submission that Dan is comfortable using the current Gmail address; a
+Kinnoki-domain address may be preferable later.
 
-## Support Page Draft
+- Support URL: `https://dfakkeldy.github.io/VisualTimer/support.html`
+- Privacy Policy URL: `https://dfakkeldy.github.io/VisualTimer/privacy.html`
+- Developer: Kinnoki Labs
+- Contact: `dfakkeldy@gmail.com`
+- Website: `https://dfakkeldy.github.io/VisualTimer/`
 
-```text
-# Turn Timer Support
+## Support Page Summary
 
-For help with Turn Timer, contact:
+The public support page asks users to email `dfakkeldy@gmail.com` with device,
+OS, app version, expected behavior, and actual behavior. It covers:
 
-[CONTACT_EMAIL]
+- What Turn Timer is.
+- What is free.
+- What Turn Timer Pro unlocks.
+- Restore Purchases.
+- iCloud sync troubleshooting, only if the installed build includes sync.
+- Import safety for `.turntimer` files.
+- Local and iCloud data deletion guidance.
 
-Please include:
-- Your device model.
-- iOS or watchOS version.
-- Turn Timer app version.
-- What you expected to happen.
-- What happened instead.
-```
+## Privacy Policy Summary
 
-### FAQ Topics
+The public privacy page states that Turn Timer is designed to work without
+developer-run accounts, ads, tracking, or analytics SDKs. It says:
 
-- What is Turn Timer?
-- What is free?
-- What does Turn Timer Pro unlock?
-- How do I restore Pro?
-- Why is iCloud sync not updating?
-- How do widgets work, if included in the shipping build?
-- Does importing overwrite existing templates?
-- How do I delete local app data?
-
-## Privacy Policy Draft Outline
-
-```text
-# Privacy Policy for Turn Timer
-
-Effective Date: [DATE]
-Last Updated: [DATE]
-
-Developer: [DEVELOPER_NAME]
-Contact: [CONTACT_EMAIL]
-Website: [WEBSITE_URL]
-```
-
-Turn Timer is designed to work without accounts, ads, third-party tracking, or
-third-party analytics SDKs. Timer templates, session history, settings, and
-widget preferences are stored on device unless the user chooses iCloud sync
-through their Apple account. In-app purchases are processed by Apple.
-
-Data areas to describe:
-
-- Timer duration and sound preferences.
-- Saved templates: names, round names, colors, sounds, durations, repeats, and
-  related settings.
-- Recent/full session history, if enabled in the shipping build.
-- Favorite-template/widget data, if widgets ship.
-- Purchase entitlement state.
-- Support request content the user chooses to send.
-
-State clearly:
-
-- No account is required for core app use.
-- No third-party analytics SDKs are currently included.
-- No advertising SDKs are currently included.
-- No cross-app tracking is currently included.
-- Location, contacts, camera, photos, microphone, HealthKit, and motion data are
-  not currently accessed.
-- Templates can be intentionally exported or shared as `.turntimer` files.
-
-Retention draft:
-
-- Local templates and history remain on device until deleted by the user or the
-  app is deleted.
-- iCloud-synced data remains in the user's private iCloud database according to
-  Apple iCloud behavior and settings.
-- Support messages are retained only as long as reasonably needed to respond and
-  manage support.
+- Kinnoki Labs does not collect timer templates, session history, device
+  analytics, advertising identifiers, or tracking data from Turn Timer.
+- Timer settings, saved templates, local session history, and purchase
+  entitlement state are stored by the app on device.
+- If an installed build includes iCloud sync and the user chooses to use it,
+  supported templates or history are stored in the user's private iCloud
+  database through Apple's CloudKit service.
+- Kinnoki Labs does not operate a separate account server for this sync and
+  cannot read the contents of the user's private iCloud database.
+- Apple processes App Store purchases through StoreKit.
+- Support email receives only the email address and message content the user
+  chooses to send.
 
 ## App Store Privacy Label Notes
 
@@ -93,5 +56,7 @@ current intended posture is:
 - User content: templates/history may be stored locally and, for Pro sync, in
   the user's private iCloud database for app functionality.
 
-Do not publish this as final policy text until placeholders are replaced and
-the app's final data practices are verified.
+Suggested label: Data Not Collected, because the developer does not receive
+templates, history, analytics, advertising identifiers, or tracking data from
+the app, and private CloudKit data is stored in the user's Apple account.
+Verify this in App Store Connect before confirming the questionnaire.
