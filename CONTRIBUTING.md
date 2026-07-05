@@ -51,9 +51,28 @@ and advanced customization.
   `TurnTimerTemplates`, and record type `Template`.
 - `TemplateCloudSyncEngine` owns CKSyncEngine state, pending record changes, and
   timestamp conflict handling. Avoid putting CloudKit behavior in SwiftUI views.
+- History sync is also Pro-only and local-first. Use custom zone
+  `TurnTimerHistory` and record type `HistoryRecord`; keep completed local
+  sessions available before live CloudKit validation or schema deployment.
+- `HistoryCloudSyncEngine` owns history CKSyncEngine state and should be queued
+  from the history view model or storage layer, not SwiftUI views.
 - Selected sound syncs through `NSUbiquitousKeyValueStore`.
 - Before release, run a signed build with an iCloud account and deploy the
   CloudKit development schema to production in CloudKit Dashboard.
+
+## Widgets
+
+- Widgets are a Pro reuse feature and must use the shared App Group
+  `group.Dan.Visual-Timer`.
+- The app writes compact `WidgetTemplateSnapshot` payloads through
+  `WidgetSnapshotStore`; widget code must not read the app's Documents
+  directory directly.
+- Widget taps should launch `turntimer://starter/<id>` or
+  `turntimer://template/<uuid>` and let `MainTabView` route the template into
+  existing view models.
+- After changing widget data, project settings, entitlements, or deep links,
+  verify the iOS app embeds `TurnTimerWidgets.appex` and manually smoke-test Home
+  Screen and Lock Screen widgets when a simulator or device UI pass is available.
 
 ## Adding a New View
 
@@ -107,6 +126,13 @@ and advanced customization.
 - UI tests live in `Visual TimerUITests/`.
 - Before submitting a PR, verify the app builds with `xcodebuild` and
   manually smoke-test the four timer states.
+- Keep `TurnTimer.storekit` valid with
+  `python3 -m json.tool TurnTimer.storekit >/dev/null`.
+- For sync and widget changes, run the iOS build-for-testing gate, the iOS app
+  build, and the watch app build used in the README validation section.
 - CloudKit runtime behavior cannot be fully proven by local simulator builds.
   At minimum, compile the sync layer, unit-test the record mapper, and document
   any live iCloud verification that still needs a signed build or TestFlight.
+- Signed-device validation proves the pieces local builds cannot: iCloud account
+  status, container entitlements, subscriptions, schema readiness, cross-device
+  propagation, and widget tap behavior on real app installations.

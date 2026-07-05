@@ -24,7 +24,8 @@ final class ProAccessViewModel: ObservableObject {
         product?.displayPrice ?? ProProduct.fallbackDisplayPrice
     }
 
-    init() {
+    init(automaticallyStartsStoreKitTasks: Bool = true) {
+        guard automaticallyStartsStoreKitTasks else { return }
         transactionTask = observeTransactions()
         Task {
             await loadProducts()
@@ -101,10 +102,12 @@ final class ProAccessViewModel: ObservableObject {
             else { continue }
             unlocked = true
         }
+        applyEntitlementRefreshResult(isUnlocked: unlocked)
+    }
+
+    func applyEntitlementRefreshResult(isUnlocked unlocked: Bool) {
         isProUnlocked = unlocked
-        if unlocked {
-            purchaseState = .purchased
-        }
+        purchaseState = unlocked ? .purchased : .idle
     }
 
     private func observeTransactions() -> Task<Void, Never> {

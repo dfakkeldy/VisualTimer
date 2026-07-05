@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject var soundManager: SoundManager
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
+    @ObservedObject var historySync: HistoryCloudSyncEngine
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -49,7 +50,23 @@ struct SettingsView: View {
                             await templateSync.refreshNow()
                         }
                     } label: {
-                        Text("Refresh Sync")
+                        Text("Refresh Template Sync")
+                    }
+                    .disabled(!proAccess.isProUnlocked)
+
+                    HStack {
+                        Text("History Sync")
+                        Spacer()
+                        Text(historySync.statusText)
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    }
+
+                    Button {
+                        Task {
+                            await historySync.refreshNow()
+                        }
+                    } label: {
+                        Text("Refresh History Sync")
                     }
                     .disabled(!proAccess.isProUnlocked)
 
@@ -84,7 +101,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Turn Timer Pro")
                 } footer: {
-                    Text("Pro unlocks unlimited templates, full history export, iCloud template sync, sharing, and widgets.")
+                    Text("Pro unlocks unlimited templates, full history export, iCloud template and history sync, sharing, and widgets.")
                 }
             }
             .navigationTitle("Settings")

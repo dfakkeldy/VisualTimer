@@ -24,7 +24,7 @@ struct TurnTimerTemplateDocument: Codable, Equatable, Identifiable {
     ) {
         var normalizedGame = game
         normalizedGame.title = title
-        normalizedGame.reindexRounds()
+        normalizedGame.normalizeTemplateFields()
 
         self.schemaVersion = schemaVersion
         self.templateID = templateID
@@ -41,6 +41,7 @@ struct SavedTemplate: Identifiable, Equatable {
     let title: String
     let roundCount: Int
     let repeatCount: Int
+    let totalSeconds: Int
     let modifiedAt: Date
     let url: URL
 
@@ -62,10 +63,12 @@ struct TemplateDocumentCodec {
     func decode(_ data: Data) throws -> TurnTimerTemplateDocument {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let document = try decoder.decode(TurnTimerTemplateDocument.self, from: data)
+        var document = try decoder.decode(TurnTimerTemplateDocument.self, from: data)
         guard document.schemaVersion <= TurnTimerTemplateDocument.currentSchemaVersion else {
             throw TemplateDocumentError.unsupportedSchemaVersion(document.schemaVersion)
         }
+        document.game.title = document.title
+        document.game.normalizeTemplateFields()
         return document
     }
 

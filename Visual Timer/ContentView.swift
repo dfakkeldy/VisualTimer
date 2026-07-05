@@ -12,6 +12,7 @@ struct ContentView: View {
     @StateObject private var soundManager: SoundManager
     @StateObject private var proAccess = ProAccessViewModel()
     @StateObject private var templateSync = TemplateCloudSyncEngine()
+    @StateObject private var historySync = HistoryCloudSyncEngine()
 
     @State private var showSettings = false
 
@@ -55,7 +56,8 @@ struct ContentView: View {
             SettingsView(
                 soundManager: soundManager,
                 proAccess: proAccess,
-                templateSync: templateSync
+                templateSync: templateSync,
+                historySync: historySync
             )
         }
         .onAppear {
@@ -107,7 +109,7 @@ struct ContentView: View {
     private var timerCircleButton: some View {
         ZStack {
             TimerVisualView(
-                elapsedFraction: elapsedFraction,
+                visualProgress: viewModel.visualProgress,
                 fillColor: viewModel.timerColor
             )
 
@@ -171,19 +173,6 @@ struct ContentView: View {
             .accessibilityLabel(Theme.Label.reset)
         }
         .opacity(viewModel.state == .paused ? 1 : 0)
-    }
-
-    // MARK: - Derived Values
-
-    /// 0.0 when the timer is full, 1.0 when fully depleted.
-    /// Once the timer leaves `.notStarted` the pie jumps one notch
-    /// ahead so the depletion is visible immediately on start.
-    private var elapsedFraction: Double {
-        guard viewModel.totalDuration > 0 else { return 0 }
-        let notch = viewModel.state == .notStarted ? 0 : 1
-        let raw = Double(viewModel.totalDuration - viewModel.timeRemaining + notch)
-            / Double(viewModel.totalDuration)
-        return min(raw, 1.0)
     }
 
     // MARK: - Settings Gear
