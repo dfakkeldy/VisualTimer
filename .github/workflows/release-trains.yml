@@ -279,11 +279,17 @@ jobs:
           echo "GIT_SSH_COMMAND=ssh -i ~/.ssh/match_git_ssh_key -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
 
       - name: Set up Ruby
-        if: env.APP_STORE_CONNECT_API_KEY_JSON != '' && env.MATCH_PASSWORD != '' && env.MATCH_GIT_SSH_KEY != ''
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
+
+      - name: Validate TestFlight metadata
+        if: env.CHANNEL == 'nightly' || env.CHANNEL == 'weekly'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle exec fastlane validate_testflight_metadata
 
       - name: Ship release channel
         if: env.APP_STORE_CONNECT_API_KEY_JSON != '' && env.MATCH_PASSWORD != '' && env.MATCH_GIT_SSH_KEY != ''

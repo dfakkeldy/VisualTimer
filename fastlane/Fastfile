@@ -3,6 +3,10 @@ REPO_ROOT = File.expand_path("..", __dir__)
 PROJECT_PATH = File.join(REPO_ROOT, "Visual Timer.xcodeproj")
 IOS_SCHEME = "Visual Timer"
 TEAM_ID = "8AXNA5B37R"
+TESTFLIGHT_METADATA_DIR = File.join(REPO_ROOT, "fastlane", "testflight")
+DEFAULT_TESTFLIGHT_LOCALE = "en-US"
+DEFAULT_MARKETING_URL = "https://dfakkeldy.github.io/VisualTimer/"
+DEFAULT_PRIVACY_POLICY_URL = "https://dfakkeldy.github.io/VisualTimer/privacy.html"
 
 SIGNING_TARGETS = {
   "Visual Timer" => "Dan.Visual-Timer",
@@ -29,23 +33,180 @@ def boolean_env(name, default:)
   %w[1 true yes on].include?(value.downcase)
 end
 
+def env_value(name)
+  value = ENV[name]
+  return nil if value.nil? || value.strip.empty?
+
+  value.strip
+end
+
 def ci_environment?
   ENV["CI"].to_s.casecmp("true").zero?
 end
 
-def app_store_connect_key
+def app_store_connect_key(set_spaceship_token: false)
   require "json"
 
-  api_key_path = ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
-  api_key_data = JSON.parse(File.read(api_key_path))
-  ENV.delete("APP_STORE_CONNECT_API_KEY_PATH")
+  api_key_json = env_value("APP_STORE_CONNECT_API_KEY_JSON")
+  api_key_path = env_value("APP_STORE_CONNECT_API_KEY_PATH") ||
+    env_value("VISUAL_TIMER_APP_STORE_CONNECT_API_KEY_PATH") ||
+    env_value("APP_STORE_CONNECT_API_KEY_JSON_PATH") ||
+    env_value("APP_STORE_CONNECT_API_KEY_JSON_FILEPATH")
+  api_key_path = File.expand_path(api_key_path, REPO_ROOT) if api_key_path
+  api_key_path ||= File.join(REPO_ROOT, "fastlane", "api_key.json") if File.exist?(File.join(REPO_ROOT, "fastlane", "api_key.json"))
+
+  UI.user_error!(
+    "Set APP_STORE_CONNECT_API_KEY_JSON, APP_STORE_CONNECT_API_KEY_PATH, " \
+    "VISUAL_TIMER_APP_STORE_CONNECT_API_KEY_PATH, or provide fastlane/api_key.json."
+  ) if api_key_json.nil? && api_key_path.nil?
+
+  api_key_data = JSON.parse(api_key_json || File.read(api_key_path))
 
   app_store_connect_api_key(
     key_id: api_key_data.fetch("key_id"),
     issuer_id: api_key_data.fetch("issuer_id"),
     key_content: api_key_data.fetch("key"),
+    duration: api_key_data.fetch("duration", 1200),
+    set_spaceship_token: set_spaceship_token,
     in_house: api_key_data.fetch("in_house", false)
   )
+end
+
+def metadata_locale
+  env_value("FASTLANE_METADATA_LOCALE") || DEFAULT_TESTFLIGHT_LOCALE
+end
+
+def testflight_metadata_file(locale, filename)
+  File.join(TESTFLIGHT_METADATA_DIR, locale, filename)
+end
+
+def testflight_review_file(filename)
+  File.join(TESTFLIGHT_METADATA_DIR, "review_information", filename)
+end
+
+def read_text_file(path)
+  return nil unless File.exist?(path)
+
+  text = File.read(path).strip
+  text.empty? ? nil : text
+end
+
+def required_testflight_text(locale, filename)
+  path = testflight_metadata_file(locale, filename)
+  text = read_text_file(path)
+  UI.user_error!("Missing required TestFlight metadata file: #{path}") if text.nil?
+
+  text
+end
+
+def optional_testflight_text(locale, filename)
+  read_text_file(testflight_metadata_file(locale, filename))
+end
+
+def validate_text_limit(label, text, limit)
+  return if text.nil?
+
+  bytes = text.bytesize
+  UI.user_error!("#{label} is #{bytes}/#{limit} bytes") if bytes > limit
+  UI.message("#{label}: #{bytes}/#{limit} bytes")
+end
+
+def testflight_whats_new(locale)
+  required_testflight_text(locale, "whats_new.txt")
+end
+
+def testflight_description(locale)
+  required_testflight_text(locale, "description.txt")
+end
+
+def testflight_feedback_email(locale)
+  env_value("TESTFLIGHT_FEEDBACK_EMAIL") || optional_testflight_text(locale, "feedback_email.txt")
+end
+
+def testflight_marketing_url(locale)
+  env_value("TESTFLIGHT_MARKETING_URL") || optional_testflight_text(locale, "marketing_url.txt") || DEFAULT_MARKETING_URL
+end
+
+def testflight_privacy_policy_url(locale)
+  env_value("TESTFLIGHT_PRIVACY_POLICY_URL") ||
+    optional_testflight_text(locale, "privacy_policy_url.txt") ||
+    DEFAULT_PRIVACY_POLICY_URL
+end
+
+def review_info_value(env_name, filename)
+  env_value(env_name) || read_text_file(testflight_review_file(filename))
+end
+
+def beta_app_review_info
+  info = {
+    contact_email: review_info_value("TESTFLIGHT_REVIEW_CONTACT_EMAIL", "email_address.txt"),
+    contact_first_name: review_info_value("TESTFLIGHT_REVIEW_CONTACT_FIRST_NAME", "first_name.txt"),
+    contact_last_name: review_info_value("TESTFLIGHT_REVIEW_CONTACT_LAST_NAME", "last_name.txt"),
+    contact_phone: review_info_value("TESTFLIGHT_REVIEW_CONTACT_PHONE", "phone_number.txt"),
+    notes: review_info_value("TESTFLIGHT_REVIEW_NOTES", "notes.txt")
+  }.reject { |_key, value| value.nil? || value == "" }
+
+  required_keys = %i[contact_email contact_first_name contact_last_name contact_phone]
+  present_required_keys = required_keys.select { |key| info.key?(key) }
+  if !present_required_keys.empty? && present_required_keys.length != required_keys.length
+    missing = (required_keys - present_required_keys).join(", ")
+    UI.user_error!("Incomplete TestFlight review contact information. Missing: #{missing}.")
+  end
+
+  info[:demo_account_required] = false unless info.empty?
+  info
+end
+
+def testflight_metadata_options(locale)
+  whats_new = testflight_whats_new(locale)
+  description = testflight_description(locale)
+  feedback_email = testflight_feedback_email(locale)
+
+  validate_text_limit("TestFlight What to Test", whats_new, 4000)
+  validate_text_limit("TestFlight beta description", description, 4000)
+  UI.user_error!("Missing TestFlight feedback email. Set TESTFLIGHT_FEEDBACK_EMAIL or add feedback_email.txt.") if feedback_email.nil?
+
+  localized_app_info = {
+    description: description,
+    feedback_email: feedback_email,
+    marketing_url: testflight_marketing_url(locale),
+    privacy_policy_url: testflight_privacy_policy_url(locale)
+  }.compact
+
+  options = {
+    beta_app_description: description,
+    beta_app_feedback_email: feedback_email,
+    changelog: whats_new,
+    localized_app_info: {
+      locale => localized_app_info
+    },
+    localized_build_info: {
+      locale => {
+        whats_new: whats_new
+      }
+    },
+    uses_non_exempt_encryption: false
+  }
+
+  review_info = beta_app_review_info
+  options[:beta_app_review_info] = review_info unless review_info.empty?
+
+  options
+end
+
+def connect_app
+  app_store_connect_key(set_spaceship_token: true)
+  app = Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+  UI.user_error!("Could not find App Store Connect app for #{APP_IDENTIFIER}") if app.nil?
+
+  app
+end
+
+def beta_group_for_channel(app, channel)
+  config = TESTFLIGHT_CHANNELS.fetch(channel)
+  expected_name = config.fetch(:group)
+  groups = app.get_beta_groups
+  groups.find { |group| group.name.casecmp(expected_name).zero? }
 end
 
 def project_target_names
@@ -129,28 +290,75 @@ end
 default_platform(:ios)
 
 platform :ios do
+  desc "Validate file-backed TestFlight beta metadata"
+  lane :validate_testflight_metadata do
+    locale = metadata_locale
+    options = testflight_metadata_options(locale)
+
+    UI.message("TestFlight locale: #{locale}")
+    UI.message("feedback email: configured")
+    UI.message("marketing URL: #{options.dig(:localized_app_info, locale, :marketing_url)}")
+    UI.message("privacy policy URL: #{options.dig(:localized_app_info, locale, :privacy_policy_url)}")
+    UI.message("review contact: #{options[:beta_app_review_info] ? 'configured' : 'not configured; relying on App Store Connect if required'}")
+    UI.success("TestFlight metadata is ready for pilot.")
+  end
+
+  desc "List TestFlight beta groups for Turn Timer"
+  lane :list_beta_groups do
+    app = connect_app
+    app.get_beta_groups.each do |group|
+      group_type = group.is_internal_group ? "internal" : "external"
+      UI.message("#{group.name} (#{group.id}, #{group_type})")
+    end
+  end
+
+  desc "Create or verify the TestFlight beta group for a channel"
+  lane :ensure_beta_group do |options|
+    channel = (options[:channel] || "weekly").to_s
+    config = TESTFLIGHT_CHANNELS[channel]
+    UI.user_error!("Pass channel:nightly or channel:weekly") if config.nil?
+
+    app = connect_app
+    existing_group = beta_group_for_channel(app, channel)
+    if existing_group
+      UI.success("TestFlight group '#{existing_group.name}' already exists (#{existing_group.id}).")
+      next
+    end
+
+    group = app.create_beta_group(
+      group_name: config.fetch(:group),
+      is_internal_group: !config.fetch(:external),
+      public_link_enabled: false,
+      public_link_limit_enabled: false
+    )
+    group_type = group.is_internal_group ? "internal" : "external"
+    UI.success("Created #{group_type} TestFlight group '#{group.name}' (#{group.id}).")
+  end
+
   desc "Build and distribute nightly or weekly release trains to TestFlight"
   lane :beta do |options|
     channel = options[:channel].to_s
     config = TESTFLIGHT_CHANNELS[channel]
     UI.user_error!("Pass channel:nightly or channel:weekly") if config.nil?
+    validate_testflight_metadata
+    ensure_beta_group(channel: channel)
 
     api_key = app_store_connect_key
     sync_release_signing(api_key)
     increment_release_build_number(api_key)
     ipa_path = build_release(channel)
 
-    upload_to_testflight(
+    testflight_options = {
       api_key: api_key,
       ipa: ipa_path,
       groups: [config.fetch(:group)],
       distribute_external: config.fetch(:external),
       submit_beta_review: config.fetch(:external),
-      beta_app_description: beta_app_description,
       notify_external_testers: config.fetch(:external),
-      changelog: release_changelog(channel),
       skip_waiting_for_build_processing: false
-    )
+    }.merge(testflight_metadata_options(metadata_locale))
+
+    upload_to_testflight(testflight_options)
   end
 
   desc "Build and upload the main release train to App Store Connect"

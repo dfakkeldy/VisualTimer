@@ -45,6 +45,7 @@ fastlane/api_key.json
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
+fastlane/testflight/review_information/
 fastlane/test_output
 
 # ── Misc ──────────────────────────────────────────────
