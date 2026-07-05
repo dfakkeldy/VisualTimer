@@ -33,6 +33,7 @@
 		EE00010C0000000000000001 /* HistoryDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020C0000000000000001 /* HistoryDocument.swift */; };
 		EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020D0000000000000001 /* TemplateImportExport.swift */; };
 		EE00010E0000000000000001 /* TemplateDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020E0000000000000001 /* TemplateDocument.swift */; };
+		EE00010F0000000000000001 /* TimerVisualProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020F0000000000000001 /* TimerVisualProgress.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -135,6 +136,7 @@
 		DD44020A0000000000000001 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/SoundManager.swift"; sourceTree = "<group>"; };
 		DD44020B0000000000000001 /* UbiquitousSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/UbiquitousSettingsStore.swift"; sourceTree = "<group>"; };
 		EE0002010000000000000001 /* TimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TimerViewModel.swift"; sourceTree = "<group>"; };
+		EE00020F0000000000000001 /* TimerVisualProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TimerVisualProgress.swift"; sourceTree = "<group>"; };
 		EE0002020000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Theme.swift"; sourceTree = "<group>"; };
 		EE0002030000000000000001 /* Round.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/Round.swift"; sourceTree = "<group>"; };
 		EE0002040000000000000001 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/GameViewModel.swift"; sourceTree = "<group>"; };
@@ -658,6 +660,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EE0001010000000000000001 /* TimerViewModel.swift in Sources */,
+				EE00010F0000000000000001 /* TimerVisualProgress.swift in Sources */,
 				EE0001020000000000000001 /* Theme.swift in Sources */,
 				EE0001030000000000000001 /* Round.swift in Sources */,
 				EE0001040000000000000001 /* GameViewModel.swift in Sources */,

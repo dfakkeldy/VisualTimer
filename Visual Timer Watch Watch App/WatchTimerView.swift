@@ -86,20 +86,17 @@ struct WatchTimerView: View {
     // MARK: - Timer Circle
 
     private var timerCircle: some View {
-        let elapsed = viewModel.totalDuration > 0
-            ? Double(viewModel.totalDuration - viewModel.timeRemaining)
-                / Double(viewModel.totalDuration)
-            : 0.0
+        TimelineView(.animation(paused: !viewModel.visualProgress.isRunning)) { timeline in
+            let elapsed = viewModel.visualProgress.elapsedFraction(at: timeline.date)
+            ZStack {
+                Circle()
+                    .fill(Color(white: 0.15))
 
-        return ZStack {
-            Circle()
-                .fill(Color(white: 0.15))
-
-            Circle()
-                .trim(from: elapsed, to: 1.0)
-                .stroke(viewModel.timerColor, lineWidth: 14)
-                .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 1.0), value: elapsed)
+                Circle()
+                    .trim(from: elapsed, to: 1.0)
+                    .stroke(viewModel.timerColor, lineWidth: 14)
+                    .rotationEffect(.degrees(-90))
+            }
         }
     }
 

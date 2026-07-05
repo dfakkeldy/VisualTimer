@@ -57,23 +57,23 @@ struct WatchGamePlaybackView: View {
     }
 
     private var timerRing: some View {
-        let total = max(timerViewModel.totalDuration, 1)
-        let elapsed = Double(total - timerViewModel.timeRemaining) / Double(total)
-        return ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.15), lineWidth: 8)
-            Circle()
-                .trim(from: elapsed, to: 1.0)
-                .stroke(timerViewModel.timerColor, lineWidth: 8)
-                .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 1.0), value: elapsed)
+        TimelineView(.animation(paused: !timerViewModel.visualProgress.isRunning)) { timeline in
+            let elapsed = timerViewModel.visualProgress.elapsedFraction(at: timeline.date)
+            ZStack {
+                Circle()
+                    .stroke(Color.white.opacity(0.15), lineWidth: 8)
+                Circle()
+                    .trim(from: elapsed, to: 1.0)
+                    .stroke(timerViewModel.timerColor, lineWidth: 8)
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 84, height: 84)
+            .overlay {
+                Image(systemName: playPauseIcon)
+                    .font(.title3)
+            }
+            .onTapGesture { handleCircleTap() }
         }
-        .frame(width: 84, height: 84)
-        .overlay {
-            Image(systemName: playPauseIcon)
-                .font(.title3)
-        }
-        .onTapGesture { handleCircleTap() }
     }
 
     private var controlRow: some View {
