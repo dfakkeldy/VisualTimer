@@ -31,6 +31,7 @@ final class TimerViewModel: ObservableObject {
     @Published var state: TimerState = .notStarted
     @Published var timeRemaining: Int
     @Published var totalDuration: Int
+    @Published private(set) var visualProgress: TimerVisualProgress
 
     /// Index into `Theme.ColorValue.timerPalette`. Advances each time
     /// the timer finishes so the pie replenishes with a fresh color.
@@ -76,16 +77,18 @@ final class TimerViewModel: ObservableObject {
             : Theme.TimerMechanic.defaultDuration
         self.totalDuration = duration
         self.timeRemaining = duration
+        self.visualProgress = TimerVisualProgress(totalDuration: duration)
     }
 
     // MARK: - State Machine Transitions
 
     /// Starts or resumes the countdown. Allowed from `.notStarted` and `.paused`.
     /// Keeps the screen awake while the timer is active.
-    func play() {
+    func play(at date: Date = Date()) {
         switch state {
         case .notStarted, .paused:
             state = .running
+            visualProgress = visualProgress.running(from: date)
 #if !os(watchOS)
             UIApplication.shared.isIdleTimerDisabled = true
 #endif
@@ -97,9 +100,10 @@ final class TimerViewModel: ObservableObject {
 
     /// Pauses the countdown, preserving remaining time.
     /// Releases the screen-sleep lock.
-    func pause() {
+    func pause(at date: Date = Date()) {
         guard case .running = state else { return }
         state = .paused
+        visualProgress = visualProgress.paused(at: date)
 #if !os(watchOS)
         UIApplication.shared.isIdleTimerDisabled = false
 #endif
@@ -115,6 +119,7 @@ final class TimerViewModel: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = false
 #endif
         timeRemaining = totalDuration
+        visualProgress = TimerVisualProgress(totalDuration: totalDuration)
     }
 
     /// Cancels countdown work and restores the timer to its current full duration.
@@ -126,6 +131,7 @@ final class TimerViewModel: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = false
 #endif
         timeRemaining = totalDuration
+        visualProgress = TimerVisualProgress(totalDuration: totalDuration)
     }
 
     /// Reconfigures the timer in-place for a new game round.
@@ -136,6 +142,7 @@ final class TimerViewModel: ObservableObject {
         timerColorOverride = color
         totalDuration = duration
         timeRemaining = duration
+        visualProgress = TimerVisualProgress(totalDuration: duration)
         state = .notStarted
     }
 
@@ -147,6 +154,7 @@ final class TimerViewModel: ObservableObject {
         let clampedDuration = max(Theme.TimerMechanic.minimumDuration, duration)
         totalDuration = clampedDuration
         timeRemaining = clampedDuration
+        visualProgress = TimerVisualProgress(totalDuration: clampedDuration)
         savedDuration = clampedDuration
     }
 
@@ -189,6 +197,7 @@ final class TimerViewModel: ObservableObject {
             // don't overwrite the new state.
             guard state == .finished else { return }
             timeRemaining = totalDuration
+            visualProgress = TimerVisualProgress(totalDuration: totalDuration)
             state = .notStarted
         }
     }

@@ -331,7 +331,7 @@ struct GamePlaybackView: View {
         } label: {
             ZStack {
                 TimerVisualView(
-                    elapsedFraction: elapsedFraction,
+                    visualProgress: timerViewModel.visualProgress,
                     fillColor: timerViewModel.timerColor
                 )
 
@@ -401,14 +401,6 @@ struct GamePlaybackView: View {
         case .finished:
             break
         }
-    }
-
-    private var elapsedFraction: Double {
-        guard timerViewModel.totalDuration > 0 else { return 0 }
-        let notch = timerViewModel.state == .notStarted ? 0 : 1
-        let raw = Double(timerViewModel.totalDuration - timerViewModel.timeRemaining + notch)
-            / Double(timerViewModel.totalDuration)
-        return min(raw, 1.0)
     }
 
     // MARK: - Quick Timer Sub-Views

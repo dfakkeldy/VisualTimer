@@ -979,6 +979,43 @@ final class Visual_TimerTests: XCTestCase {
     }
 
     @MainActor
+    func testTimerViewModelVisualProgressStartsAtZeroWhenTimerStarts() {
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+        let viewModel = TimerViewModel()
+        viewModel.setDuration(25)
+        let startDate = Date(timeIntervalSince1970: 100)
+
+        viewModel.play(at: startDate)
+
+        XCTAssertEqual(viewModel.visualProgress.elapsedFraction(at: startDate), 0, accuracy: 0.0001)
+        XCTAssertEqual(
+            viewModel.visualProgress.elapsedFraction(at: startDate.addingTimeInterval(0.5)),
+            0.02,
+            accuracy: 0.0001
+        )
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    func testTimerVisualProgressFreezesAndResumesFromFractionalElapsedTime() {
+        let startDate = Date(timeIntervalSince1970: 200)
+        let pauseDate = startDate.addingTimeInterval(0.75)
+        let resumeDate = pauseDate.addingTimeInterval(10)
+        let progress = TimerVisualProgress(totalDuration: 25)
+            .running(from: startDate)
+            .paused(at: pauseDate)
+
+        XCTAssertEqual(progress.elapsedFraction(at: resumeDate), 0.03, accuracy: 0.0001)
+
+        let resumed = progress.running(from: resumeDate)
+
+        XCTAssertEqual(
+            resumed.elapsedFraction(at: resumeDate.addingTimeInterval(0.25)),
+            0.04,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
     func testProAccessRefreshResetsPurchaseStateWhenEntitlementIsRevoked() {
         let proAccess = ProAccessViewModel(automaticallyStartsStoreKitTasks: false)
 
