@@ -24,6 +24,7 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     private var syncEngine: CKSyncEngine?
     private var needsInitialHistorySync = false
     private var pendingDeletedHistoryIDs = Set<UUID>()
+    private var inFlightRefreshTask: Task<Void, Never>?
 
     var statusText: String {
         switch syncState {
@@ -79,9 +80,6 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
                 CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: record.id))
             }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
-        Task {
-            await sendChanges()
-        }
     }
 
     func queueDeletedHistory(id: UUID) {
@@ -92,6 +90,22 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
     }
 
     func refreshNow() async {
+        guard syncEngine != nil else { return }
+        if let inFlightRefreshTask {
+            await inFlightRefreshTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await performManualRefresh()
+        }
+        inFlightRefreshTask = task
+        await task.value
+        inFlightRefreshTask = nil
+    }
+
+    private func performManualRefresh() async {
         guard let syncEngine else { return }
         do {
             syncState = .syncing
@@ -108,7 +122,6 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         guard syncEngine == nil else {
             queueLocalHistory(historyStore.loadAll())
             queuePendingDeletedHistories()
-            await refreshNow()
             return
         }
 
@@ -130,7 +143,6 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         engine.state.add(pendingDatabaseChanges: [
             .saveZone(CKRecordZone(zoneID: configuration.zoneID)),
         ])
-        await sendChanges()
     }
 
     private func stop() {
@@ -270,18 +282,6 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
         }
     }
 
-    private func sendChanges() async {
-        guard let syncEngine else { return }
-        do {
-            syncState = .syncing
-            try await syncEngine.sendChanges()
-            lastSyncDate = Date()
-            syncState = .idle
-        } catch {
-            syncState = .failed(CloudSyncError.from(error).localizedDescription)
-        }
-    }
-
     @discardableResult
     func applyFetchedHistoryDocument(_ incomingDocument: HistoryDocument) -> Bool {
         let historyID = incomingDocument.record.id
@@ -345,9 +345,6 @@ final class HistoryCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @unc
             CKSyncEngine.PendingRecordZoneChange.deleteRecord(mapper.recordID(for: historyID))
         }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
-        Task {
-            await sendChanges()
-        }
     }
 
     private func shouldPreserveLocalChange(modifiedAt: Date, lastSuccessfulSyncDate: Date?) -> Bool {
