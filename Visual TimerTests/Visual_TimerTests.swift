@@ -4,6 +4,20 @@ import XCTest
 
 final class Visual_TimerTests: XCTestCase {
 
+    // MARK: - Cloud sync scheduling
+
+    func testTemplateCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/TemplateCloudSyncEngine.swift"
+        )
+    }
+
+    func testHistoryCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/HistoryCloudSyncEngine.swift"
+        )
+    }
+
     // MARK: - Round Model
 
     func testRoundDefaultValues() {
@@ -1229,5 +1243,116 @@ final class Visual_TimerTests: XCTestCase {
                 playedAt: Date(timeIntervalSince1970: TimeInterval(index))
             )
         }
+    }
+
+    private func assertManualSendLifecycle(
+        sourcePath: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let source = try productionSource(at: sourcePath)
+        let manualSendCallSites = functionNames(containing: "syncEngine.sendChanges(", in: source)
+
+        XCTAssertEqual(
+            manualSendCallSites,
+            ["performManualRefresh"],
+            "Only the serialized explicit-refresh operation may manually send CloudKit changes.",
+            file: file,
+            line: line
+        )
+
+        let manualRefreshReferences = functionNames(containing: "performManualRefresh(", in: source)
+        XCTAssertEqual(
+            manualRefreshReferences,
+            ["performManualRefresh", "refreshNow"],
+            "Queue, startup, delegate-event, retry, and delete paths must not reach the manual refresh worker.",
+            file: file,
+            line: line
+        )
+
+        let refreshBody = try functionBody(named: "refreshNow", in: source)
+        XCTAssertTrue(
+            refreshBody.contains("inFlightRefreshTask"),
+            "Concurrent refresh requests must join a retained in-flight task.",
+            file: file,
+            line: line
+        )
+        XCTAssertTrue(
+            refreshBody.contains("await task.value"),
+            "Explicit refresh must await the retained task before returning.",
+            file: file,
+            line: line
+        )
+    }
+
+    private func productionSource(at relativePath: String) throws -> String {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repositoryRoot.appending(path: relativePath)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    private func functionNames(containing needle: String, in source: String) -> Set<String> {
+        var matches = Set<String>()
+        var currentFunction: String?
+        var braceDepth = 0
+
+        for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(line)
+            if currentFunction == nil,
+               let functionRange = line.range(of: "func "),
+               let openingParenthesis = line[functionRange.upperBound...].firstIndex(of: "(") {
+                currentFunction = String(line[functionRange.upperBound..<openingParenthesis])
+                    .trimmingCharacters(in: .whitespaces)
+            }
+
+            if let currentFunction, line.contains(needle) {
+                matches.insert(currentFunction)
+            }
+
+            braceDepth += line.filter { $0 == "{" }.count
+            braceDepth -= line.filter { $0 == "}" }.count
+            if currentFunction != nil, braceDepth == 1 {
+                currentFunction = nil
+            }
+        }
+
+        return matches
+    }
+
+    private func functionBody(named functionName: String, in source: String) throws -> String {
+        guard let declarationRange = source.range(of: "func \(functionName)("),
+              let openingBrace = source[declarationRange.upperBound...].firstIndex(of: "{")
+        else {
+            throw NSError(
+                domain: "VisualTimerTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Missing function \(functionName)"]
+            )
+        }
+
+        var depth = 0
+        var index = openingBrace
+        while index < source.endIndex {
+            switch source[index] {
+            case "{":
+                depth += 1
+            case "}":
+                depth -= 1
+                if depth == 0 {
+                    return String(source[openingBrace...index])
+                }
+            default:
+                break
+            }
+            index = source.index(after: index)
+        }
+
+        throw NSError(
+            domain: "VisualTimerTests",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "Unterminated function \(functionName)"]
+        )
     }
 }

@@ -23,6 +23,7 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
     private let userDefaults: UserDefaults
     private var syncEngine: CKSyncEngine?
     private var needsInitialTemplateSync = false
+    private var inFlightRefreshTask: Task<Void, Never>?
 
     var statusText: String {
         switch syncState {
@@ -94,12 +95,25 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
             CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: template.id))
         }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
-        Task {
-            await sendChanges()
-        }
     }
 
     func refreshNow() async {
+        guard syncEngine != nil else { return }
+        if let inFlightRefreshTask {
+            await inFlightRefreshTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await performManualRefresh()
+        }
+        inFlightRefreshTask = task
+        await task.value
+        inFlightRefreshTask = nil
+    }
+
+    private func performManualRefresh() async {
         guard let syncEngine else { return }
         do {
             syncState = .syncing
@@ -115,7 +129,6 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
     private func start() async {
         guard syncEngine == nil else {
             queueLocalTemplates(templateLibrary.listTemplates())
-            await refreshNow()
             return
         }
 
@@ -137,7 +150,6 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         engine.state.add(pendingDatabaseChanges: [
             .saveZone(CKRecordZone(zoneID: configuration.zoneID)),
         ])
-        await sendChanges()
     }
 
     private func stop() {
@@ -299,18 +311,6 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
 
         try? templateLibrary.deleteTemplate(id: templateID)
         return true
-    }
-
-    private func sendChanges() async {
-        guard let syncEngine else { return }
-        do {
-            syncState = .syncing
-            try await syncEngine.sendChanges()
-            lastSyncDate = Date()
-            syncState = .idle
-        } catch {
-            syncState = .failed(CloudSyncError.from(error).localizedDescription)
-        }
     }
 
     private func shouldPreserveLocalChange(modifiedAt: Date, lastSuccessfulSyncDate: Date?) -> Bool {
