@@ -9,7 +9,7 @@ starter templates for common timed sessions.
 - **Quick timer** - Start a standalone visual countdown with the existing timer
   controls.
 - **Starter templates** - Begin from Game Night, Recipe Steps, Plant Watering,
-  Classroom Stations, or Meeting Agenda.
+  Classroom Stations, Meeting Agenda, or a 40-minute Morning Routine.
 - **Template editor** - Rename a template, edit rounds, set colors, choose
   sounds, add emoji, and decide whether a round counts as a turn.
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,

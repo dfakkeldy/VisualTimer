@@ -201,6 +201,7 @@ final class Visual_TimerTests: XCTestCase {
             "Plant Watering",
             "Classroom Stations",
             "Meeting Agenda",
+            "Morning Routine",
         ])
     }
 
@@ -212,6 +213,28 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(template.game.roundCount, 1)
         XCTAssertEqual(rounds.map(\.name), ["Alice", "Bob", "Charlie", "Timeout"])
         XCTAssertEqual(rounds.map(\.countsAsPlayer), [true, true, true, false])
+    }
+
+    func testStarterTemplateLibrary_morningRoutineEndsAtCommute() throws {
+        let template = try XCTUnwrap(StarterTemplateLibrary.template(id: "morning-routine"))
+        let rounds = template.game.rounds
+
+        XCTAssertEqual(template.title, "Morning Routine")
+        XCTAssertEqual(template.subtitle, "Get ready and out the door in 40 minutes.")
+        XCTAssertEqual(template.game.roundCount, 1)
+        XCTAssertEqual(rounds.map(\.name), [
+            "Wake Up",
+            "Wash Up",
+            "Get Dressed",
+            "Breakfast",
+            "Brush Teeth",
+            "Pack Essentials",
+            "Shoes & Coat",
+            "Start Commute",
+        ])
+        XCTAssertEqual(rounds.map(\.durationSeconds), [900, 300, 120, 600, 120, 180, 120, 60])
+        XCTAssertEqual(rounds.map(\.countsAsPlayer), Array(repeating: false, count: 8))
+        XCTAssertEqual(rounds.map(\.orderIndex), Array(0 ..< 8))
     }
 
     func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
