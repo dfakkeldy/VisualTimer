@@ -14,6 +14,7 @@ enum StarterTemplateLibrary {
         plantWatering,
         classroomStations,
         meetingAgenda,
+        morningRoutine,
     ]
 
     static var defaultTemplate: StarterTemplate { gameNight }
@@ -93,6 +94,25 @@ enum StarterTemplateLibrary {
                 round("Updates", emoji: "📣", color: 12, seconds: 300),
                 round("Discussion", emoji: "💬", color: 13, seconds: 600),
                 round("Decisions", emoji: "✅", color: 14, seconds: 180, countsAsPlayer: false),
+            ]
+        )
+    )
+
+    private static let morningRoutine = StarterTemplate(
+        id: "morning-routine",
+        title: "Morning Routine",
+        subtitle: "Get ready and out the door in 40 minutes.",
+        game: makeGame(
+            title: "Morning Routine",
+            rounds: [
+                round("Wake Up", emoji: Theme.Emoji.wakeUp, color: 2, seconds: 900, countsAsPlayer: false),
+                round("Wash Up", emoji: Theme.Emoji.washUp, color: 6, seconds: 300, countsAsPlayer: false),
+                round("Get Dressed", emoji: Theme.Emoji.getDressed, color: 7, seconds: 120, countsAsPlayer: false),
+                round("Breakfast", emoji: Theme.Emoji.breakfast, color: 1, seconds: 600, countsAsPlayer: false),
+                round("Brush Teeth", emoji: Theme.Emoji.brushTeeth, color: 4, seconds: 120, countsAsPlayer: false),
+                round("Pack Essentials", emoji: Theme.Emoji.packEssentials, color: 8, seconds: 180, countsAsPlayer: false),
+                round("Shoes & Coat", emoji: Theme.Emoji.shoesAndCoat, color: 9, seconds: 120, countsAsPlayer: false),
+                round("Start Commute", emoji: Theme.Emoji.startCommute, color: 13, seconds: 60, countsAsPlayer: false),
             ]
         )
     )
