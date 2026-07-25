@@ -22,6 +22,10 @@ npm run build
 npm run preview
 ```
 
+`npm run build:pages` writes the same production client to `docs/app/`, the
+committed GitHub Pages route served at `/VisualTimer/app/`. It intentionally
+leaves the existing Pages homepage, support, privacy, and devlog routes intact.
+
 ## Architecture
 
 | Area | Location | Responsibility |
@@ -32,6 +36,7 @@ npm run preview
 | Screens | `src/components` | Declarative timer, template, history, navigation, and settings UI |
 | Starter data | `src/data/starterTemplates.ts` | The six free starter workflows shared conceptually with the Apple app |
 | PWA shell | `public/manifest.webmanifest`, `public/sw.js` | Installation metadata and a small application-shell cache |
+| GitHub Pages package | `docs/app` | Generated production copy for the Turn Timer project website |
 
 The countdown is timestamp-derived rather than decrementing an integer once per
 second. This keeps the timer accurate when the browser delays callbacks or a

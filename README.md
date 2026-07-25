@@ -167,6 +167,11 @@ StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
 See [`web/README.md`](web/README.md) for the web architecture and support
 details.
 
+The project website hosts the production web client at
+`https://dfakkeldy.github.io/VisualTimer/app/`. Regenerate the committed Pages
+package with `make web-pages`; this preserves the existing homepage, devlog,
+support, and privacy routes.
+
 ## CloudKit and Widget Setup
 
 Template sync uses CloudKit container `iCloud.Dan.Visual-Timer`, custom zone

@@ -56,6 +56,11 @@ jobs:
       - name: Build production app
         run: npm run build
 
+      - name: Verify committed GitHub Pages app
+        run: |
+          npm run build:pages
+          git diff --exit-code -- ../docs/app
+
   build-gate-tests:
     name: Build gate + tests
     runs-on: macos-26
