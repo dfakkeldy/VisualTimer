@@ -24,6 +24,17 @@ generic timer or only a board-game timer.
 - **State flows down, events flow up.** Published properties drive
   the UI; button taps invoke closures that call ViewModel methods.
 
+The React client follows the same boundary in browser-native terms:
+
+- `web/src/domain` contains pure timer transitions and document parsing.
+- `web/src/hooks/useTurnTimerController.ts` owns feature orchestration and
+  persistence.
+- React components receive state and callbacks; they do not own countdown or
+  template business rules.
+- Keep `.turntimer` JSON compatible across Apple and web clients. A web import
+  must duplicate the document identity rather than overwrite an existing local
+  template.
+
 ## Monetization Rules
 
 Turn Timer uses a non-consumable StoreKit 2 Pro unlock with product ID
@@ -124,6 +135,10 @@ and advanced customization.
 
 - Unit tests live in `Visual TimerTests/`.
 - UI tests live in `Visual TimerUITests/`.
+- Web domain tests live beside their modules in `web/src/domain/`.
+- Before submitting web changes, run `npm test`, `npm run check`, and
+  `npm run build` from `web/`, then smoke-test both desktop and 390-pixel mobile
+  layouts in a real browser.
 - Before submitting a PR, verify the app builds with `xcodebuild` and
   manually smoke-test the four timer states.
 - Keep `TurnTimer.storekit` valid with

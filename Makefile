@@ -1,4 +1,13 @@
-.PHONY: devlog-update devlog-pr-body doc-automation-test
+.PHONY: devlog-update devlog-pr-body doc-automation-test web-dev web-test web-build
+
+web-dev: ## Run the React web client locally
+	cd web && npm run dev
+
+web-test: ## Run the web client's tests and TypeScript checks
+	cd web && npm test && npm run check
+
+web-build: ## Build the production web client
+	cd web && npm run build
 
 devlog-update: ## Update generated weekly devlog blocks from the previous calendar week
 	@PYTHONPATH=Scripts python3 -m doc_automation.devlog \
