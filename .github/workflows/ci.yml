@@ -27,6 +27,40 @@ env:
   DERIVED_DATA_PATH: ".build/DerivedData"
 
 jobs:
+  web-build-tests:
+    name: Web build + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run domain tests
+        run: npm test
+
+      - name: Check TypeScript
+        run: npm run check
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Verify committed GitHub Pages app
+        run: |
+          npm run build:pages
+          git diff --exit-code -- ../docs/app
+
   build-gate-tests:
     name: Build gate + tests
     runs-on: macos-26
