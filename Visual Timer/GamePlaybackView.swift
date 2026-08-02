@@ -303,12 +303,7 @@ struct GamePlaybackView: View {
     private var gameOverActions: some View {
         HStack(spacing: Theme.Dimension.controlButtonSpacing) {
             Button {
-                let timeout = Round(
-                    name: "Extra Round",
-                    durationSeconds: Theme.TimerMechanic.defaultDuration,
-                    orderIndex: gameViewModel.activeRounds.count
-                )
-                gameViewModel.addRoundDuringGameOver(timeout)
+                gameViewModel.addRoundDuringGameOver()
             } label: {
                 Label("Add Round", systemImage: Theme.Symbol.increment)
                     .font(.body.weight(.medium))

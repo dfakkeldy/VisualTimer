@@ -1172,6 +1172,51 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().count, 1)
     }
 
+    func testGameViewModelAddRoundReplaysTheFullSequenceFromTheBeginning() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let timerViewModel = TimerViewModel()
+        let gameViewModel = GameViewModel(
+            timerViewModel: timerViewModel,
+            historyStore: HistoryStore(documentsDirectory: directory)
+        )
+        var game = GameSequence(title: "Two Timers", roundCount: 1)
+        game.rounds = [
+            Round(name: "First", durationSeconds: 10, orderIndex: 0),
+            Round(name: "Second", durationSeconds: 20, orderIndex: 1),
+        ]
+
+        gameViewModel.loadGame(game)
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+
+        gameViewModel.addRoundDuringGameOver()
+
+        assertGamePhase(gameViewModel, is: .playing)
+        XCTAssertEqual(gameViewModel.currentOverallRound, 2)
+        XCTAssertEqual(gameViewModel.totalRoundCount, 2)
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 0)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "First")
+        XCTAssertEqual(gameViewModel.activeRounds.map(\.name), ["First", "Second"])
+        XCTAssertEqual(timerViewModel.totalDuration, 10)
+        assertTimerState(timerViewModel, is: .running)
+
+        gameViewModel.handleTimerFinished()
+
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 1)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "Second")
+        XCTAssertEqual(timerViewModel.totalDuration, 20)
+        assertGamePhase(gameViewModel, is: .playing)
+
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+    }
+
     func testGameViewModelUsesRoundProgressForNonTurnRoutines() {
         let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
         var routine = GameSequence(title: "Recipe", roundCount: 1)

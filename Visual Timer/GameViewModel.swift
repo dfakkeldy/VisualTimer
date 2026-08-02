@@ -181,16 +181,12 @@ final class GameViewModel: ObservableObject {
         }
     }
 
-    /// Appends a new round during the game-over state.
-    func addRoundDuringGameOver(_ round: Round) {
-        guard gamePhase == .gameOver, var game = gameSequence else { return }
-        var newRound = round
-        newRound.orderIndex = game.rounds.count
-        game.rounds.append(newRound)
-        game.modifiedAt = Date()
-        gameSequence = game
-
-        currentRoundIndex = game.activeRounds.count - 1
+    /// Replays the full active-round sequence once more from the beginning.
+    func addRoundDuringGameOver() {
+        guard gamePhase == .gameOver, !activeRounds.isEmpty else { return }
+        currentOverallRound += 1
+        totalRoundCount += 1
+        currentRoundIndex = 0
         gamePhase = .playing
         configureTimerForCurrentRound(autoStart: true)
     }
