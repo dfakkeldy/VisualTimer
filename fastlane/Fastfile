@@ -133,15 +133,20 @@ platform :ios do
     increment_release_build_number(api_key)
     ipa_path = build_release(channel)
 
-    upload_to_testflight(
+    upload_options = {
       api_key: api_key,
       ipa: ipa_path,
-      groups: [config.fetch(:group)],
       distribute_external: config.fetch(:external),
-      notify_external_testers: config.fetch(:external),
       changelog: release_changelog(channel),
       skip_waiting_for_build_processing: false
-    )
+    }
+
+    if config.fetch(:external)
+      upload_options[:groups] = [config.fetch(:group)]
+      upload_options[:notify_external_testers] = true
+    end
+
+    upload_to_testflight(**upload_options)
   end
 
   desc "Build and upload the main release train to App Store Connect"
