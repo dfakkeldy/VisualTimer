@@ -166,6 +166,7 @@ platform :ios do
       skip_screenshots: true,
       submit_for_review: submit_for_review,
       automatic_release: automatic_release,
+      run_precheck_before_submit: false,
       force: true
     )
   end

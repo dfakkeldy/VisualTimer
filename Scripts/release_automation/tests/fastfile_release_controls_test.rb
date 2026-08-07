@@ -103,6 +103,7 @@ class FastfileReleaseControlsTest < Minitest::Test
     upload_options = RELEASE_UPLOADS.fetch(0)
     assert_equal false, upload_options.fetch(:submit_for_review)
     assert_equal false, upload_options.fetch(:automatic_release)
+    assert_equal false, upload_options.fetch(:run_precheck_before_submit)
   end
 
   def test_beta_channels_only_target_a_group_for_external_distribution
