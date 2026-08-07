@@ -237,7 +237,7 @@ Label("iCloud sync and sharing", systemImage: Theme.Symbol.proFutureFeatures)
 Text("Pro unlocks unlimited templates, full history export, iCloud template sync, and sharing.")
 ```
 
-- [ ] **Step 3: Build and test the iOS and watch schemes through the build-slot wrapper**
+- [x] **Step 3: Verify the iOS and watch schemes without bypassing the build-slot policy**
 
 ```bash
 /Users/dfakkeldy/.claude/bin/xcode-build-slot.sh -- xcodebuild test -project "Visual Timer.xcodeproj" -scheme "Visual Timer" -destination "platform=iOS Simulator,id=<discovered-udid>" -resultBundlePath "<timestamped-path>" CODE_SIGNING_ALLOWED=NO
@@ -246,7 +246,11 @@ Text("Pro unlocks unlimited templates, full history export, iCloud template sync
 
 Expected: both wrapper-controlled commands exit 0; the iOS result bundle reports no test failures.
 
-- [ ] **Step 5: Commit the coherent release-control hotfix**
+The local wrapper correctly held at warning memory pressure, so no local Apple build was started. Equivalent fresh proof ran on the protected hosted macOS runner in GitHub Actions run `31175746906`: release-control test, iOS build-for-testing, watchOS build, and iOS unit tests all passed.
+
+- [x] **Step 4: Commit the coherent release-control hotfix**
+
+Dan then added commit `30b99e4` to keep internal nightly uploads out of external Beta App Review while preserving external distribution for the `weekly` lane.
 
 ```bash
 git add .github/workflows/ci.yml Scripts/release_automation/tests/fastfile_release_controls_test.rb "Visual Timer/ProPaywallView.swift" "Visual Timer/SettingsView.swift" fastlane/Fastfile docs/superpowers/plans/2026-08-07-controlled-app-store-release.md
