@@ -34,6 +34,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release controls
+        run: ruby Scripts/release_automation/tests/fastfile_release_controls_test.rb
+
       - name: Pin Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
