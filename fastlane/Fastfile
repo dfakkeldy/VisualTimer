@@ -364,7 +364,7 @@ platform :ios do
   desc "Build and upload the main release train to App Store Connect"
   lane :app_store do
     api_key = app_store_connect_key
-    submit_for_review = boolean_env("APP_STORE_SUBMIT_FOR_REVIEW", default: true)
+    submit_for_review = boolean_env("APP_STORE_SUBMIT_FOR_REVIEW", default: false)
     automatic_release = boolean_env("APP_STORE_AUTOMATIC_RELEASE", default: false)
 
     sync_release_signing(api_key)
@@ -378,6 +378,7 @@ platform :ios do
       skip_screenshots: true,
       submit_for_review: submit_for_review,
       automatic_release: automatic_release,
+      run_precheck_before_submit: false,
       force: true
     )
   end

@@ -16,6 +16,11 @@ This project is still being rebranded from Visual Timer, so update hand-written 
 
 <!-- AUTO-DEVLOG:END -->
 
+The automated block is refreshed by `.github/workflows/devlog-update.yml`. The
+workflow opens a reviewed PR against `main`, includes a factual commit digest,
+and adds an optional AI-assisted draft only when `OPENAI_API_KEY` is configured.
+Nothing is posted publicly without a human choosing to merge and reuse the copy.
+
 ## Notes
 
 The generated weekly digest above is safe to refresh automatically. Hand-written launch notes can live below this section when there is a story worth telling in more detail.
