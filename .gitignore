@@ -9,6 +9,10 @@ IDEWorkspaceChecks.plist
 # ── Build artifacts ───────────────────────────────────
 build/
 DerivedData/
+web/dist/
+web/node_modules/
+web/.qa/
+web/*.tsbuildinfo
 *.ipa
 *.dSYM.zip
 *.dSYM

@@ -26,7 +26,7 @@ Useful docs:
 - **Quick timer** - Start a standalone visual countdown with the existing timer
   controls.
 - **Starter templates** - Begin from Game Night, Recipe Steps, Plant Watering,
-  Classroom Stations, or Meeting Agenda.
+  Classroom Stations, Meeting Agenda, or a 40-minute Morning Routine.
 - **Template editor** - Rename a template, edit rounds, set colors, choose
   sounds, add emoji, and decide whether a round counts as a turn.
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
@@ -46,6 +46,8 @@ Useful docs:
   Group snapshots and launch starter or saved templates through `turntimer://`
   deep links.
 - **Watch app** - Keep companion watch target support.
+- **Installable web app** - Run the same core timer, starter templates,
+  `.turntimer` import/export, and local history in a responsive React PWA.
 
 Staged on `nightly` ahead of the next release promotion: Pro iCloud history
 sync, widget snapshots/deep links, watch template playback, and release-train
@@ -114,6 +116,7 @@ status, data formats, sync boundaries, and release-engineering notes.
 | Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
 | Theme | `Theme` | Shared colors, symbols, labels, dimensions, and animation values |
+| Web client | `web/src` | React UI, browser timer state machine, local persistence, and compatible template documents |
 
 Views should remain declarative. Business logic belongs in view models or
 storage/parser helpers, with state flowing down and user actions flowing back up
@@ -166,6 +169,8 @@ not publish social posts automatically.
 
 ## Getting Started
 
+### Apple apps
+
 1. Clone the repository.
 2. Open `Visual Timer.xcodeproj` in Xcode.
 3. Select an iOS simulator or connected device.
@@ -174,6 +179,36 @@ not publish social posts automatically.
 No additional dependencies are required. The project uses only system
 frameworks, including SwiftUI, Combine, AVFoundation, StoreKit, and WatchKit
 support.
+
+### Web app
+
+The web client requires Node.js 22 or newer:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Run its complete local gate with:
+
+```bash
+cd web
+npm test
+npm run check
+npm run build
+```
+
+The browser client is local-first. Templates, preferences, and history remain
+in browser storage; `.turntimer` import/export is the portability boundary.
+StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
+See [`web/README.md`](web/README.md) for the web architecture and support
+details.
+
+The project website hosts the production web client at
+`https://dfakkeldy.github.io/VisualTimer/app/`. Regenerate the committed Pages
+package with `make web-pages`; this preserves the existing homepage, devlog,
+support, and privacy routes.
 
 ## CloudKit and Widget Setup
 

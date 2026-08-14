@@ -4,6 +4,20 @@ import XCTest
 
 final class Visual_TimerTests: XCTestCase {
 
+    // MARK: - Cloud sync scheduling
+
+    func testTemplateCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/TemplateCloudSyncEngine.swift"
+        )
+    }
+
+    func testHistoryCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/HistoryCloudSyncEngine.swift"
+        )
+    }
+
     // MARK: - Round Model
 
     func testRoundDefaultValues() {
@@ -187,6 +201,7 @@ final class Visual_TimerTests: XCTestCase {
             "Plant Watering",
             "Classroom Stations",
             "Meeting Agenda",
+            "Morning Routine",
         ])
     }
 
@@ -198,6 +213,28 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(template.game.roundCount, 1)
         XCTAssertEqual(rounds.map(\.name), ["Alice", "Bob", "Charlie", "Timeout"])
         XCTAssertEqual(rounds.map(\.countsAsPlayer), [true, true, true, false])
+    }
+
+    func testStarterTemplateLibrary_morningRoutineEndsAtCommute() throws {
+        let template = try XCTUnwrap(StarterTemplateLibrary.template(id: "morning-routine"))
+        let rounds = template.game.rounds
+
+        XCTAssertEqual(template.title, "Morning Routine")
+        XCTAssertEqual(template.subtitle, "Get ready and out the door in 40 minutes.")
+        XCTAssertEqual(template.game.roundCount, 1)
+        XCTAssertEqual(rounds.map(\.name), [
+            "Wake Up",
+            "Wash Up",
+            "Get Dressed",
+            "Breakfast",
+            "Brush Teeth",
+            "Pack Essentials",
+            "Shoes & Coat",
+            "Start Commute",
+        ])
+        XCTAssertEqual(rounds.map(\.durationSeconds), [900, 300, 120, 600, 120, 180, 120, 60])
+        XCTAssertEqual(rounds.map(\.countsAsPlayer), Array(repeating: false, count: 8))
+        XCTAssertEqual(rounds.map(\.orderIndex), Array(0 ..< 8))
     }
 
     func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
@@ -1135,6 +1172,51 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().count, 1)
     }
 
+    func testGameViewModelAddRoundReplaysTheFullSequenceFromTheBeginning() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let timerViewModel = TimerViewModel()
+        let gameViewModel = GameViewModel(
+            timerViewModel: timerViewModel,
+            historyStore: HistoryStore(documentsDirectory: directory)
+        )
+        var game = GameSequence(title: "Two Timers", roundCount: 1)
+        game.rounds = [
+            Round(name: "First", durationSeconds: 10, orderIndex: 0),
+            Round(name: "Second", durationSeconds: 20, orderIndex: 1),
+        ]
+
+        gameViewModel.loadGame(game)
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+
+        gameViewModel.addRoundDuringGameOver()
+
+        assertGamePhase(gameViewModel, is: .playing)
+        XCTAssertEqual(gameViewModel.currentOverallRound, 2)
+        XCTAssertEqual(gameViewModel.totalRoundCount, 2)
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 0)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "First")
+        XCTAssertEqual(gameViewModel.activeRounds.map(\.name), ["First", "Second"])
+        XCTAssertEqual(timerViewModel.totalDuration, 10)
+        assertTimerState(timerViewModel, is: .running)
+
+        gameViewModel.handleTimerFinished()
+
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 1)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "Second")
+        XCTAssertEqual(timerViewModel.totalDuration, 20)
+        assertGamePhase(gameViewModel, is: .playing)
+
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+    }
+
     func testGameViewModelUsesRoundProgressForNonTurnRoutines() {
         let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
         var routine = GameSequence(title: "Recipe", roundCount: 1)
@@ -1229,5 +1311,116 @@ final class Visual_TimerTests: XCTestCase {
                 playedAt: Date(timeIntervalSince1970: TimeInterval(index))
             )
         }
+    }
+
+    private func assertManualSendLifecycle(
+        sourcePath: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let source = try productionSource(at: sourcePath)
+        let manualSendCallSites = functionNames(containing: "syncEngine.sendChanges(", in: source)
+
+        XCTAssertEqual(
+            manualSendCallSites,
+            ["performManualRefresh"],
+            "Only the serialized explicit-refresh operation may manually send CloudKit changes.",
+            file: file,
+            line: line
+        )
+
+        let manualRefreshReferences = functionNames(containing: "performManualRefresh(", in: source)
+        XCTAssertEqual(
+            manualRefreshReferences,
+            ["performManualRefresh", "refreshNow"],
+            "Queue, startup, delegate-event, retry, and delete paths must not reach the manual refresh worker.",
+            file: file,
+            line: line
+        )
+
+        let refreshBody = try functionBody(named: "refreshNow", in: source)
+        XCTAssertTrue(
+            refreshBody.contains("inFlightRefreshTask"),
+            "Concurrent refresh requests must join a retained in-flight task.",
+            file: file,
+            line: line
+        )
+        XCTAssertTrue(
+            refreshBody.contains("await task.value"),
+            "Explicit refresh must await the retained task before returning.",
+            file: file,
+            line: line
+        )
+    }
+
+    private func productionSource(at relativePath: String) throws -> String {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repositoryRoot.appending(path: relativePath)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    private func functionNames(containing needle: String, in source: String) -> Set<String> {
+        var matches = Set<String>()
+        var currentFunction: String?
+        var braceDepth = 0
+
+        for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(line)
+            if currentFunction == nil,
+               let functionRange = line.range(of: "func "),
+               let openingParenthesis = line[functionRange.upperBound...].firstIndex(of: "(") {
+                currentFunction = String(line[functionRange.upperBound..<openingParenthesis])
+                    .trimmingCharacters(in: .whitespaces)
+            }
+
+            if let currentFunction, line.contains(needle) {
+                matches.insert(currentFunction)
+            }
+
+            braceDepth += line.filter { $0 == "{" }.count
+            braceDepth -= line.filter { $0 == "}" }.count
+            if currentFunction != nil, braceDepth == 1 {
+                currentFunction = nil
+            }
+        }
+
+        return matches
+    }
+
+    private func functionBody(named functionName: String, in source: String) throws -> String {
+        guard let declarationRange = source.range(of: "func \(functionName)("),
+              let openingBrace = source[declarationRange.upperBound...].firstIndex(of: "{")
+        else {
+            throw NSError(
+                domain: "VisualTimerTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Missing function \(functionName)"]
+            )
+        }
+
+        var depth = 0
+        var index = openingBrace
+        while index < source.endIndex {
+            switch source[index] {
+            case "{":
+                depth += 1
+            case "}":
+                depth -= 1
+                if depth == 0 {
+                    return String(source[openingBrace...index])
+                }
+            default:
+                break
+            }
+            index = source.index(after: index)
+        }
+
+        throw NSError(
+            domain: "VisualTimerTests",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "Unterminated function \(functionName)"]
+        )
     }
 }

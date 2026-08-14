@@ -103,6 +103,19 @@ enum Theme {
         static let proFutureFeatures = "icloud"
     }
 
+    // MARK: - Starter Template Emoji
+
+    enum Emoji {
+        static let wakeUp = "⏰"
+        static let washUp = "🚿"
+        static let getDressed = "👕"
+        static let breakfast = "🥣"
+        static let brushTeeth = "🪥"
+        static let packEssentials = "🎒"
+        static let shoesAndCoat = "🧥"
+        static let startCommute = "🚗"
+    }
+
     // MARK: - Accessibility Labels
 
     enum Label {
