@@ -50,8 +50,8 @@ Useful docs:
   `.turntimer` import/export, and local history in a responsive React PWA.
 
 Staged on `nightly` ahead of the next release promotion: Pro iCloud history
-sync, widget snapshots/deep links, watch template playback, and release-train
-validation updates.
+sync, widget snapshots/deep links, watch template playback, the React PWA
+(`web/` and `docs/app/`), and release-train validation updates.
 
 ## Core Features
 
@@ -167,6 +167,10 @@ The public website is served from `main` at `docs/`. The site root is
 `docs/devlog.html`. Weekly devlog automation opens a PR against `main`; it does
 not publish social posts automatically.
 
+The installable web app (`web/` and the committed `docs/app/` package) lives on
+`nightly` and `weekly` until that tree is promoted to `main`. GitHub Pages does
+not host `/app/` until `docs/app/` exists on `main`.
+
 ## Getting Started
 
 ### Apple apps
@@ -205,10 +209,11 @@ StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
 See [`web/README.md`](web/README.md) for the web architecture and support
 details.
 
-The project website hosts the production web client at
-`https://dfakkeldy.github.io/VisualTimer/app/`. Regenerate the committed Pages
-package with `make web-pages`; this preserves the existing homepage, devlog,
-support, and privacy routes.
+Until `docs/app/` is promoted to `main`, run the PWA locally with the commands
+above. `make web-pages` regenerates the committed `docs/app/` package on this
+branch and leaves the existing homepage, devlog, support, and privacy routes
+intact. It does not publish a live GitHub Pages `/app/` URL while Pages still
+reads `main`.
 
 ## CloudKit and Widget Setup
 
