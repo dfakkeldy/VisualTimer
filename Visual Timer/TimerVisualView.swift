@@ -18,6 +18,10 @@ struct TimerVisualView: View {
         ZStack {
             Circle()
                 .fill(Theme.TimerStyle.well)
+                .shadow(
+                    color: simplified ? .clear : fillColor.opacity(Theme.TimerStyle.glowOpacity),
+                    radius: Theme.TimerStyle.glowRadius
+                )
 
             Circle()
                 .fill(fillColor)
@@ -51,10 +55,7 @@ struct TimerVisualView: View {
                         }
                     }
                 }
-                .shadow(
-                    color: simplified ? .clear : fillColor.opacity(Theme.TimerStyle.glowOpacity),
-                    radius: Theme.TimerStyle.glowRadius
-                )
+
 
             Circle()
                 .strokeBorder(

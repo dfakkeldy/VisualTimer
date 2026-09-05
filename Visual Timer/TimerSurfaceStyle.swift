@@ -32,6 +32,8 @@ private struct TimerControlSurface<S: Shape>: ViewModifier {
 extension View {
     func timerControlSurface(in shape: some Shape) -> some View {
         modifier(TimerControlSurface(shape: shape))
+            // The timer canvas is always dark, independent of system appearance.
+            .environment(\.colorScheme, .dark)
     }
 }
 
@@ -49,9 +51,11 @@ struct TimerGlassGroup<Content: View>: View {
 
 struct TimerPressStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .opacity(isEnabled ? 1 : Theme.TimerStyle.disabledOpacity)
             .scaleEffect(configuration.isPressed && !reduceMotion ? Theme.TimerStyle.pressedScale : 1)
             .animation(
                 reduceMotion ? nil : .easeOut(duration: Theme.TimerStyle.pressDuration),

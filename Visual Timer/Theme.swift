@@ -66,6 +66,7 @@ enum Theme {
         static let iconOpacity = 0.92
         static let iconShadowRadius: CGFloat = 6
         static let pressedScale: CGFloat = 0.975
+        static let disabledOpacity = 0.45
         static let pressDuration = 0.18
         static let colourDuration = 0.45
         static let rippleScale: CGFloat = 1.12
