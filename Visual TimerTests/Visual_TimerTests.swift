@@ -1063,6 +1063,23 @@ final class Visual_TimerTests: XCTestCase {
         UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
     }
 
+    func testTimerWedgeDepletesClockwiseAndEndsEmpty() {
+        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let quadrants = [
+            CGPoint(x: 70, y: 30), CGPoint(x: 70, y: 70),
+            CGPoint(x: 30, y: 70), CGPoint(x: 30, y: 30)
+        ]
+        for elapsedQuarter in 0...4 {
+            let path = RemainingTimerWedge(elapsedFraction: Double(elapsedQuarter) / 4).path(in: rect)
+            for (quadrant, point) in quadrants.enumerated() {
+                XCTAssertEqual(path.contains(point), quadrant >= elapsedQuarter,
+                               "Unexpected fill in quadrant \(quadrant) at quarter \(elapsedQuarter)")
+            }
+        }
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: 2).path(in: rect).isEmpty)
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: -1).path(in: rect).contains(quadrants[0]))
+    }
+
     func testTimerVisualProgressFreezesAndResumesFromFractionalElapsedTime() {
         let startDate = Date(timeIntervalSince1970: 200)
         let pauseDate = startDate.addingTimeInterval(0.75)

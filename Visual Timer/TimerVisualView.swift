@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A coloured glass dial whose remaining wedge sweeps clockwise from twelve.
 /// The supplied colour remains the source of every tint; round colours and the
-/// quick timer's palette retain their meaning. Only the mask updates each frame.
+/// quick timer's palette retain their meaning. Only the mask and sweep edge update each frame.
 struct TimerVisualView: View {
     let visualProgress: TimerVisualProgress
     var fillColor: Color = .red
@@ -115,7 +115,7 @@ struct TimerVisualView: View {
 
 /// Deliberately has no interpolated animatable data: wall-clock samples describe
 /// the exact wedge, including pause/resume and a newly replenished round.
-private struct RemainingTimerWedge: Shape {
+struct RemainingTimerWedge: Shape {
     let elapsedFraction: Double
 
     func path(in rect: CGRect) -> Path {

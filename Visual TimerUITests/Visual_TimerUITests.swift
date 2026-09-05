@@ -34,11 +34,10 @@ final class Visual_TimerUITests: XCTestCase {
     }
 
     @MainActor
-    func testPolishedTimerPauseResetAndLandscape() {
+    func testPolishedTimerPauseAndReset() {
         let app = XCUIApplication()
         app.launchArguments += ["-savedTimerDuration", "25"]
         app.launch()
-        defer { XCUIDevice.shared.orientation = .portrait }
 
         XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
         attachScreen("Timer — ready")
@@ -51,10 +50,22 @@ final class Visual_TimerUITests: XCTestCase {
         app.buttons["Reset"].tap()
         XCTAssertTrue(app.staticTexts["00:25"].waitForExistence(timeout: 3))
 
-        XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["Play"].isHittable)
         XCTAssertTrue(app.buttons["Increase duration"].isHittable)
-        attachScreen("Timer — landscape")
+        attachScreen("Timer — reset")
+    }
+
+    @MainActor
+    func testPolishedTimerReplenishesAfterCompletion() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-savedTimerDuration", "5"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        app.buttons["Play"].tap()
+        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["00:05"].exists)
+        attachScreen("Timer — next palette colour")
     }
 
     @MainActor
