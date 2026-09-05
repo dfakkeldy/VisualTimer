@@ -47,6 +47,33 @@ enum Theme {
         static let landscapeControlColumnWidth: CGFloat = 240
     }
 
+    // MARK: - Timer finish and glass styling
+
+    enum TimerStyle {
+        static let ink = Color(red: 0.025, green: 0.035, blue: 0.065)
+        static let well = Color(red: 0.055, green: 0.065, blue: 0.085)
+        static let controlSize: CGFloat = 44
+        static let controlSpacing: CGFloat = 8
+        static let surfaceBorder: CGFloat = 1
+        static let rimWidth: CGFloat = 1.5
+        static let glowRadius: CGFloat = 24
+        static let glowOpacity = 0.2
+        static let backdropOpacity = 0.12
+        static let highlightOpacity = 0.32
+        static let shadeOpacity = 0.24
+        static let restingIconSize: CGFloat = 52
+        static let runningIconSize: CGFloat = 36
+        static let iconOpacity = 0.92
+        static let iconShadowRadius: CGFloat = 6
+        static let pressedScale: CGFloat = 0.975
+        static let pressDuration = 0.18
+        static let colourDuration = 0.45
+        static let rippleScale: CGFloat = 1.12
+        static let rippleOpacity = 0.35
+        static let rippleDuration = 0.7
+        static let rippleAttack = 0.08
+    }
+
     // MARK: - Animation
 
     enum AnimationValue {
@@ -77,6 +104,8 @@ enum Theme {
         static let play = "play.fill"
         static let pause = "pause.fill"
         static let reset = "arrow.counterclockwise"
+        static let increase = "plus"
+        static let decrease = "minus"
         static let increment = "plus.circle.fill"
         static let decrement = "minus.circle.fill"
         static let checkmark = "checkmark"

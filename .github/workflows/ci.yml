@@ -181,3 +181,12 @@ jobs:
             -parallel-testing-enabled NO \
             -maximum-concurrent-test-simulator-destinations 1 \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Preserve Apple test results and UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-test-results
+          path: .build/results
+          retention-days: 3
+          if-no-files-found: ignore

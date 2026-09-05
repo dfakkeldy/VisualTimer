@@ -1,5 +1,6 @@
 import CloudKit
 import XCTest
+import SwiftUI
 @testable import Visual_Timer
 
 final class Visual_TimerTests: XCTestCase {
@@ -1013,6 +1014,35 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(viewModel.timeRemaining, Theme.TimerMechanic.minimumDuration)
         XCTAssertEqual(UserDefaults.standard.integer(forKey: "savedTimerDuration"), Theme.TimerMechanic.minimumDuration)
         UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    @MainActor
+    func testTimerColoursKeepCyclingAndRoundOverridesSurvivePauseAndReset() async {
+        let viewModel = TimerViewModel()
+        defer { viewModel.stopAndReset() }
+
+        // Exercise the actual completion callback, including wrapping the palette.
+        viewModel.timerColorIndex = Theme.ColorValue.timerPalette.count - 1
+        viewModel.reconfigureForRound(duration: 1, color: nil)
+        let completed = expectation(description: "Timer completes")
+        viewModel.onFinish = { completed.fulfill() }
+        viewModel.play()
+        await fulfillment(of: [completed], timeout: 5)
+        XCTAssertEqual(viewModel.timerColorIndex, Theme.ColorValue.timerPalette.count)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
+
+        let roundColour = Color(red: 0.2, green: 0.7, blue: 0.5)
+        viewModel.reconfigureForRound(duration: 30, color: roundColour)
+        viewModel.play()
+        viewModel.pause()
+        viewModel.reset()
+        XCTAssertEqual(viewModel.timerColor, roundColour)
+        XCTAssertEqual(viewModel.timeRemaining, 30)
+
+        viewModel.reconfigureForRound(duration: 30, color: .purple)
+        XCTAssertEqual(viewModel.timerColor, .purple)
+        viewModel.reconfigureForRound(duration: 30, color: nil)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
     }
 
     @MainActor
