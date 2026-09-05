@@ -1,5 +1,6 @@
 import CloudKit
 import XCTest
+import SwiftUI
 @testable import Visual_Timer
 
 final class Visual_TimerTests: XCTestCase {
@@ -1016,6 +1017,35 @@ final class Visual_TimerTests: XCTestCase {
     }
 
     @MainActor
+    func testTimerColoursKeepCyclingAndRoundOverridesSurvivePauseAndReset() async {
+        let viewModel = TimerViewModel()
+        defer { viewModel.stopAndReset() }
+
+        // Exercise the actual completion callback, including wrapping the palette.
+        viewModel.timerColorIndex = Theme.ColorValue.timerPalette.count - 1
+        viewModel.reconfigureForRound(duration: 1, color: nil)
+        let completed = expectation(description: "Timer completes")
+        viewModel.onFinish = { completed.fulfill() }
+        viewModel.play()
+        await fulfillment(of: [completed], timeout: 5)
+        XCTAssertEqual(viewModel.timerColorIndex, Theme.ColorValue.timerPalette.count)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
+
+        let roundColour = Color(red: 0.2, green: 0.7, blue: 0.5)
+        viewModel.reconfigureForRound(duration: 30, color: roundColour)
+        viewModel.play()
+        viewModel.pause()
+        viewModel.reset()
+        XCTAssertEqual(viewModel.timerColor, roundColour)
+        XCTAssertEqual(viewModel.timeRemaining, 30)
+
+        viewModel.reconfigureForRound(duration: 30, color: .purple)
+        XCTAssertEqual(viewModel.timerColor, .purple)
+        viewModel.reconfigureForRound(duration: 30, color: nil)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
+    }
+
+    @MainActor
     func testTimerViewModelVisualProgressStartsAtZeroWhenTimerStarts() {
         UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
         let viewModel = TimerViewModel()
@@ -1031,6 +1061,23 @@ final class Visual_TimerTests: XCTestCase {
             accuracy: 0.0001
         )
         UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    func testTimerWedgeDepletesClockwiseAndEndsEmpty() {
+        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let quadrants = [
+            CGPoint(x: 70, y: 30), CGPoint(x: 70, y: 70),
+            CGPoint(x: 30, y: 70), CGPoint(x: 30, y: 30)
+        ]
+        for elapsedQuarter in 0...4 {
+            let path = RemainingTimerWedge(elapsedFraction: Double(elapsedQuarter) / 4).path(in: rect)
+            for (quadrant, point) in quadrants.enumerated() {
+                XCTAssertEqual(path.contains(point), quadrant >= elapsedQuarter,
+                               "Unexpected fill in quadrant \(quadrant) at quarter \(elapsedQuarter)")
+            }
+        }
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: 2).path(in: rect).isEmpty)
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: -1).path(in: rect).contains(quadrants[0]))
     }
 
     func testTimerVisualProgressFreezesAndResumesFromFractionalElapsedTime() {

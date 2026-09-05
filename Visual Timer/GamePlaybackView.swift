@@ -11,11 +11,13 @@ struct GamePlaybackView: View {
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     @State private var showSettings = false
 
     var body: some View {
         ZStack {
-            Theme.ColorValue.appBackground.ignoresSafeArea()
+            TimerBackdrop(color: timerViewModel.timerColor)
 
             if gameViewModel.hasActiveGame {
                 gamePlaybackContent
@@ -29,11 +31,11 @@ struct GamePlaybackView: View {
             }
         }
         .animation(
-            .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
+            reduceMotion ? nil : .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
             value: timerViewModel.state
         )
         .animation(
-            .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
+            reduceMotion ? nil : .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
             value: gameViewModel.gamePhase
         )
         .sheet(isPresented: $showSettings) {
@@ -327,18 +329,24 @@ struct GamePlaybackView: View {
             ZStack {
                 TimerVisualView(
                     visualProgress: timerViewModel.visualProgress,
-                    fillColor: timerViewModel.timerColor
+                    fillColor: timerViewModel.timerColor,
+                    completionCount: timerViewModel.timerColorIndex
                 )
 
                 if let icon = centerIcon {
                     Image(systemName: icon)
-                        .font(.system(size: 64, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.system(
+                            size: timerViewModel.state == .running ? Theme.TimerStyle.runningIconSize : Theme.TimerStyle.restingIconSize,
+                            weight: .medium
+                        ))
+                        .foregroundStyle(.white.opacity(Theme.TimerStyle.iconOpacity))
+                        .shadow(color: .black.opacity(Theme.TimerStyle.shadeOpacity), radius: Theme.TimerStyle.iconShadowRadius)
+                        .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                         .accessibilityHidden(true)
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TimerPressStyle())
         .contentShape(Circle())
         .disabled(!isTimerCircleEnabled)
         .accessibilityLabel(timerCircleAccessibilityLabel)
@@ -401,37 +409,45 @@ struct GamePlaybackView: View {
     // MARK: - Quick Timer Sub-Views
 
     private var durationStepper: some View {
-        HStack(spacing: Theme.Dimension.durationStepperSpacing) {
-            Button {
-                timerViewModel.setDuration(
-                    max(Theme.TimerMechanic.minimumDuration,
-                        timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
-                )
-            } label: {
-                Image(systemName: Theme.Symbol.decrement)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-            .disabled(timerViewModel.state != .notStarted)
-            .accessibilityLabel(Theme.Label.decrementDuration)
+        TimerGlassGroup {
+            HStack(spacing: Theme.TimerStyle.controlSpacing) {
+                Button {
+                    timerViewModel.setDuration(
+                        max(Theme.TimerMechanic.minimumDuration,
+                            timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
+                    )
+                } label: {
+                    Image(systemName: Theme.Symbol.decrease)
+                        .font(.title3)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .disabled(timerViewModel.state != .notStarted)
+                .accessibilityLabel(Theme.Label.decrementDuration)
 
-            Text("\(timerViewModel.totalDuration / 60)m \(timerViewModel.totalDuration % 60)s")
-                .font(.title3.weight(.medium))
-                .monospacedDigit()
-                .foregroundStyle(Theme.ColorValue.textPrimary)
+                Text("\(timerViewModel.totalDuration / 60)m \(timerViewModel.totalDuration % 60)s")
+                    .font(.title3.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
 
-            Button {
-                timerViewModel.setDuration(
-                    timerViewModel.totalDuration + Theme.TimerMechanic.durationStep
-                )
-            } label: {
-                Image(systemName: Theme.Symbol.increment)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                Button {
+                    timerViewModel.setDuration(
+                        timerViewModel.totalDuration + Theme.TimerMechanic.durationStep
+                    )
+                } label: {
+                    Image(systemName: Theme.Symbol.increase)
+                        .font(.title3)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .disabled(timerViewModel.state != .notStarted)
+                .accessibilityLabel(Theme.Label.incrementDuration)
             }
-            .disabled(timerViewModel.state != .notStarted)
-            .accessibilityLabel(Theme.Label.incrementDuration)
+            .buttonStyle(TimerPressStyle())
         }
+        .padding(.top, Theme.TimerStyle.controlSize + Theme.Dimension.gearTopPadding)
     }
 
     private var resetButton: some View {
@@ -441,18 +457,13 @@ struct GamePlaybackView: View {
                 Button {
                     timerViewModel.reset()
                 } label: {
-                    Circle()
-                        .fill(Theme.ColorValue.buttonFill)
-                        .frame(
-                            width: Theme.Dimension.controlButtonSize,
-                            height: Theme.Dimension.controlButtonSize
-                        )
-                        .overlay {
-                            Image(systemName: Theme.Symbol.reset)
-                                .font(.title2.weight(.medium))
-                                .foregroundStyle(Theme.ColorValue.textPrimary)
-                        }
-                    }
+                    Image(systemName: Theme.Symbol.reset)
+                        .font(.title2.weight(.medium))
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.Dimension.controlButtonSize, height: Theme.Dimension.controlButtonSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .buttonStyle(TimerPressStyle())
                 .accessibilityLabel(Theme.Label.reset)
             }
         }
@@ -477,8 +488,11 @@ struct GamePlaybackView: View {
                 } label: {
                     Image(systemName: Theme.Symbol.settings)
                         .font(.title3)
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
                 }
+                .buttonStyle(TimerPressStyle())
                 .accessibilityLabel(Theme.Label.settings)
             }
             .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)

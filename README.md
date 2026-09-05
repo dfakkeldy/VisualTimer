@@ -56,7 +56,11 @@ sync, widget snapshots/deep links, watch template playback, the React PWA
 ## Core Features
 
 - **Visual pie countdown** - A circular timer depletes clockwise from the
-  12 o'clock position using SwiftUI drawing and animation.
+  12 o'clock position using SwiftUI drawing and animation. The iOS dial adds
+  glasslike lighting and a completion ripple while preserving the quick timer's
+  colour cycle and each round's chosen colour. Controls use Liquid Glass on
+  iOS 26+, with material fallbacks on iOS 18 and accessibility alternatives for
+  reduced motion, reduced transparency, and increased contrast.
 - **Custom sounds** - Built-in tones are generated programmatically as 16-bit
   PCM WAV files. The chosen sound plays when a countdown reaches zero.
 - **Sleep prevention** - The screen stays awake while a timer is running and

@@ -4,13 +4,18 @@ import SwiftUI
 struct TimeDisplayView: View {
     let timeRemaining: Int
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Text(formattedTime)
             .font(.system(
                 size: Theme.Dimension.timeFontSize,
-                weight: .bold,
-                design: .monospaced
+                weight: .semibold,
+                design: .rounded
             ))
+            .monospacedDigit()
+            .contentTransition(.numericText(countsDown: true))
+            .animation(reduceMotion ? nil : .easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: timeRemaining)
             .foregroundStyle(Theme.ColorValue.textPrimary)
             .padding(.horizontal, Theme.Dimension.timePillHorizontalPadding)
             .padding(.vertical, Theme.Dimension.timePillVerticalPadding)
