@@ -1,97 +1,42 @@
-# Claude Code Guidelines for Turn Timer
+# Turn Timer
 
-## Role & Tone
+Visual sequence timer for turns, routines, and countdowns on iOS 18 and
+watchOS, with a React web version in `web/`. Pie-chart countdowns, guarded
+timer and sequence state machines, starter templates, local history, and
+generated WAV sounds. `CONTRIBUTING.md` has the architecture rules and product
+language; `Architecture.md` has the design.
 
-You are an expert, patient Senior Apple Ecosystem Developer mentoring a solo
-developer. The developer is learning as they go, so whenever you propose an
-architectural decision or provide code, briefly explain why you chose that
-approach.
+## Commands
 
-## Project Context
+- iOS scheme `Visual Timer`, watch scheme `Visual Timer Watch Watch App`, in
+  `Visual Timer.xcodeproj` (Swift 5 language mode).
+- Web: `make web-test` (tests plus type check), `make web-build`.
 
-* **App:** Turn Timer - a visual sequence timer for turns, routines, and
-  real-world countdowns.
-* **Core Mechanics:** Hardware-accelerated pie-chart countdowns, guarded timer
-  and sequence state machines, editable starter templates, local history, and
-  programmatic 16-bit PCM WAV sound generation.
-* **Target:** iOS and watchOS using Swift 5.0 project settings, SwiftUI,
-  Combine, AVFoundation, and StoreKit.
-* **Current Phase:** Turn Timer Pro uses a $4.99 one-time non-consumable unlock.
-  Free users keep quick timer use, built-in starter templates, basic playback,
-  and one custom saved template. Pro unlocks unlimited saved templates, full
-  history/export, and iCloud template sync.
-* **Roadmap:** Pro value grows through richer sharing, history sync, widgets,
-  and advanced customization.
-* **Product ID:** The StoreKit 2 non-consumable unlock is
-  `turntimer.pro.unlock`; `TurnTimer.storekit` exists for local testing.
+## Rules
 
-## Architecture & Coding Guidelines
+- MVVM with dumb views: view models own logic and state machines. Leaf views
+  take `let` data and `() -> Void` closures, with no business logic.
+- Timer state transitions (not started, running, paused, finished) are
+  guarded; round-to-round, pause, and completion transitions must respect
+  them.
+- Colors, symbols, labels, and spacing go in `Theme.swift`, not inline.
+- New sounds go through `SoundManager` / `TimerSound`.
+- Saved templates are `.turntimer` JSON in `Documents/Templates/<id>.turntimer`.
+  Legacy `.vtgame` files still load. Malformed files must fail gracefully.
+- Pro is a $4.99 one-time unlock (`turntimer.pro.unlock`; `TurnTimer.storekit`
+  for local testing). Never gate the quick timer, built-in templates, or basic
+  playback. Pro covers extra saved templates, full history and export, iCloud
+  sync, sharing, widgets, and advanced customization.
+- Template sync uses CloudKit container `iCloud.Dan.Visual-Timer`, zone
+  `TurnTimerTemplates`, record type `Template`. Live sync needs a signed build
+  and a deployed CloudKit schema.
+- Commit messages are short and imperative: "Add template picker".
 
-* **MVVM with Dumb Views (CRITICAL):** Strictly adhere to the existing
-  architecture. ViewModels own all logic and state machines. Views must remain
-  declarative, receiving data via `let` properties and communicating via
-  `() -> Void` closures. No business logic or `@StateObject` wrappers belong in
-  leaf views.
-* **State Machine Integrity:** The timer mechanics rely on guarded state
-  transitions (Not Started, Running, Paused, Finished). When implementing
-  sequential rounds, ensure transitions from one turn to the next, to pauses, or
-  to completion respect these guards to prevent sequence breaking or UI glitches.
-* **Template Documents:** New saved templates are `.turntimer` JSON documents in
-  `Documents/Templates/<templateID>.turntimer`. Legacy `.vtgame` files may still
-  be loaded for migration. Prioritize robust, safe parsing. Handle malformed
-  files gracefully without crashing the app, and decouple storage/parsing logic
-  from the UI.
-* **Monetization Boundaries:** Never gate quick timer, built-in starter
-  templates, or basic playback behind Pro. Pro gates reuse and portability:
-  additional saved templates, full history/export, iCloud template sync,
-  sharing, widgets, and advanced customization.
-* **CloudKit Sync:** Template sync uses private CloudKit container
-  `iCloud.Dan.Visual-Timer`, custom zone `TurnTimerTemplates`, and record type
-  `Template`. Local builds can compile the sync layer and unit-test record
-  mapping, but live account/container/subscription behavior requires a signed
-  build and CloudKit Dashboard schema deployment before release.
-* **Strict Theming:** Never hardcode magic numbers, strings, or colors in views.
-  If a new color, emoji, symbol, label, or layout spacing is needed, add it to
-  `Theme.swift`.
-* **Audio Management:** Any new sounds must be integrated directly into the
-  `SoundManager`/`TimerSound` path with appropriate frequencies and durations.
+## Branches and releases
 
-## Documentation & Workflow Sync (CRITICAL)
-
-* Before starting a major refactor, template feature, sync feature, widget, or
-  StoreKit work, autonomously read `CONTRIBUTING.md` and `README.md` to
-  understand the established blueprint.
-* Whenever a feature, architecture boundary, product language rule, or custom
-  file format changes, explicitly remind the developer that documentation needs
-  updating.
-* Proactively offer to update `README.md` or `CONTRIBUTING.md` when the sequence
-  architecture, file parsing rules, paid-app strategy, sync, sharing, or widgets
-  change. Use file-editing tools to make the updates if approved.
-
-## Release Engineering
-
-* Use the promotion ladder `feature/*` -> `nightly` -> `weekly` -> `main`.
-  Feature work branches from `nightly`, and feature PRs target `nightly`.
-* `main` stays the GitHub default branch. Scheduled release-train workflows only
-  run from the default-branch copy after the workflow has been promoted there.
-* Release automation restores the default-branch `fastlane` configuration after
-  checking out a train branch. Keep signing and distribution policy centralized
-  there instead of maintaining divergent fastlane files on `nightly` and
-  `weekly`.
-* Distribution policy: `nightly` goes to the internal TestFlight group named
-  `nightly`, `weekly` goes to the external TestFlight group named `weekly`, and
-  app-affecting pushes to `main` upload to App Store Connect and submit for
-  review by default.
-* Protected branches require the `Build gate + tests` check and pull requests,
-  but this solo project requires zero approving reviews.
-* Hotfixes branch from `main`, merge to `main` by PR, then merge `main` back down
-  into `weekly` and `nightly`.
-
-## Response Rules
-
-* When outputting code in chat, do not output entire files unless explicitly
-  requested. Only show the modified functions, structs, or protocols, using
-  clear comments to indicate exactly where the new code belongs.
-* If drafting git commits, strictly follow the imperative, present-tense
-  convention, such as "Add template picker", not "Added template picker". Keep
-  commits focused on one logical change.
+`feature/*` → `nightly` → `weekly` → `main`. Feature PRs target `nightly`;
+hotfixes branch from `main` and are merged back down. `nightly` ships to
+internal TestFlight, `weekly` to external TestFlight, and app changes merged
+to `main` are submitted to App Review. Signing and distribution config lives
+only in the default branch's `fastlane/`; release automation uses that copy
+for every train.
