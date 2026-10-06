@@ -1,10 +1,9 @@
 # Turn Timer Marketing Plan
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC
 
-No standalone marketing plan existed on `main` at the start of this pass. This
-document creates the first plan and intentionally keeps marketing assets separate
-from the core docs/website PR.
+Status: preparation only; no posts, featuring nomination or store submission
+authorized. Readiness and candidate acceptance precede promotion.
 
 ## Positioning
 
@@ -39,20 +38,19 @@ outcomes unless future evidence supports that language.
 
 ## Launch Funnel
 
-1. Merge the core docs/website PR so the site root works and readiness docs are
-   public.
-2. Promote the intended app stack to `main`.
-3. Capture screenshots from the promoted build.
-4. Finalize App Store copy from `docs/marketing/app-store-copy.md`.
-5. Convert approved copy into checked-in Fastlane metadata only after the App
-   Store Connect record exists and the copy has been reviewed.
-6. Publish support and privacy pages.
-7. Ship internal TestFlight and invite a small private beta group.
-8. Post a build-in-public update from the devlog PR body, not from invented
-   claims.
-9. Submit to App Review.
-10. After approval, post launch notes and ask early users for feedback on the
-    first-run flow, pricing, widgets, and template examples.
+1. Resolve release blockers in [readiness](../app-store/readiness.md).
+2. Select a payload, pass strict native CI and internal acceptance.
+3. With exact promotion/distribution authorization, pass external weekly
+   acceptance before promoting to main.
+4. Capture the candidate using [screenshot manifest](screenshot-plan.md).
+5. Verify current ASC fields and reconcile [submission packet](../app-store/submission-packet.md).
+6. Obtain exact authorization for store writes, pricing/legal declarations,
+   upload/submission/release. Binary lanes skip store copy and screenshots.
+7. Verify actual store approval and territory availability before a public push.
+8. Publish launch/community/featuring material only when explicitly authorized.
+
+Support/privacy URLs returned HTTPS 200 on 6 Oct. Historic passed launch dates
+are not a current release schedule. No date is ratified by this audit.
 
 ## Channel Plan
 

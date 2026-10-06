@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MainTabView: View {
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var soundManager: SoundManager
     @StateObject private var gameEditorViewModel: GameEditorViewModel
@@ -85,7 +87,14 @@ struct MainTabView: View {
                 .tag(2)
         }
         .onOpenURL(perform: handleOpenURL)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                timerViewModel.refreshCountdown()
+                WatchTemplateConnectivity.shared.retryLatestSnapshot()
+            }
+        }
         .task {
+            WatchTemplateConnectivity.shared.activate()
             gameEditorViewModel.refreshSavedTemplates()
         }
         .task(id: proAccess.isProUnlocked) {

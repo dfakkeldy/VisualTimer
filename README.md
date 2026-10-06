@@ -6,11 +6,13 @@ starter templates for common timed sessions.
 
 ## Status
 
-`main` is the deployable GitHub Pages and App Store release branch. `nightly`
-currently carries newer app work that is staged for promotion, including widget,
-watch, history-sync, and release-validation improvements. Keep user-facing docs
-honest about which branch is being described, and promote app changes through
-`nightly` -> `weekly` -> `main` before treating them as App Store-ready.
+Re-checked 2026-10-06: nightly build **1.0 (73)** has upload, processing and
+internal-distribution receipts; weekly build **1.0 (66)** has external receipts
+for an older payload. Main remains older. App Store review/live state is
+unverified. The [readiness ledger](docs/app-store/readiness.md) records exact
+SHAs, CI, blockers and the required `nightly` → `weekly` → `main` ladder.
+[Submission materials](docs/app-store/submission-packet.md) are drafts. No
+promotion, upload or submission is authorized by this preparation.
 
 Useful docs:
 
@@ -35,7 +37,7 @@ Useful docs:
   full local history, export, and iCloud sync available with Pro.
 - **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
   iCloud sync, sharing, widgets, and advanced customization with a one-time
-  $4.99 StoreKit purchase.
+  StoreKit purchase. The local $4.99 test value does not verify the ASC price.
 - **Shared template files** - Import and export portable `.turntimer` template
   files without overwriting existing local work.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
@@ -45,13 +47,16 @@ Useful docs:
 - **Template widgets** - Home Screen and Lock Screen widgets read compact App
   Group snapshots and launch starter or saved templates through `turntimer://`
   deep links.
-- **Watch app** - Keep companion watch target support.
+- **Watch app** - A separate watch-only source target has quick timer and
+  starter playback. It is not embedded by the current iOS release scheme;
+  companion distribution and saved-template delivery need verification.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
-Staged on `nightly` ahead of the next release promotion: Pro iCloud history
-sync, widget snapshots/deep links, watch template playback, the React PWA
-(`web/` and `docs/app/`), and release-train validation updates.
+These scope bullets describe implemented source, not signed-device acceptance
+or the old main release. Production sync, saved Watch-template transfer and
+timer lock/background behavior still need the focused checks in the readiness
+ledger. No background-alarm guarantee is implied.
 
 ## Core Features
 

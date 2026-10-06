@@ -1,10 +1,11 @@
 # Fastlane Release Docs
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC
 
 Fastlane owns Turn Timer's archive, signing-profile sync, TestFlight upload, and
-App Store upload lanes. App Store metadata is not yet fully checked in on
-`main`; marketing metadata drafts are being isolated separately before upload.
+App Store upload lanes. App Store copy is prepared outside automation in
+`docs/app-store/submission-draft/en-CA/`. The app-store lane skips metadata and
+screenshots, so a binary upload does not apply those drafts.
 
 ## Local Tooling
 
@@ -15,9 +16,9 @@ Ruby, use the rbenv shims first:
 PATH="$HOME/.rbenv/shims:$PATH" bundle exec fastlane lanes
 ```
 
-In this worktree, the pinned Ruby was not installed locally during the docs
-audit, so Fastlane commands could not be fully exercised without installing the
-matching Ruby or switching to the known working rbenv version.
+The July local-Ruby availability observation is historical, not a current
+release blocker. Hosted upload receipts and actual lane configuration are
+recorded in [readiness](../docs/app-store/readiness.md).
 
 ## Required Secrets
 
@@ -68,16 +69,21 @@ release automatically after review.
 git@github.com:dfakkeldy/echo-audiobooks-certificates.git
 ```
 
-If entitlements change, dispatch the release workflow with
-`refresh_signing_profiles=true` so App Store profiles are regenerated instead of
-read-only fetched.
+If a separately authorized release needs changed entitlements, the workflow
+accepts `refresh_signing_profiles=true`. This regenerates profiles and is not a
+read-only preparation step; obtain exact authorization before using it.
 
 Current known app identifiers:
 
 - `Dan.Visual-Timer`
-- `Dan.Visual-Timer-Watch`
-- Widget and watch-extension identifiers are staged on `nightly` and should be
-  kept in sync with the project before release.
+- `Dan.Visual-Timer-Watch` (mapped only if that project target exists)
+- `Dan.Visual-Timer-Watch.watchkitapp`
+- `Dan.Visual-Timer.TurnTimerWidgets`
+
+Automation comes from the default-branch workflow ref for every channel. Keep
+source/automation SHAs distinct and follow internal nightly → external weekly →
+main acceptance before an authorized promotion. Do not backport feature work
+directly to weekly/main to obtain a green check.
 
 ## Validation
 

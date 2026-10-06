@@ -133,8 +133,10 @@ struct WatchGamePlaybackView: View {
             gameViewModel.recordResume()
             timerViewModel.play()
         case .running:
-            gameViewModel.recordPause()
             timerViewModel.pause()
+            if timerViewModel.state == .paused {
+                gameViewModel.recordPause()
+            }
         case .finished:
             break
         }

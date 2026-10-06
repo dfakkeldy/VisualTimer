@@ -8,6 +8,7 @@ app_identifier([
   "Dan.Visual-Timer",
   "Dan.Visual-Timer.TurnTimerWidgets",
   "Dan.Visual-Timer-Watch",
-  "Dan.Visual-Timer-Watch.watchkitapp"
+  "Dan.Visual-Timer-Watch.watchkitapp",
+  "Dan.Visual-Timer.watchkitapp"
 ])
 team_id("8AXNA5B37R")

@@ -8,6 +8,7 @@ struct TimeDisplayView: View {
 
     var body: some View {
         Text(formattedTime)
+            .accessibilityIdentifier("timer.time-remaining")
             .font(.system(
                 size: Theme.Dimension.timeFontSize,
                 weight: .semibold,

@@ -4,8 +4,8 @@ enum WatchTemplateStoreError: Error, Equatable {
     case missingAppGroupContainer
 }
 
-/// Full-payload template snapshots written by the iOS app into the shared
-/// App Group so the watchOS app can reconstruct and play back saved templates.
+/// Full-payload template snapshots. App Group storage is local to each device;
+/// WatchConnectivity transfers snapshots from iOS to watchOS.
 ///
 /// Unlike `WidgetTemplateStore` (metadata only), each entry carries the
 /// complete `GameSequence`, which is enough to drive `GameViewModel` playback
@@ -21,6 +21,37 @@ struct WatchTemplate: Codable, Equatable, Identifiable {
 
 struct WatchTemplateStore {
     static let fileName = "WatchTemplates.json"
+    static let contextKey = "turnTimerTemplateSnapshot"
+
+    private struct Snapshot: Codable {
+        var revision: UInt64
+        var templates: [WatchTemplate]
+    }
+
+    static func applicationContext(
+        for templates: [WatchTemplate],
+        revision: UInt64 = UInt64(Date().timeIntervalSince1970 * 1_000_000)
+    ) throws -> [String: Any] {
+        let encoder = JSONEncoder()
+        return [contextKey: try encoder.encode(Snapshot(revision: revision, templates: templates))]
+    }
+
+    /// Validate before replacing the last durable snapshot. Revisions prevent a
+    /// delayed large-file transfer from restoring templates after Pro revocation.
+    @discardableResult
+    func applyApplicationContext(_ context: [String: Any]) throws -> Bool {
+        guard let data = context[Self.contextKey] as? Data else { return false }
+        let snapshot = try Self.decodeSnapshot(data)
+        let url = try storeURL()
+        if let previousData = try? Data(contentsOf: url),
+           let previous = try? Self.decodeSnapshot(previousData),
+           snapshot.revision <= previous.revision {
+            return false
+        }
+        try fileManager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url, options: .atomic)
+        return true
+    }
 
     private let containerURLProvider: () -> URL?
     private let fileManager: FileManager
@@ -39,7 +70,6 @@ struct WatchTemplateStore {
     func write(templates: [WatchTemplate]) throws {
         let url = try storeURL()
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(templates)
 
@@ -50,16 +80,34 @@ struct WatchTemplateStore {
         try data.write(to: url, options: [.atomic])
     }
 
-    /// Reads saved templates published by the iOS app. Returns an empty array
-    /// when the file is missing (no iOS app has published yet, or not Pro).
+    /// Reads this device's durable snapshot, including the prior array format.
+    /// Returns an empty array until a snapshot is received or when Pro is locked.
     func read() throws -> [WatchTemplate] {
         let url = try storeURL()
         guard fileManager.fileExists(atPath: url.path) else { return [] }
 
         let data = try Data(contentsOf: url)
+        if let snapshot = try? Self.decodeSnapshot(data) {
+            return snapshot.templates
+        }
         let decoder = JSONDecoder()
+        if let templates = try? decoder.decode([WatchTemplate].self, from: data) {
+            return templates
+        }
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([WatchTemplate].self, from: data)
+    }
+
+    /// Numeric dates retain the full timestamp precision. Existing ISO8601
+    /// snapshots remain readable without altering ordering or template IDs.
+    private static func decodeSnapshot(_ data: Data) throws -> Snapshot {
+        let decoder = JSONDecoder()
+        do {
+            return try decoder.decode(Snapshot.self, from: data)
+        } catch {
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(Snapshot.self, from: data)
+        }
     }
 
     private func storeURL() throws -> URL {
@@ -67,5 +115,28 @@ struct WatchTemplateStore {
             throw WatchTemplateStoreError.missingAppGroupContainer
         }
         return containerURL.appendingPathComponent(Self.fileName)
+    }
+}
+
+/// Latest-state retry policy. A new template/entitlement snapshot replaces
+/// failed work; retries never restore a previously owned snapshot.
+struct WatchTemplateDeliveryState {
+    private(set) var latestContext: [String: Any]?
+    private var failureCount = 0
+
+    mutating func replace(with context: [String: Any]) {
+        latestContext = context
+        resetRetries()
+    }
+
+    mutating func resetRetries() {
+        failureCount = 0
+    }
+
+    mutating func retryDelayAfterFailure() -> UInt64? {
+        guard latestContext != nil, failureCount < 3 else { return nil }
+        let delay: UInt64 = [1, 5, 30][failureCount]
+        failureCount += 1
+        return delay
     }
 }
