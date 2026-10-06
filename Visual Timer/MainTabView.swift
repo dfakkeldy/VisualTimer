@@ -90,6 +90,7 @@ struct MainTabView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 timerViewModel.refreshCountdown()
+                WatchTemplateConnectivity.shared.retryLatestSnapshot()
             }
         }
         .task {

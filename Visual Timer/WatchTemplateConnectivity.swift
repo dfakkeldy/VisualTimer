@@ -14,7 +14,8 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
     private let logger = Logger(subsystem: "Dan.Visual-Timer", category: "WatchTemplates")
     private let store = WatchTemplateStore()
     private let session: WCSession?
-    private var pendingContext: [String: Any]?
+    private var deliveryState = WatchTemplateDeliveryState()
+    private var retryTask: Task<Void, Never>?
 
     private override init() {
         session = WCSession.isSupported() ? WCSession.default : nil
@@ -29,10 +30,12 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
 
     func publish(templates: [WatchTemplate]) {
 #if os(iOS)
+        retryTask?.cancel()
+        deliveryState.resetRetries()
         let previous = UserDefaults.standard.double(forKey: Self.revisionKey)
         let revision = UInt64(max(previous + 1, Date().timeIntervalSince1970 * 1_000_000))
         do {
-            pendingContext = try WatchTemplateStore.applicationContext(for: templates, revision: revision)
+            deliveryState.replace(with: try WatchTemplateStore.applicationContext(for: templates, revision: revision))
             UserDefaults.standard.set(Double(revision), forKey: Self.revisionKey)
             activate()
             sendPendingContext()
@@ -42,15 +45,34 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
 #endif
     }
 
+    func retryLatestSnapshot() {
+        retryTask?.cancel()
+        deliveryState.resetRetries()
+        activate()
+        sendPendingContext()
+    }
+
+    private func scheduleRetry() {
+        guard let delay = deliveryState.retryDelayAfterFailure() else { return }
+        retryTask?.cancel()
+        retryTask = Task { @MainActor [weak self] in
+            do { try await Task.sleep(nanoseconds: delay * 1_000_000_000) }
+            catch { return }
+            guard !Task.isCancelled else { return }
+            self?.sendPendingContext()
+        }
+    }
+
     private func sendPendingContext() {
 #if os(iOS)
         guard let session, session.activationState == .activated,
               session.isPaired, session.isWatchAppInstalled,
-              let context = pendingContext,
+              let context = deliveryState.latestContext,
               let data = context[WatchTemplateStore.contextKey] as? Data else { return }
         do {
             // Context replaces older snapshots and does not require reachability.
             try session.updateApplicationContext(context)
+            deliveryState.resetRetries()
         } catch {
             // Large snapshots exceed the context limit. File delivery retains the
             // full payload; persisted revisions reject delayed/out-of-order files.
@@ -115,7 +137,10 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
         guard url.deletingLastPathComponent().standardizedFileURL == ownedDirectory else { return }
         try? FileManager.default.removeItem(at: url)
         if error != nil {
-            Task { @MainActor [weak self] in self?.logger.error("Watch template file delivery failed; refresh on iPhone to retry.") }
+            Task { @MainActor [weak self] in
+                self?.logger.error("Watch template file delivery failed; retrying latest snapshot.")
+                self?.scheduleRetry()
+            }
         }
     }
 

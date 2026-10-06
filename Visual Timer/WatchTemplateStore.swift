@@ -106,3 +106,26 @@ struct WatchTemplateStore {
         return containerURL.appendingPathComponent(Self.fileName)
     }
 }
+
+/// Latest-state retry policy. A new template/entitlement snapshot replaces
+/// failed work; retries never restore a previously owned snapshot.
+struct WatchTemplateDeliveryState {
+    private(set) var latestContext: [String: Any]?
+    private var failureCount = 0
+
+    mutating func replace(with context: [String: Any]) {
+        latestContext = context
+        resetRetries()
+    }
+
+    mutating func resetRetries() {
+        failureCount = 0
+    }
+
+    mutating func retryDelayAfterFailure() -> UInt64? {
+        guard latestContext != nil, failureCount < 3 else { return nil }
+        let delay: UInt64 = [1, 5, 30][failureCount]
+        failureCount += 1
+        return delay
+    }
+}

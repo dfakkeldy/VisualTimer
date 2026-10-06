@@ -20,7 +20,7 @@ final class GameEditorViewModel: ObservableObject {
     private let templateLibrary: TemplateLibraryStore
     private let widgetSnapshotStore: WidgetSnapshotStore
     private let watchTemplateStore: WatchTemplateStore
-    private let watchTemplatePublisher: ([WatchTemplate]) -> Void
+    private let watchTemplatePublisher: @MainActor ([WatchTemplate]) -> Void
     private var isWidgetPublishingEnabled = false
 
     enum TemplateSaveResult {
@@ -39,7 +39,7 @@ final class GameEditorViewModel: ObservableObject {
         templateLibrary: TemplateLibraryStore = TemplateLibraryStore(),
         widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore(),
         watchTemplateStore: WatchTemplateStore = WatchTemplateStore(),
-        watchTemplatePublisher: @escaping ([WatchTemplate]) -> Void = {
+        watchTemplatePublisher: @escaping @MainActor ([WatchTemplate]) -> Void = {
             WatchTemplateConnectivity.shared.publish(templates: $0)
         }
     ) {

@@ -43,6 +43,23 @@ final class WatchTemplateTransferTests: XCTestCase {
         XCTAssertEqual(try watch.read(), templates)
     }
 
+    func testFailedDeliveryRetriesLatestRevocationAndStopsAfterBoundedAttempts() throws {
+        var delivery = WatchTemplateDeliveryState()
+        XCTAssertNil(delivery.retryDelayAfterFailure())
+        delivery.replace(with: try WatchTemplateStore.applicationContext(for: [template()], revision: 10))
+        XCTAssertNotNil(delivery.retryDelayAfterFailure())
+        delivery.replace(with: try WatchTemplateStore.applicationContext(for: [], revision: 11))
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let watch = WatchTemplateStore(containerURLProvider: { directory })
+        for _ in 0..<3 {
+            XCTAssertNotNil(delivery.retryDelayAfterFailure())
+            _ = try watch.applyApplicationContext(XCTUnwrap(delivery.latestContext))
+            XCTAssertTrue(try watch.read().isEmpty)
+        }
+        XCTAssertNil(delivery.retryDelayAfterFailure())
+    }
+
     func testDelayedAndDuplicateSnapshotsCannotUndoNewerRevocation() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

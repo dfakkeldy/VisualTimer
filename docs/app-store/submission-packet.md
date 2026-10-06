@@ -13,7 +13,7 @@ legal declarations or release.
 | Name | Turn Timer; locked product name. Confirm current ASC name/locale availability. |
 | Subtitle | Visual rounds & routines |
 | Category | Productivity proposal; source category is Utilities. Read ASC before choosing. |
-| Platforms | iPhone/iPad with embedded widget. Separate Watch source target is not embedded by the current iOS release scheme; verify intended distribution/archive before including it in the listing. No native Mac target. |
+| Platforms | iPhone/iPad with embedded widget. Watch embedding/companion repair is under native/archive validation; require signed paired delivery before Watch listing claims. No native Mac target. |
 | Locale | en-CA draft; historical en-CA/fallback notes need current ASC verification before creating en-US or asserting a name conflict. |
 | Version | Source `1.0`; choose exact candidate/build after ladder gates. |
 | Support | https://dfakkeldy.github.io/VisualTimer/support.html — HTTPS 200 on 6 Oct. |
@@ -36,9 +36,11 @@ field applies; it omits developer documentation/release automation as features.
 - Name `Turn Timer Pro` (14 characters); description draft:
   `Unlimited templates, history export, sharing.`
 - No subscription group, renewal or trial configured in source.
-- Source/local test price is `$4.99`, not proof of the ASC storefront price.
-  Planning sources disagree. Inspect real price schedule and obtain one exact
-  owner decision only if a change is needed. Do not set offers/prices here.
+- Owner-approved October 6 one-time price: CAD1.99 for the existing Canada
+  product. ASC operator verified the exact price after reload. No territory
+  expansion. The app displays StoreKit's localized price and disables a
+  missing product instead of inventing a fallback. Local StoreKit configuration
+  uses Canada/CAD1.99 for simulation; it is not proof of paid store acceptance.
 - Read product state, localization, availability, review screenshot, first-IAP
   version attachment and Paid Apps Agreement. Local `.storekit` does not
   establish these. Capture real paywall/unlocked-state review screenshot and
