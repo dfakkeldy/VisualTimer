@@ -30,16 +30,26 @@ struct ProPaywallView: View {
                         .foregroundStyle(Theme.ColorValue.textSecondary)
                 }
 
+                Text("One-time purchase. No subscription.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+
                 Spacer()
 
                 Button {
                     Task { await proAccess.purchasePro() }
                 } label: {
-                    Label("Unlock Pro \(proAccess.displayPrice)", systemImage: Theme.Symbol.proUnlock)
+                    Label(proAccess.purchaseButtonTitle, systemImage: Theme.Symbol.proUnlock)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(proAccess.purchaseState == .purchasing)
+                .disabled(!proAccess.canPurchase)
+
+                if proAccess.product == nil && proAccess.purchaseState != .loading {
+                    Button("Retry Loading Pro") {
+                        Task { await proAccess.loadProducts() }
+                    }
+                }
 
                 Button {
                     Task { await proAccess.restorePurchases() }

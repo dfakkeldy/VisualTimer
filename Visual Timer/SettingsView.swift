@@ -81,9 +81,15 @@ struct SettingsView: View {
                         Button {
                             Task { await proAccess.purchasePro() }
                         } label: {
-                            Text("Unlock Pro \(proAccess.displayPrice)")
+                            Text(proAccess.purchaseButtonTitle)
                         }
-                        .disabled(proAccess.purchaseState == .purchasing)
+                        .disabled(!proAccess.canPurchase)
+                    }
+
+                    if proAccess.product == nil && proAccess.purchaseState != .loading {
+                        Button("Retry Loading Pro") {
+                            Task { await proAccess.loadProducts() }
+                        }
                     }
 
                     Button {

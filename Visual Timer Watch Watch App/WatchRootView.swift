@@ -5,6 +5,7 @@ import SwiftUI
 /// shared `GameViewModel` and presents `WatchGamePlaybackView`.
 struct WatchRootView: View {
 
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var gameViewModel: GameViewModel
     @StateObject private var timerViewModel: TimerViewModel
     @StateObject private var soundManager = SoundManager()
@@ -69,7 +70,16 @@ struct WatchRootView: View {
                 )
             }
         }
-        .task { refreshSavedTemplates() }
+        .task {
+            WatchTemplateConnectivity.shared.activate()
+            refreshSavedTemplates()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: WatchTemplateConnectivity.templatesChanged)) { _ in
+            refreshSavedTemplates()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshSavedTemplates() }
+        }
     }
 
     // MARK: - Launch
@@ -80,7 +90,7 @@ struct WatchRootView: View {
         presentingGame = true
     }
 
-    // MARK: - Saved templates (App Group)
+    // MARK: - Received saved templates
 
     private func refreshSavedTemplates() {
         let store = WatchTemplateStore()

@@ -20,6 +20,7 @@ final class GameEditorViewModel: ObservableObject {
     private let templateLibrary: TemplateLibraryStore
     private let widgetSnapshotStore: WidgetSnapshotStore
     private let watchTemplateStore: WatchTemplateStore
+    private let watchTemplatePublisher: ([WatchTemplate]) -> Void
     private var isWidgetPublishingEnabled = false
 
     enum TemplateSaveResult {
@@ -37,11 +38,15 @@ final class GameEditorViewModel: ObservableObject {
     init(
         templateLibrary: TemplateLibraryStore = TemplateLibraryStore(),
         widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore(),
-        watchTemplateStore: WatchTemplateStore = WatchTemplateStore()
+        watchTemplateStore: WatchTemplateStore = WatchTemplateStore(),
+        watchTemplatePublisher: @escaping ([WatchTemplate]) -> Void = {
+            WatchTemplateConnectivity.shared.publish(templates: $0)
+        }
     ) {
         self.templateLibrary = templateLibrary
         self.widgetSnapshotStore = widgetSnapshotStore
         self.watchTemplateStore = watchTemplateStore
+        self.watchTemplatePublisher = watchTemplatePublisher
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -339,9 +344,8 @@ final class GameEditorViewModel: ObservableObject {
 #endif
     }
 
-    /// Publishes full `GameSequence` payloads for saved templates into the
-    /// shared App Group so the watchOS app can play them back. Gated by the
-    /// same Pro/widget flag: when disabled the watch sees no saved templates.
+    /// Publishes full games locally and to the paired Watch. The existing Pro
+    /// flag also sends an empty snapshot when access is revoked.
     private func publishWatchTemplates(for templates: [SavedTemplate]) {
         let templatesToPublish = isWidgetPublishingEnabled ? templates : []
         let watchTemplates = templatesToPublish.compactMap { saved -> WatchTemplate? in
@@ -354,6 +358,7 @@ final class GameEditorViewModel: ObservableObject {
             )
         }
         _ = try? watchTemplateStore.write(templates: watchTemplates)
+        watchTemplatePublisher(watchTemplates)
     }
 
     private func reindex() {

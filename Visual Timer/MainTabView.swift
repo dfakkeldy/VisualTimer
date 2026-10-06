@@ -93,6 +93,7 @@ struct MainTabView: View {
             }
         }
         .task {
+            WatchTemplateConnectivity.shared.activate()
             gameEditorViewModel.refreshSavedTemplates()
         }
         .task(id: proAccess.isProUnlocked) {

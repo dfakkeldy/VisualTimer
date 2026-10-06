@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE5501040000000000000001 /* WatchTemplateConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5501050000000000000001 /* WatchTemplateConnectivity.swift */; };
 		EE5501010000000000000001 /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC56FE2C2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DD4401010000000000000001 /* TurnTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = DD4402010000000000000001 /* TurnTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -126,6 +127,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		EE5501050000000000000001 /* WatchTemplateConnectivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WatchTemplateConnectivity.swift"; sourceTree = "<group>"; };
 		CC56F6C12FBA1C2200918D5A /* Visual Timer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Visual Timer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56F6CE2FBA1C2400918D5A /* Visual TimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual TimerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56F6D82FBA1C2400918D5A /* Visual TimerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual TimerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -681,6 +683,7 @@
 				EE0001090000000000000001 /* SessionEvent.swift in Sources */,
 				EE00010A0000000000000001 /* SharedAppGroup.swift in Sources */,
 				EE00010B0000000000000001 /* WatchTemplateStore.swift in Sources */,
+				EE5501040000000000000001 /* WatchTemplateConnectivity.swift in Sources */,
 				EE00010C0000000000000001 /* HistoryDocument.swift in Sources */,
 				EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */,
 				EE00010E0000000000000001 /* TemplateDocument.swift in Sources */,

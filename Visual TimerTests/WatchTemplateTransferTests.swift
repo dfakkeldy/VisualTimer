@@ -1,6 +1,7 @@
 import XCTest
 @testable import Visual_Timer
 
+@MainActor
 final class WatchTemplateTransferTests: XCTestCase {
     func testSnapshotReachesSeparateWatchStorageAndSurvivesRelaunch() throws {
         let directory = try temporaryDirectory()
@@ -42,6 +43,33 @@ final class WatchTemplateTransferTests: XCTestCase {
         XCTAssertEqual(try watch.read(), templates)
     }
 
+    func testDelayedAndDuplicateSnapshotsCannotUndoNewerRevocation() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let watch = WatchTemplateStore(containerURLProvider: { directory })
+        let owned = try WatchTemplateStore.applicationContext(for: [template()], revision: 10)
+        let revoked = try WatchTemplateStore.applicationContext(for: [], revision: 11)
+        XCTAssertTrue(try watch.applyApplicationContext(revoked))
+        XCTAssertFalse(try watch.applyApplicationContext(owned))
+        XCTAssertFalse(try watch.applyApplicationContext(revoked))
+        XCTAssertTrue(try watch.read().isEmpty)
+        let relaunched = WatchTemplateStore(containerURLProvider: { directory })
+        XCTAssertFalse(try relaunched.applyApplicationContext(owned))
+    }
+
+    func testLargeTemplateSnapshotPreservesFullPayload() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let watch = WatchTemplateStore(containerURLProvider: { directory })
+        var large = template()
+        large.title = String(repeating: "Safe fixture ", count: 10_000)
+        let context = try WatchTemplateStore.applicationContext(for: [large])
+        let data = try XCTUnwrap(context[WatchTemplateStore.contextKey] as? Data)
+        XCTAssertGreaterThan(data.count, 65_536)
+        XCTAssertTrue(try watch.applyApplicationContext([WatchTemplateStore.contextKey: data]))
+        XCTAssertEqual(try watch.read(), [large])
+    }
+
     @MainActor
     func testPublishingTracksProUnlockAndRevocation() throws {
         let directory = try temporaryDirectory()
@@ -68,6 +96,8 @@ final class WatchTemplateTransferTests: XCTestCase {
     func testUnavailableProductDoesNotInventStorefrontPrice() {
         let access = ProAccessViewModel(automaticallyStartsStoreKitTasks: false)
         XCTAssertEqual(access.displayPrice, "")
+        XCTAssertEqual(access.purchaseButtonTitle, "Unlock Pro")
+        XCTAssertFalse(access.canPurchase)
     }
 
     private func temporaryDirectory() throws -> URL {
