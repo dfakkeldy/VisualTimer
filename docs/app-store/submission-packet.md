@@ -34,7 +34,7 @@ field applies; it omits developer documentation/release automation as features.
 
 - Product `turntimer.pro.unlock`, source type **non-consumable**.
 - Name `Turn Timer Pro` (14 characters); description draft:
-  `Unlimited templates, full history export, and sharing.`
+  `Unlimited templates, history export, sharing.`
 - No subscription group, renewal or trial configured in source.
 - Source/local test price is `$4.99`, not proof of the ASC storefront price.
   Planning sources disagree. Inspect real price schedule and obtain one exact
