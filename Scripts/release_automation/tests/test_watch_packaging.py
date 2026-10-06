@@ -1,5 +1,6 @@
 """Regression checks for the iOS app's paired Watch product packaging."""
 import json
+import re
 from pathlib import Path
 import subprocess
 import unittest
@@ -41,6 +42,18 @@ class WatchPackagingTests(unittest.TestCase):
                 self.assertTrue(settings['PRODUCT_BUNDLE_IDENTIFIER'].startswith(
                     phone_configs[name]['PRODUCT_BUNDLE_IDENTIFIER'] + '.'
                 ), 'The paired Watch identifier must begin with the iPhone identifier and a dot.')
+
+    def test_release_signing_maps_actual_watch_identifier(self):
+        repo = PROJECT.parent.parent
+        fastfile = (repo / 'fastlane/Fastfile').read_text()
+        matchfile = (repo / 'fastlane/Matchfile').read_text()
+        mapped = re.search(r'"' + re.escape(self.watch['name']) + r'"\s*=>\s*"([^"]+)"', fastfile)
+        self.assertIsNotNone(mapped)
+        for name, settings in self.configurations(self.watch).items():
+            with self.subTest(configuration=name):
+                identifier = settings['PRODUCT_BUNDLE_IDENTIFIER']
+                self.assertEqual(mapped.group(1), identifier)
+                self.assertIn('"' + identifier + '"', matchfile)
 
     def test_watch_declares_iphone_companion(self):
         phone_configs = self.configurations(self.phone)
