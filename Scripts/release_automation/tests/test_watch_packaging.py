@@ -34,6 +34,14 @@ class WatchPackagingTests(unittest.TestCase):
             pending.extend(self.objects[key]['target'] for key in self.objects[current].get('dependencies', []))
         self.assertIn(self.watch_id, seen, 'An iOS archive must build its embedded Watch product.')
 
+    def test_watch_bundle_identifier_belongs_to_iphone(self):
+        phone_configs = self.configurations(self.phone)
+        for name, settings in self.configurations(self.watch).items():
+            with self.subTest(configuration=name):
+                self.assertTrue(settings['PRODUCT_BUNDLE_IDENTIFIER'].startswith(
+                    phone_configs[name]['PRODUCT_BUNDLE_IDENTIFIER'] + '.'
+                ), 'The paired Watch identifier must begin with the iPhone identifier and a dot.')
+
     def test_watch_declares_iphone_companion(self):
         phone_configs = self.configurations(self.phone)
         for name, settings in self.configurations(self.watch).items():

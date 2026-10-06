@@ -37,8 +37,9 @@ field applies; it omits developer documentation/release automation as features.
   `Unlimited templates, history export, sharing.`
 - No subscription group, renewal or trial configured in source.
 - Owner-approved October 6 one-time price: CAD1.99 for the existing Canada
-  product. ASC operator verified the exact price after reload. No territory
-  expansion. The app displays StoreKit's localized price and disables a
+  product. ASC operator verified the exact price after reload. Dan later
+  authorized worldwide app/IAP availability; the ASC owner configures localized
+  equivalents from the CAD anchor. The app displays StoreKit's localized price and disables a
   missing product instead of inventing a fallback. Local StoreKit configuration
   uses Canada/CAD1.99 for simulation; it is not proof of paid store acceptance.
 - Read product state, localization, availability, review screenshot, first-IAP
