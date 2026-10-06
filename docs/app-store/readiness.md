@@ -68,7 +68,7 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    return, with no catch-up loop or new background alarm behavior. A new
    deterministic pause regression failed before the repair (60 vs 20); all 80
    unit tests passed afterward. Physical manual lock/background/audio and
-   current candidate UI remain acceptance checks. The separate session-history
+   current candidate UI remain acceptance checks. The separate displayed session
    elapsed counter still counts callbacks; no session-time correction is claimed.
 3. **Watch packaging and saved templates:** `WatchTemplateStore` writes/reads App Group
    JSON; no WatchConnectivity transfer or watch CloudKit template path was
@@ -153,3 +153,9 @@ and the 80-test unit suite. Independent source review found no remaining
 correctness issues after removing a duplicate test annotation. Current-head
 hosted native/Watch CI and UI evidence are tracked separately. No credential,
 store write, upload, promotion, submission or release occurred.
+
+Exact repair-head hosted [CI 37410738760](https://github.com/dfakkeldy/VisualTimer/actions/runs/37410738760)
+completed successfully: 80 unit tests, six UI tests, ten web tests and Watch
+compilation. Local regression failed before the repair and the complete local
+80-test unit suite passed afterward. These results do not establish physical
+background alarm delivery or paired Watch-template transport.
