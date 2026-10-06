@@ -33,7 +33,6 @@ struct WatchTemplateStore {
         revision: UInt64 = UInt64(Date().timeIntervalSince1970 * 1_000_000)
     ) throws -> [String: Any] {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
         return [contextKey: try encoder.encode(Snapshot(revision: revision, templates: templates))]
     }
 
@@ -42,12 +41,10 @@ struct WatchTemplateStore {
     @discardableResult
     func applyApplicationContext(_ context: [String: Any]) throws -> Bool {
         guard let data = context[Self.contextKey] as? Data else { return false }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let snapshot = try decoder.decode(Snapshot.self, from: data)
+        let snapshot = try Self.decodeSnapshot(data)
         let url = try storeURL()
         if let previousData = try? Data(contentsOf: url),
-           let previous = try? decoder.decode(Snapshot.self, from: previousData),
+           let previous = try? Self.decodeSnapshot(previousData),
            snapshot.revision <= previous.revision {
             return false
         }
@@ -73,7 +70,6 @@ struct WatchTemplateStore {
     func write(templates: [WatchTemplate]) throws {
         let url = try storeURL()
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(templates)
 
@@ -91,12 +87,27 @@ struct WatchTemplateStore {
         guard fileManager.fileExists(atPath: url.path) else { return [] }
 
         let data = try Data(contentsOf: url)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        if let snapshot = try? decoder.decode(Snapshot.self, from: data) {
+        if let snapshot = try? Self.decodeSnapshot(data) {
             return snapshot.templates
         }
+        let decoder = JSONDecoder()
+        if let templates = try? decoder.decode([WatchTemplate].self, from: data) {
+            return templates
+        }
+        decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([WatchTemplate].self, from: data)
+    }
+
+    /// Numeric dates retain the full timestamp precision. Existing ISO8601
+    /// snapshots remain readable without altering ordering or template IDs.
+    private static func decodeSnapshot(_ data: Data) throws -> Snapshot {
+        let decoder = JSONDecoder()
+        do {
+            return try decoder.decode(Snapshot.self, from: data)
+        } catch {
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(Snapshot.self, from: data)
+        }
     }
 
     private func storeURL() throws -> URL {

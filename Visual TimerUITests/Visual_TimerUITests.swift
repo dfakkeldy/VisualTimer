@@ -43,9 +43,20 @@ final class Visual_TimerUITests: XCTestCase {
         attachScreen("Timer — ready")
         app.buttons["Play"].tap()
         XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["00:22"].waitForExistence(timeout: 5))
+        // XCTest snapshots may miss a single one-second label on a busy runner.
+        // Verify progress, then a frozen paused value and the original reset value.
+        let countdown = app.staticTexts["timer.time-remaining"]
+        let progressed = NSPredicate(format: "label MATCHES %@", "^00:(0[1-9]|1[0-9]|2[0-4])$")
+        let progress = XCTNSPredicateExpectation(predicate: progressed, object: countdown)
+        XCTAssertEqual(XCTWaiter.wait(for: [progress], timeout: 5), .completed)
         app.buttons["Pause"].tap()
         XCTAssertTrue(app.buttons["Unpause"].waitForExistence(timeout: 3))
+        let pausedValue = countdown.label
+        let changedWhilePaused = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", pausedValue), object: countdown
+        )
+        changedWhilePaused.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [changedWhilePaused], timeout: 1.5), .completed)
         attachScreen("Timer — partial and paused")
         app.buttons["Reset"].tap()
         XCTAssertTrue(app.staticTexts["00:25"].waitForExistence(timeout: 3))

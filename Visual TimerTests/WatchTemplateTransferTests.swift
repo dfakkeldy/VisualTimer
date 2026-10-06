@@ -74,6 +74,28 @@ final class WatchTemplateTransferTests: XCTestCase {
         XCTAssertFalse(try relaunched.applyApplicationContext(owned))
     }
 
+    func testLegacyIso8601ArraysAndSnapshotsRemainReadable() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let watch = WatchTemplateStore(containerURLProvider: { directory })
+        var legacy = template()
+        legacy.game.createdAt = Date(timeIntervalSince1970: 2_000)
+        legacy.game.modifiedAt = Date(timeIntervalSince1970: 2_001)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let arrayData = try encoder.encode([legacy])
+        try arrayData.write(to: directory.appendingPathComponent(WatchTemplateStore.fileName))
+        XCTAssertEqual(try watch.read(), [legacy])
+
+        let objects = try JSONSerialization.jsonObject(with: arrayData)
+        let snapshotData = try JSONSerialization.data(withJSONObject: ["revision": 10, "templates": objects])
+        XCTAssertTrue(try watch.applyApplicationContext([WatchTemplateStore.contextKey: snapshotData]))
+        XCTAssertEqual(try watch.read(), [legacy])
+        XCTAssertTrue(try watch.applyApplicationContext(WatchTemplateStore.applicationContext(for: [], revision: 11)))
+        XCTAssertFalse(try watch.applyApplicationContext([WatchTemplateStore.contextKey: snapshotData]))
+        XCTAssertTrue(try watch.read().isEmpty)
+    }
+
     func testLargeTemplateSnapshotPreservesFullPayload() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
