@@ -37,6 +37,9 @@ language; `Architecture.md` has the design.
 `feature/*` → `nightly` → `weekly` → `main`. Feature PRs target `nightly`;
 hotfixes branch from `main` and are merged back down. `nightly` ships to
 internal TestFlight, `weekly` to external TestFlight, and app changes merged
-to `main` are submitted to App Review. Signing and distribution config lives
+to `main` can trigger an App Store Connect upload. Submission and automatic
+release are separate opt-in controls, false by default. Preparation is not
+authorization to promote, upload or submit. Consult
+`docs/app-store/readiness.md` for current evidence and release blockers. Signing and distribution config lives
 only in the default branch's `fastlane/`; release automation uses that copy
 for every train.

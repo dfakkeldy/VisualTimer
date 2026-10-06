@@ -1,0 +1,10 @@
+Turn Timer is a visual countdown and sequence timer. Core use requires no app account. Start the quick timer or open Templates and select a starter such as Game Night or Morning Routine. Edit the round names and durations, then start playback. Pause, skip and restart controls are available during the session. Completed sessions appear in History.
+
+The free app includes the quick timer, six editable starters, basic playback, five recent history records and one custom saved template. Turn Timer Pro is a non-consumable purchase, product ID turntimer.pro.unlock. It adds unlimited templates, full history/export, sharing, private iCloud template/history sync and template widgets. Open Settings to purchase or restore; Restore Purchases is also available in the Pro sheet. There is no subscription.
+
+iCloud requires an Apple account on the device and uses private container iCloud.Dan.Visual-Timer, with Template and HistoryRecord types in separate private zones. Core local timer/template use remains available without iCloud. Sharing creates a portable .turntimer file; imports get a new local identity.
+
+Widgets use App Group group.Dan.Visual-Timer and open the iPhone/iPad app for playback. The bundled Watch app offers a quick timer and starter templates. No iPhone-to-Watch saved-template transfer or background alarm capability is promised in the store description.
+
+Support: https://dfakkeldy.github.io/VisualTimer/support.html
+Privacy: https://dfakkeldy.github.io/VisualTimer/privacy.html

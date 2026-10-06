@@ -1,0 +1,18 @@
+Turn Timer makes time visible with a colorful countdown and reusable sequences for game turns, routines and everyday tasks.
+
+START SIMPLY
+Use the quick visual timer or choose an editable starter: Game Night, Recipe Steps, Plant Watering, Classroom Stations, Meeting Agenda or Morning Routine.
+
+BUILD YOUR SEQUENCE
+Give rounds a name, duration, color, sound and emoji. Choose which rounds count as turns, repeat a sequence, pause, skip, restart or do over a turn.
+
+KEEP THE SETUPS YOU REUSE
+Save custom templates, return to recent session history and import portable .turntimer files without overwriting existing templates.
+
+TURN TIMER PRO
+The quick timer, starter templates, basic playback, five recent history records and one custom saved template are free. A one-time Pro purchase unlocks unlimited saved templates, full history and export, sharing, iCloud template and history sync, and template widgets.
+
+No subscription, ads or third-party tracking SDKs. Core use does not require an app account. Pro sync uses your private iCloud database through your Apple account.
+
+Support: https://dfakkeldy.github.io/VisualTimer/support.html
+Privacy: https://dfakkeldy.github.io/VisualTimer/privacy.html

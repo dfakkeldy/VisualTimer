@@ -1,89 +1,56 @@
-# Screenshot Plan
+# Screenshot Capture Manifest
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC. **Native images pending selected candidate**.
+App icon PNGs/SVG exist; `web/docs/design/*.png` are web design evidence and
+must not be uploaded as native screenshots. Do not fabricate screens or use
+old main UI to illustrate nightly features. No screenshots have been uploaded.
 
-Status: draft. Capture only from the promoted App Store candidate build.
+## Required sizes
 
-## Default Product Page
+Current [Apple specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
+require at least one image per required category, up to ten per size, JPEG/JPG/
+PNG with no alpha/transparency. For this universal app and bundled Watch:
 
-The first screenshots should sell the clearest wedge: fair turns and reusable
-visual sequences. The first two need to work as small search thumbnails.
+| Platform | Category / accepted portrait dimensions |
+|---|---|
+| iPhone | Dynamic Island medium: 1179×2556 or 1206×2622 |
+| iPad | 13-inch: 2064×2752 or 2048×2732 |
+| Watch | Choose one consistent size: 422×514, 410×502, 416×496, 396×484, 368×448 or 312×390 |
 
-| # | Caption | Visual | Capture notes |
-|---|---|---|---|
-| 1 | Keep game night moving | Active Game Night session with large colorful timer, current player, and next player | Lead with the strongest visual. |
-| 2 | See every turn | Round sequence view with names, colors, repeat/skip/restart/do-over controls | Make it feel purpose-built for turn order. |
-| 3 | Save reusable templates | Templates tab with starter templates and saved template affordance | Show breadth after the game-night hook. |
-| 4 | Reuse, share, and sync | Saved template library plus Pro reuse/sync/import/export affordance | Avoid price text. |
-| 5 | Start from any surface | Widget and watch visuals beside the iPhone app | Use only if widgets/watch are promoted and polished. |
+Apple also specifies scaling fallbacks/landscape reversals. Record the actual
+ASC category's acceptance; an old large-iPhone image set is not automatically
+proof that current categories are complete. No Mac screenshots: source has no
+native Mac target.
 
-## Caption Rules
+## Minimum useful launch set
 
-- Keep captions under eight words.
-- Use sentence case.
-- Match the actual visual.
-- Avoid price text.
-- Avoid generic stopwatch imagery.
+| File stem | Caption | Actual candidate screen |
+|---|---|---|
+| `01-visual-countdown` | Make time visible | Active quick timer with visible duration/controls |
+| `02-reusable-rounds` | Keep every turn moving | Game Night playback with current/next round |
+| `03-starter-templates` | Start with a routine | Six starter templates, including Morning Routine |
+| `04-edit-steps` | Build the steps you need | Editor with public fixture names/durations |
+| `05-pro-reuse` | Keep the setups you reuse | Real Pro screen; no price overlay or unsupported feature claim |
+| `watch-01-starter` | Start a routine on Watch | Actual Watch starter/playback, after acceptance |
 
-## Required Sizes
+Capture iPhone and iPad sets using the same storyline; one real Watch image is
+sufficient for the minimum packet. Widget/sync campaign images can follow proof;
+no saved-template Watch-sync image until its transport and result are verified.
+Optional app preview/featuring/campaign sets are not prerequisites.
 
-Use current App Store Connect requirements when uploading. At minimum, prepare
-the current large iPhone fallback size and any iPad size required by the final
-platform configuration.
+## Public fixture data
 
-Planned capture classes:
+Game Night: Player A 60s, Player B 60s, Player C 60s, Break 30s (not a turn).
+Recipe: Prep 5m, Simmer 12m, Stir 1m, Rest 5m.
+Meeting: Opening 3m, Updates 10m, Decisions 8m, Wrap 2m.
+Use generic fixtures only; no private tester/device/account content.
 
-- iPhone large portrait.
-- Older iPhone large portrait fallback.
-- iPad only if the app is submitted as universal.
+## Capture receipt
 
-## Fixture Data
+Record source/automation SHA, version/build, device/OS, locale, capture date,
+pixel dimensions and alpha check beside each delivered set. Verify text is
+legible, UI/controls are usable, no placeholder/login/splash-only image appears,
+and every caption matches the screen. Caption overlays stay under eight words.
 
-Game Night:
-
-- Alice, 60 seconds
-- Bob, 60 seconds
-- Charlie, 60 seconds
-- Timeout, 30 seconds, not counted as a turn
-
-Recipe Steps:
-
-- Prep, 5 minutes
-- Simmer, 12 minutes
-- Flip or Stir, 1 minute
-- Rest, 5 minutes
-
-Meeting Agenda:
-
-- Opening, 3 minutes
-- Updates, 10 minutes
-- Decisions, 8 minutes
-- Wrap, 2 minutes
-
-Plant Watering:
-
-- Front porch, 2 minutes
-- Herbs, 1 minute
-- Soak pause, 3 minutes
-- Back garden, 4 minutes
-
-## Secondary Campaign Sets
-
-Create these later when traffic or Custom Product Pages justify the work:
-
-- Cooking: recipe steps, stir/rest states, shareable kitchen timers.
-- Classrooms: station rotation, clear group progress, reusable routines.
-- Meetings: speaker turns, agenda timing, useful history/export.
-- Plant watering: zones, soak pauses, recurring outdoor routines.
-
-## App Preview
-
-Optional after screenshots are stable:
-
-1. Tap Game Night and start the visual timer.
-2. Show turn progress, skip, restart, and do-over.
-3. Open Templates and show reusable use cases.
-4. Mark a favorite or show quick-start surface if promoted.
-5. End on Turn Timer Pro value: save, share, sync, and reuse.
-
-Keep the first three seconds entirely inside the app experience.
+IAP review also needs an actual candidate paywall/unlocked-state screenshot.
+Do not claim it exists based on a `.storekit` file or this manifest.
