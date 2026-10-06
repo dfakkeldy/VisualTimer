@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EE5501010000000000000001 /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC56FE2C2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DD4401010000000000000001 /* TurnTimerWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = DD4402010000000000000001 /* TurnTimerWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DD4401020000000000000001 /* SharedAppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4402020000000000000001 /* SharedAppGroup.swift */; };
@@ -37,6 +38,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		EE5501020000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CC56F6B92FBA1C2200918D5A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CC56FE2A2FBA5ABC00918D5A;
+			remoteInfo = "Visual Timer Watch Watch App";
+		};
 		CC56F6CF2FBA1C2400918D5A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CC56F6B92FBA1C2200918D5A /* Project object */;
@@ -88,6 +96,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
+				EE5501010000000000000001 /* Visual Timer Watch Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -342,6 +351,7 @@
 			);
 			dependencies = (
 				DD44030D0000000000000001 /* PBXTargetDependency */,
+				EE5501030000000000000001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
@@ -711,6 +721,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		EE5501030000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CC56FE2A2FBA5ABC00918D5A /* Visual Timer Watch Watch App */;
+			targetProxy = EE5501020000000000000001 /* PBXContainerItemProxy */;
+		};
 		CC56F6D02FBA1C2400918D5A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = CC56F6C02FBA1C2200918D5A /* Visual Timer */;
@@ -1020,7 +1035,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Turn Timer";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Dan.Visual-Timer";
+				INFOPLIST_KEY_WKWatchOnly = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1054,7 +1070,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Turn Timer";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "Dan.Visual-Timer";
+				INFOPLIST_KEY_WKWatchOnly = NO;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
