@@ -76,8 +76,9 @@ read-only preparation step; obtain exact authorization before using it.
 Current known app identifiers:
 
 - `Dan.Visual-Timer`
-- `Dan.Visual-Timer-Watch` (mapped only if that project target exists)
-- `Dan.Visual-Timer-Watch.watchkitapp`
+- `Dan.Visual-Timer.watchkitapp` (embedded paired Watch companion)
+- `Dan.Visual-Timer-Watch` and `Dan.Visual-Timer-Watch.watchkitapp` (older
+  watch-only identities, kept in `Matchfile` for existing records)
 - `Dan.Visual-Timer.TurnTimerWidgets`
 
 Automation comes from the default-branch workflow ref for every channel. Keep

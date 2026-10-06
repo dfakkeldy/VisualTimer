@@ -8,7 +8,7 @@ this public repository.
 
 | Surface | Verified state |
 |---|---|
-| `nightly` | `9fac13280843ad9d9add26f87c047570c144e098` (27 Sep) |
+| `nightly` | `a637dbbccf8f4fcca9029273b2ae2e31a58beaf9` (6 Oct, PR #103 merge). Exact head `8a04cca2` passed [CI 37457703798](https://github.com/dfakkeldy/VisualTimer/actions/runs/37457703798). TestFlight upload for this SHA is not recorded here. |
 | `weekly` | `d1896f2f4a29fb8c75a986837b7d7c65dc1eb59a` (13 Aug) |
 | `main` | `0956da6e5b9b8e7c2a1b19ed0b29c694029cf866` (7 Aug) |
 | Native branch CI | [36335355019](https://github.com/dfakkeldy/VisualTimer/actions/runs/36335355019): exact nightly SHA; iOS build, watchOS build and iOS tests ran successfully. Web job also passed. |
@@ -20,10 +20,13 @@ this public repository.
 | Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
 
 The project supports iPhone/iPad (iOS 18+) and embeds its widget extension.
-It also has a separate watchOS 11+ target: iOS has no Watch target dependency,
-its Watch embed phase is empty, and the release scheme archives only iOS.
-The Watch target sets `WKWatchOnly=YES`. A separate successful Watch build does
-not establish inclusion in the uploaded iOS artifact or a Watch store release. Marketing version is `1.0`; source build `1` is replaced by
+Since PR #103 it also embeds the watchOS 11+ companion: iOS depends on the
+Watch target, the Embed Watch Content phase copies it, and the Watch app uses
+`Dan.Visual-Timer.watchkitapp` with `WKWatchOnly=NO` and
+`WKCompanionAppBundleIdentifier=Dan.Visual-Timer`. Signed delivery still needs a
+matching provisioning profile for `Dan.Visual-Timer.watchkitapp` and paired
+hardware acceptance. Earlier uploads (1.0 (73) and older) predate the embedded
+companion. Marketing version is `1.0`; source build `1` is replaced by
 Fastlane's next TestFlight number. CI pins Xcode 26.6. The project build setting
 is not the uploaded build number.
 
@@ -70,11 +73,13 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    unit tests passed afterward. Physical manual lock/background/audio and
    current candidate UI remain acceptance checks. The separate displayed session
    elapsed counter still counts callbacks; no session-time correction is claimed.
-3. **Watch packaging and saved templates:** `WatchTemplateStore` writes/reads App Group
-   JSON; no WatchConnectivity transfer or watch CloudKit template path was
-   found. First resolve intended Watch distribution/companion configuration;
-   the iOS release scheme does not currently embed that target. Local storage does not demonstrate iPhone-to-Watch delivery. Verify
-   transport and paired-device behavior before promising saved-template sync.
+3. **Watch packaging and saved templates:** PR #103 embeds the companion and
+   adds `WatchTemplateConnectivity`, which sends full template snapshots over
+   WatchConnectivity (application context plus file transfer) with atomic
+   writes, revision ordering, latest-state retry and legacy reads. Revoking Pro
+   clears Watch templates without deleting the iPhone library. Unit tests cover
+   the transfer payloads; signed paired-device delivery is unverified. Verify
+   it on hardware before promising saved-template sync.
    Quick timer/starter templates are separate paths.
    [Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity)
    describes cross-device transfers.

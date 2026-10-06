@@ -37,7 +37,9 @@ Useful docs:
   full local history, export, and iCloud sync available with Pro.
 - **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
   iCloud sync, sharing, widgets, and advanced customization with a one-time
-  StoreKit purchase. The local $4.99 test value does not verify the ASC price.
+  StoreKit purchase. The app shows StoreKit's localized price and has no
+  hardcoded fallback amount; the local `TurnTimer.storekit` value is for
+  simulation and does not verify the App Store Connect price.
 - **Shared template files** - Import and export portable `.turntimer` template
   files without overwriting existing local work.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
@@ -47,9 +49,11 @@ Useful docs:
 - **Template widgets** - Home Screen and Lock Screen widgets read compact App
   Group snapshots and launch starter or saved templates through `turntimer://`
   deep links.
-- **Watch app** - A separate watch-only source target has quick timer and
-  starter playback. It is not embedded by the current iOS release scheme;
-  companion distribution and saved-template delivery need verification.
+- **Watch app** - The iPhone app embeds its Watch companion
+  (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
+  saved templates are sent to the paired Watch as full snapshots through
+  WatchConnectivity; revoking Pro clears Watch templates without deleting the
+  iPhone library. Signed paired-device delivery is not yet verified.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
@@ -90,7 +94,8 @@ ledger. No background-alarm guarantee is implied.
 
 ## Product Roadmap
 
-Turn Timer is planned as a free timer with a $4.99 one-time Pro unlock. The
+Turn Timer is planned as a free timer with a one-time Pro unlock (no
+subscription; the store price is set in App Store Connect). The
 core timer, built-in starter templates, and one custom saved template remain
 free. Pro value is built around reuse and portability: unlimited templates,
 history/export, iCloud sync, sharing, widgets, and Apple Watch convenience.
