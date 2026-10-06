@@ -103,6 +103,10 @@ struct SettingsView: View {
                 } footer: {
                     Text("Pro unlocks unlimited templates, full history export, iCloud template and history sync, sharing, and widgets.")
                 }
+                Section("Privacy") {
+                    Link("Privacy Policy", destination: URL(string: "https://dfakkeldy.github.io/VisualTimer/privacy.html")!)
+                        .accessibilityIdentifier("settings.privacy-policy")
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)

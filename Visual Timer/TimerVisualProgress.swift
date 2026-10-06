@@ -50,6 +50,12 @@ struct TimerVisualProgress: Equatable {
         return elapsedSeconds(at: date) / totalDuration
     }
 
+    /// Integer countdown and pie derive from the same elapsed-time state.
+    /// Round up so a partly elapsed final second still displays one.
+    func remainingSeconds(at date: Date = Date()) -> Int {
+        Int(ceil(max(totalDuration - elapsedSeconds(at: date), 0)))
+    }
+
     private func elapsedSeconds(at date: Date) -> TimeInterval {
         var elapsed = elapsedBeforeCurrentRun
         if let currentRunStartedAt {

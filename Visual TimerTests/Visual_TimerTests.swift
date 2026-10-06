@@ -1004,6 +1004,96 @@ final class Visual_TimerTests: XCTestCase {
     }
 
     @MainActor
+    func testPauseAfterDelayedCallbacksReconcilesCountdownWithPie() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+
+        timer.pause(at: start.addingTimeInterval(40.25))
+
+        XCTAssertEqual(timer.state, .paused)
+        XCTAssertEqual(timer.timeRemaining, 20)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(40.25)), 40.25 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testDelayedTimerRefreshUsesElapsedTimeInsteadOfCallbackCount() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(40.25)))
+        XCTAssertEqual(timer.timeRemaining, 20)
+        XCTAssertEqual(timer.visualProgress.remainingSeconds(at: start.addingTimeInterval(40.25)), 20)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(40.25)), 40.25 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testTimerPauseResumeKeepsFractionalTimeAndExcludesPausedTime() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+        timer.pause(at: start.addingTimeInterval(10.25))
+        XCTAssertEqual(timer.state, .paused)
+        XCTAssertEqual(timer.timeRemaining, 50)
+
+        timer.play(at: start.addingTimeInterval(100))
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(100.75)))
+        XCTAssertEqual(timer.timeRemaining, 49)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(100.75)), 11.0 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testOverdueTimerCompletesExactlyOnceAndStillResets() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        var completions = 0
+        timer.onFinish = { completions += 1 }
+        timer.play(at: start)
+
+        XCTAssertTrue(timer.refreshCountdown(at: start.addingTimeInterval(70)))
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(80)))
+        XCTAssertEqual(completions, 1)
+        XCTAssertEqual(timer.state, .notStarted)
+        XCTAssertEqual(timer.timeRemaining, 60)
+    }
+
+    @MainActor
+    func testOverduePauseDoesNotPauseTheSuccessorOrCatchUpMultipleRounds() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        let returnDate = start.addingTimeInterval(180)
+        var completions = 0
+        timer.onFinish = { [weak timer] in
+            guard let timer else { return }
+            completions += 1
+            timer.reconfigureForRound(duration: 30, color: nil)
+            timer.play(at: returnDate)
+        }
+        timer.play(at: start)
+
+        timer.pause(at: returnDate)
+        XCTAssertEqual(completions, 1)
+        XCTAssertEqual(timer.state, .running)
+        XCTAssertEqual(timer.totalDuration, 30)
+        XCTAssertEqual(timer.timeRemaining, 30)
+        XCTAssertFalse(timer.refreshCountdown(at: returnDate))
+        XCTAssertEqual(completions, 1)
+        XCTAssertFalse(timer.refreshCountdown(at: returnDate.addingTimeInterval(5)))
+        XCTAssertEqual(timer.timeRemaining, 25)
+    }
+
+    @MainActor
     func testTimerViewModelSetDurationClampsToMinimumDuration() {
         UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
         let viewModel = TimerViewModel()

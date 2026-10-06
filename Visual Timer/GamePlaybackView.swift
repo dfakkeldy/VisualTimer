@@ -398,7 +398,7 @@ struct GamePlaybackView: View {
             }
         case .running:
             timerViewModel.pause()
-            if gameViewModel.hasActiveGame {
+            if gameViewModel.hasActiveGame && timerViewModel.state == .paused {
                 gameViewModel.recordPause()
             }
         case .finished:

@@ -50,24 +50,26 @@ upload. The `app_store` lane skips metadata/screenshots. Review submission and
 automatic release are separate controls, default false; both repository
 variables were false on 6 Oct. See [Fastlane](../../fastlane/README.md).
 
-This pass authorizes documentation and draft assets only. Do not backport
+This preparation includes scoped source repairs, documentation and draft assets. Do not backport
 features directly to weekly/main, promote, dispatch a release, upload, submit,
 refresh signing, change protections/pipelines, set prices, or accept legal
 answers/agreements without exact authorization. Documentation PRs stay drafts.
 
 ## Blockers before choosing a candidate
 
-1. **In-app privacy link:** `SettingsView.swift` has purchase/restore and sync
-   controls but no accessible policy link; source search found none elsewhere.
-   Add and test it through nightly. Apple requires in-app and store links
-   ([§5.1.1](https://developer.apple.com/app-store/review/guidelines/)).
-2. **Core timer reliability:** `TimerViewModel` decrements `timeRemaining` once
-   per foreground run-loop tick; `TimerVisualProgress` uses wall-clock time.
-   No notification/alarm scheduling or background mode is configured. This is
-   a source risk, not a reproduced device result. Investigate manual lock,
-   background/return, audio interruption, round transition and completion;
-   establish intended behavior and fix divergence before making a reliability
-   claim. Do not silently remove features or promise background alarms.
+1. **In-app privacy link:** Settings now exposes the existing HTTPS policy URL
+   (`settings.privacy-policy`). The URL returned HTTP 200 on 6 Oct. Verify the
+   visible route on the selected candidate; archive/ASC privacy answers remain
+   separate from link availability.
+2. **Core timer reliability:** A bounded forced-suspension simulator probe
+   reproduced callback-count/countdown versus Date/pie divergence. The narrow
+   repair uses existing elapsed Date state for both, reconciles on pause and
+   iOS activation, and completes once. It preserves one next round starting on
+   return, with no catch-up loop or new background alarm behavior. A new
+   deterministic pause regression failed before the repair (60 vs 20); all 80
+   unit tests passed afterward. Physical manual lock/background/audio and
+   current candidate UI remain acceptance checks. The separate session-history
+   elapsed counter still counts callbacks; no session-time correction is claimed.
 3. **Watch packaging and saved templates:** `WatchTemplateStore` writes/reads App Group
    JSON; no WatchConnectivity transfer or watch CloudKit template path was
    found. First resolve intended Watch distribution/companion configuration;
@@ -146,5 +148,8 @@ iOS 18 meets the current iOS 13 minimum. Inspect updated age questions and
 September social-media questions in ASC.
 [Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)
 
-No heavy local Xcode build, credential/certificate inspection, store write,
-upload, promotion, submission or release was performed for this audit.
+Continuation validation on 6 Oct ran one serial, resource-gated iOS regression
+and the 80-test unit suite. Independent source review found no remaining
+correctness issues after removing a duplicate test annotation. Current-head
+hosted native/Watch CI and UI evidence are tracked separately. No credential,
+store write, upload, promotion, submission or release occurred.
