@@ -13,7 +13,7 @@ legal declarations or release.
 | Name | Turn Timer; locked product name. Confirm current ASC name/locale availability. |
 | Subtitle | Visual rounds & routines |
 | Category | Productivity proposal; source category is Utilities. Read ASC before choosing. |
-| Platforms | iPhone/iPad; bundled Watch app and iOS widget extension. No native Mac app configured. |
+| Platforms | iPhone/iPad with embedded widget. Separate Watch source target is not embedded by the current iOS release scheme; verify intended distribution/archive before including it in the listing. No native Mac target. |
 | Locale | en-CA draft; historical en-CA/fallback notes need current ASC verification before creating en-US or asserting a name conflict. |
 | Version | Source `1.0`; choose exact candidate/build after ladder gates. |
 | Support | https://dfakkeldy.github.io/VisualTimer/support.html — HTTPS 200 on 6 Oct. |
@@ -56,13 +56,13 @@ schema deployment, physical-device success or unsupported behavior from code.
 | Topic | Source evidence | Pending |
 |---|---|---|
 | Privacy | No ads/tracking/analytics SDK found; local templates/history, Pro private CloudKit, Apple StoreKit. | Match actual flows/archive report to privacy answers. Data Not Collected is a proposal, not a filed declaration. |
-| Manifest | iOS has UserDefaults `CA92.1` / FileTimestamp `C617.1`. | Check reasons and each executable's bundled coverage, especially Watch. |
+| Manifest | iOS has UserDefaults `CA92.1` / FileTimestamp `C617.1`. | Check reasons and each executable's bundled coverage, Watch if submitted. |
 | Accounts | No account creation; local data/Apple-managed iCloud. | Confirm deletion/retention wording, including automatic Pro sync. App-account deletion is not applicable to current design. |
 | Age/content | Generic editable local rounds/starters; no social feed, messaging or public discovery found. | Complete current age/social-media questions; do not invent a numeric age rating. |
 | Rights | PNG/SVG icon source; sounds synthesized in code; starters local. | Owner confirms rights to all app/store materials. Avoid clinical/licensed-game claims. |
 | Export | Source non-exempt encryption flag false; Apple system services used. | Owner confirms exact encryption/territory answers/documents. |
 | Account/legal | Current state not established by repo. | Read agreement/DSA/regional fields; owner handles declarations/agreements. |
-| Accessibility | UI tests outside current unit-test gate. | Verify layouts/VoiceOver before claiming supported accessibility in ASC. |
+| Accessibility | Current nightly CI includes UI tests; default-main release workflow limits tests to unit target. | Verify layouts/VoiceOver before claiming supported accessibility in ASC. |
 | Review/release | Main upload skips metadata/images; submit/auto-release controls default false. | Read live status/release setting; preserve hold; obtain explicit promotion/upload/submission authorization. |
 
 Re-checked against official [upcoming requirements](https://developer.apple.com/news/upcoming-requirements/),

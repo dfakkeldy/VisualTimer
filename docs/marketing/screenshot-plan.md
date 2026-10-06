@@ -9,13 +9,14 @@ old main UI to illustrate nightly features. No screenshots have been uploaded.
 
 Current [Apple specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
 require at least one image per required category, up to ten per size, JPEG/JPG/
-PNG with no alpha/transparency. For this universal app and bundled Watch:
+PNG with no alpha/transparency. Required for the universal iOS app; Watch set
+is conditional on an actually submitted Watch app/distribution:
 
 | Platform | Category / accepted portrait dimensions |
 |---|---|
 | iPhone | Dynamic Island medium: 1179×2556 or 1206×2622 |
 | iPad | 13-inch: 2064×2752 or 2048×2732 |
-| Watch | Choose one consistent size: 422×514, 410×502, 416×496, 396×484, 368×448 or 312×390 |
+| Watch, if submitted | Choose one consistent size: 422×514, 410×502, 416×496, 396×484, 368×448 or 312×390 |
 
 Apple also specifies scaling fallbacks/landscape reversals. Record the actual
 ASC category's acceptance; an old large-iPhone image set is not automatically
@@ -34,7 +35,9 @@ native Mac target.
 | `watch-01-starter` | Start a routine on Watch | Actual Watch starter/playback, after acceptance |
 
 Capture iPhone and iPad sets using the same storyline; one real Watch image is
-sufficient for the minimum packet. Widget/sync campaign images can follow proof;
+sufficient if Watch is included. Current iOS release scheme has an empty Watch
+embed phase and no Watch dependency; a separate CI Watch build is not proof
+of shipment. Resolve distribution before making the Watch set a requirement. Widget/sync campaign images can follow proof;
 no saved-template Watch-sync image until its transport and result are verified.
 Optional app preview/featuring/campaign sets are not prerequisites.
 

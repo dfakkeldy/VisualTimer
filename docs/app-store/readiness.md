@@ -19,19 +19,29 @@ this public repository.
 | Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 6 Oct. |
 | Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
 
-The project supports iPhone/iPad (iOS 18+) with a bundled watchOS 11+ app and
-widget extension. Marketing version is `1.0`; source build `1` is replaced by
+The project supports iPhone/iPad (iOS 18+) and embeds its widget extension.
+It also has a separate watchOS 11+ target: iOS has no Watch target dependency,
+its Watch embed phase is empty, and the release scheme archives only iOS.
+The Watch target sets `WKWatchOnly=YES`. A separate successful Watch build does
+not establish inclusion in the uploaded iOS artifact or a Watch store release. Marketing version is `1.0`; source build `1` is replaced by
 Fastlane's next TestFlight number. CI pins Xcode 26.6. The project build setting
 is not the uploaded build number.
+
+Documentation head `54a806bc1c24bc6d2f63357d303a035f4db173e7` passed
+[CI 37398433584](https://github.com/dfakkeldy/VisualTimer/actions/runs/37398433584)
+on 6 Oct: web job and native gate passed; native logs show 75 unit tests plus
+6 UI tests, zero failures. This is documentation CI, not a new upload.
 
 ## Release gates and permissions
 
 Keep `nightly` internal testers → `weekly` external testers → `main` App Store.
 All three branches currently require strict/up-to-date **Build gate + tests**,
 with admin enforcement and zero required review approvals; no rulesets were
-listed. Branch CI fails without a runnable iOS simulator. The release workflow
-can skip iOS tests without one and runs only unit tests, so its green status
-alone is a weaker gate. Inspect actual steps.
+listed. Current nightly branch CI includes unit and UI test targets and fails
+without a runnable iOS simulator. The default-main release workflow limits
+testing to `Visual TimerTests` and can skip those tests without a simulator;
+nightly workflow files differ. Inspect the actually executed workflow ref and
+steps rather than assuming identical gate strength.
 
 Release workflows execute from `main`, check out the channel's source, and
 replace `.ruby-version`, `Gemfile` and `fastlane/` from the workflow-ref copy.
@@ -58,9 +68,10 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    background/return, audio interruption, round transition and completion;
    establish intended behavior and fix divergence before making a reliability
    claim. Do not silently remove features or promise background alarms.
-3. **Saved templates on Watch:** `WatchTemplateStore` writes/reads App Group
+3. **Watch packaging and saved templates:** `WatchTemplateStore` writes/reads App Group
    JSON; no WatchConnectivity transfer or watch CloudKit template path was
-   found. Local storage does not demonstrate iPhone-to-Watch delivery. Verify
+   found. First resolve intended Watch distribution/companion configuration;
+   the iOS release scheme does not currently embed that target. Local storage does not demonstrate iPhone-to-Watch delivery. Verify
    transport and paired-device behavior before promising saved-template sync.
    Quick timer/starter templates are separate paths.
    [Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity)
@@ -87,9 +98,11 @@ unusable layout over cosmetic work.
 - iOS `PrivacyInfo.xcprivacy`: tracking false, empty collected-data list,
   UserDefaults `CA92.1`, FileTimestamp `C617.1`. Synchronized target membership
   includes it in source. Verify approved reasons and the archive privacy
-  report. Watch reuses timer/sound code and UserDefaults; no watch-specific
-  manifest is committed. Check each shipped executable's required-reason
-  coverage, including Watch, rather than assuming the iOS manifest covers it.
+  report. Watch compiles shared timer/sound UserDefaults code and
+  `GameRecord.swift` with FileTimestamp access; no watch-specific manifest is
+  committed. Check each shipped executable's required-reason
+  coverage, including Watch if it ships, rather than assuming the iOS manifest
+  covers a separately built target.
 - No third-party app SDK package, ads/tracking/analytics SDK or developer-run
   account flow was found in Apple source. Local templates/history and purchase
   entitlement state are stored on-device. Pro uses private CloudKit container
@@ -98,7 +111,9 @@ unusable layout over cosmetic work.
   automatically; policy and privacy answers must describe actual behavior.
 - iOS declares CloudKit and `group.Dan.Visual-Timer`; widget/Watch declare the
   App Group. Sound preferences use `NSUbiquitousKeyValueStore`, but its
-  key-value-store entitlement is absent from the checked-in iOS file. Verify
+  key-value-store entitlement is absent from the checked-in iOS file. Existing
+  Oct 5 and this PR CI simulator logs explicitly warn about the missing store
+  identifier. That does not establish signed-production failure. Verify
   archive/profile capability coverage; do not refresh profiles in this pass.
 - No app account is created, so account deletion is not applicable to the
   current design. Local deletion/private iCloud retention still need truthful

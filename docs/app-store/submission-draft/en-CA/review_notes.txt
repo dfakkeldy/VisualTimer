@@ -4,7 +4,7 @@ The free app includes the quick timer, six editable starters, basic playback, fi
 
 iCloud requires an Apple account on the device and uses private container iCloud.Dan.Visual-Timer, with Template and HistoryRecord types in separate private zones. Core local timer/template use remains available without iCloud. Sharing creates a portable .turntimer file; imports get a new local identity.
 
-Widgets use App Group group.Dan.Visual-Timer and open the iPhone/iPad app for playback. The bundled Watch app offers a quick timer and starter templates. No iPhone-to-Watch saved-template transfer or background alarm capability is promised in the store description.
+Widgets use App Group group.Dan.Visual-Timer and open the iPhone/iPad app for playback.
 
 Support: https://dfakkeldy.github.io/VisualTimer/support.html
 Privacy: https://dfakkeldy.github.io/VisualTimer/privacy.html

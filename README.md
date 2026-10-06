@@ -47,7 +47,9 @@ Useful docs:
 - **Template widgets** - Home Screen and Lock Screen widgets read compact App
   Group snapshots and launch starter or saved templates through `turntimer://`
   deep links.
-- **Watch app** - Keep companion watch target support.
+- **Watch app** - A separate watch-only source target has quick timer and
+  starter playback. It is not embedded by the current iOS release scheme;
+  companion distribution and saved-template delivery need verification.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 

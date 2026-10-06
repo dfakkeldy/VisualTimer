@@ -36,7 +36,8 @@ and upload receipts do not prove these interactions.
   production types `Template` and `HistoryRecord` in the private database.
 - [ ] Home/Lock Screen widgets open the correct template. Locked widgets route
   usefully into the app; selected archive embeds the extension.
-- [ ] Paired Watch: free quick timer and starter template start, pause/resume,
+- [ ] If Watch is part of the candidate distribution, confirm actual archive/
+  store inclusion first. Paired Watch: free quick timer and starter template start, pause/resume,
   and complete. Separately test iPhone saved-template delivery; App Group files
   alone are not cross-device proof. Record limitations before approving copy.
 - [ ] Accessible in-app privacy link opens the public policy in the candidate.
