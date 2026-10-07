@@ -23,13 +23,18 @@ language; `Architecture.md` has the design.
 - New sounds go through `SoundManager` / `TimerSound`.
 - Saved templates are `.turntimer` JSON in `Documents/Templates/<id>.turntimer`.
   Legacy `.vtgame` files still load. Malformed files must fail gracefully.
-- Pro is a $4.99 one-time unlock (`turntimer.pro.unlock`; `TurnTimer.storekit`
-  for local testing). Never gate the quick timer, built-in templates, or basic
+- Pro is a one-time unlock (`turntimer.pro.unlock`; `TurnTimer.storekit`
+  for local testing). Show StoreKit's localized price; never hardcode a
+  fallback amount. Never gate the quick timer, built-in templates, or basic
   playback. Pro covers extra saved templates, full history and export, iCloud
   sync, sharing, widgets, and advanced customization.
 - Template sync uses CloudKit container `iCloud.Dan.Visual-Timer`, zone
   `TurnTimerTemplates`, record type `Template`. Live sync needs a signed build
   and a deployed CloudKit schema.
+- The Watch companion (`Dan.Visual-Timer.watchkitapp`) is embedded in the iOS
+  app. Saved templates reach it through `WatchTemplateConnectivity`
+  (WatchConnectivity full snapshots); App Group files alone do not cross
+  devices.
 - Commit messages are short and imperative: "Add template picker".
 
 ## Branches and releases
