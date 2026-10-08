@@ -296,3 +296,8 @@ Signed-device validation checklist:
 7. Add Home Screen and Lock Screen widgets, confirm starter and saved templates
    render with the expected durations, and tap each widget to confirm the app
    opens the matching template.
+
+## License
+
+Turn Timer's source code is released under the [MIT License](LICENSE).
+Dependencies keep their own licences.
