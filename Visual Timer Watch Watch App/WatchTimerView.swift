@@ -1,200 +1,131 @@
 import SwiftUI
 
-/// Which part of the time the digital crown is currently adjusting.
-enum TimeComponent {
-    case minutes
-    case seconds
-}
-
-/// The main watchOS timer view with digital-crown time adjustment.
-///
-/// Tapping the minutes or seconds label selects that component for
-/// crown adjustment. Tapping it again (or pressing Play) deselects.
+/// Watch Quick Timer. While idle, tap minutes or seconds and turn the
+/// Digital Crown to edit; once started, the digits show the live remaining
+/// time. State lives in `WatchAppModel`, so leaving this screen neither stops
+/// nor resets the countdown.
 struct WatchTimerView: View {
 
-    @StateObject private var viewModel = TimerViewModel()
-
-    // MARK: - Crown State
-
-    @State private var crownValue: Double = 0
-    @State private var selectedComponent: TimeComponent? = nil
-    @State private var suppressNextCrownChange = false
-
-    // MARK: - Body
+    @ObservedObject var viewModel: WatchQuickTimerViewModel
 
     var body: some View {
-        VStack(spacing: 8) {
-            Spacer()
-
-            // Timer circle
-            timerCircle
-                .frame(width: 100, height: 100)
-
-            // Selectable time display
-            timePicker
-                .padding(.top, 4)
-
-            // Controls
-            HStack(spacing: 16) {
-                // Play / Pause
-                Button {
-                    selectedComponent = nil
-                    switch viewModel.state {
-                    case .notStarted, .paused:
-                        viewModel.play()
-                    case .running:
-                        viewModel.pause()
-                    case .finished:
-                        break
-                    }
-                } label: {
-                    Image(systemName: playPauseIcon)
-                        .font(.title2)
-                }
-                .disabled(viewModel.state == .finished)
-
-                // Reset — only when paused
-                if case .paused = viewModel.state {
-                    Button {
-                        selectedComponent = nil
-                        viewModel.reset()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.title2)
-                    }
+        VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
+            WatchTimerDial(
+                progress: viewModel.timer.visualProgress,
+                color: viewModel.timer.timerColor
+            ) { date in
+                if viewModel.canEditDuration {
+                    durationEditor
+                } else {
+                    remainingTime(at: date)
                 }
             }
-            .padding(.top, 8)
+            .frame(
+                maxWidth: Theme.Watch.Dimension.quickDialMaxSize,
+                maxHeight: Theme.Watch.Dimension.quickDialMaxSize
+            )
 
-            Spacer()
+            controls
         }
+        .navigationTitle(Theme.Watch.Label.quickTimer)
         .focusable(true)
         .digitalCrownRotation(
-            $crownValue,
-            from: 0, through: 59, by: 1,
+            $viewModel.crownValue,
+            from: Double(WatchQuickTimerViewModel.componentRange.lowerBound),
+            through: Double(WatchQuickTimerViewModel.componentRange.upperBound),
+            by: 1,
             sensitivity: .low,
-            isContinuous: false
+            isContinuous: false,
+            isHapticFeedbackEnabled: viewModel.selectedComponent != nil
         )
-        .onChange(of: selectedComponent) { component in
-            syncCrownToSelection(component)
-        }
-        .onChange(of: crownValue) { newValue in
-            applyCrownChange(Int(newValue))
-        }
     }
 
-    // MARK: - Timer Circle
+    // MARK: - Digits
 
-    private var timerCircle: some View {
-        TimelineView(.animation(paused: !viewModel.visualProgress.isRunning)) { timeline in
-            let elapsed = viewModel.visualProgress.elapsedFraction(at: timeline.date)
-            ZStack {
-                Circle()
-                    .fill(Color(white: 0.15))
+    private func remainingTime(at date: Date) -> some View {
+        let seconds = viewModel.displayedSeconds(at: date)
+        return Text(WatchTimeText.clock(seconds))
+            .font(.system(.title2, design: .rounded).monospacedDigit())
+            .lineLimit(1)
+            .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
+            .accessibilityLabel(Theme.Watch.Label.timeRemaining)
+            .accessibilityValue(WatchTimeText.spoken(seconds))
+            .accessibilityIdentifier(Theme.Watch.Identifier.quickTime)
+    }
 
-                Circle()
-                    .trim(from: elapsed, to: 1.0)
-                    .stroke(viewModel.timerColor, lineWidth: 14)
-                    .rotationEffect(.degrees(-90))
+    private var durationEditor: some View {
+        HStack(spacing: 0) {
+            componentButton(.minutes, label: Theme.Watch.Label.minutes, id: Theme.Watch.Identifier.quickMinutes)
+            Text(Theme.Watch.Label.timeSeparator)
+                .accessibilityHidden(true)
+            componentButton(.seconds, label: Theme.Watch.Label.seconds, id: Theme.Watch.Identifier.quickSeconds)
+        }
+        .font(.system(.title2, design: .rounded).monospacedDigit())
+        .lineLimit(1)
+        .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
+    }
+
+    private func componentButton(_ component: WatchTimeComponent, label: String, id: String) -> some View {
+        let value = viewModel.value(of: component)
+        let isSelected = viewModel.selectedComponent == component
+        return Button {
+            viewModel.toggleSelection(component)
+        } label: {
+            Text(String(format: "%02d", value))
+                .frame(
+                    minWidth: Theme.Watch.Dimension.digitMinTarget,
+                    minHeight: Theme.Watch.Dimension.digitMinTarget
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.Watch.Dimension.selectionCornerRadius)
+                        .fill(isSelected ? Theme.Watch.ColorValue.selection : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityValue("\(value)")
+        .accessibilityHint(Theme.Watch.Label.crownHint)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: viewModel.adjust(component, by: 1)
+            case .decrement: viewModel.adjust(component, by: -1)
+            @unknown default: break
             }
         }
+        .accessibilityIdentifier(id)
     }
 
-    // MARK: - Time Picker
+    // MARK: - Controls
 
-    private var timePicker: some View {
-        HStack(spacing: 2) {
-            // Minutes
-            Button {
-                toggleSelection(.minutes)
-            } label: {
-                Text(String(format: "%02d", viewModel.totalDuration / 60))
-                    .font(.system(.title, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(selectedComponent == .minutes
-                                ? Color.red.opacity(0.3) : Color.clear)
-                    )
+    private var controls: some View {
+        HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
+            if let primary = viewModel.primaryControl {
+                WatchControlButton(
+                    title: primary.title,
+                    systemImage: primary.symbol,
+                    accessibilityID: Theme.Watch.Identifier.quickPrimary,
+                    isProminent: true
+                ) {
+                    viewModel.performPrimaryAction()
+                }
             }
-            .buttonStyle(.plain)
-
-            Text(":")
-                .font(.system(.title, design: .monospaced))
-
-            // Seconds
-            Button {
-                toggleSelection(.seconds)
-            } label: {
-                Text(String(format: "%02d", viewModel.totalDuration % 60))
-                    .font(.system(.title, design: .monospaced))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(selectedComponent == .seconds
-                                ? Color.red.opacity(0.3) : Color.clear)
-                    )
+            if viewModel.showsReset {
+                WatchControlButton(
+                    title: Theme.Label.reset,
+                    systemImage: Theme.Symbol.reset,
+                    accessibilityID: Theme.Watch.Identifier.quickReset,
+                    isProminent: false
+                ) {
+                    viewModel.reset()
+                }
             }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Helpers
-
-    private var playPauseIcon: String {
-        switch viewModel.state {
-        case .notStarted, .paused: return "play.fill"
-        case .running: return "pause.fill"
-        case .finished: return "play.fill"
-        }
-    }
-
-    private func toggleSelection(_ component: TimeComponent) {
-        if selectedComponent == component {
-            selectedComponent = nil
-        } else {
-            selectedComponent = component
-        }
-    }
-
-    /// Snaps the crown value to the current value of the newly selected
-    /// component and suppresses the ensuing `onChange` so it doesn't
-    /// feed back into a duration change.
-    private func syncCrownToSelection(_ component: TimeComponent?) {
-        guard let component else { return }
-        suppressNextCrownChange = true
-        switch component {
-        case .minutes:
-            crownValue = Double(viewModel.totalDuration / 60)
-        case .seconds:
-            crownValue = Double(viewModel.totalDuration % 60)
-        }
-    }
-
-    private func applyCrownChange(_ newValue: Int) {
-        if suppressNextCrownChange {
-            suppressNextCrownChange = false
-            return
-        }
-
-        guard let selected = selectedComponent else { return }
-
-        switch selected {
-        case .minutes:
-            let seconds = viewModel.totalDuration % 60
-            let newMinutes = max(0, min(59, newValue))
-            viewModel.setDuration(newMinutes * 60 + seconds)
-
-        case .seconds:
-            let minutes = viewModel.totalDuration / 60
-            let newSeconds = max(0, min(59, newValue))
-            viewModel.setDuration(minutes * 60 + newSeconds)
         }
     }
 }
 
 #Preview {
-    WatchTimerView()
+    NavigationStack {
+        WatchTimerView(viewModel: WatchQuickTimerViewModel(timer: TimerViewModel()))
+    }
 }

@@ -34,6 +34,54 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
     }
 
     @MainActor
+    func testQuickTimerControlsAreLabelledThroughStartPauseResumeReset() throws {
+        let app = XCUIApplication()
+        // A long duration (argument domain) keeps the countdown from finishing mid-test.
+        app.launchArguments += ["-savedTimerDuration", "300"]
+        app.launch()
+
+        let quickTimer = app.buttons["watch.root.quickTimer"]
+        XCTAssertTrue(quickTimer.waitForExistence(timeout: 10))
+        quickTimer.tap()
+
+        let primary = app.buttons["watch.quick.primary"]
+        XCTAssertTrue(primary.waitForExistence(timeout: 5))
+        XCTAssertEqual(primary.label, "Start")
+        XCTAssertTrue(element("watch.quick.minutes", in: app).exists)
+        XCTAssertTrue(element("watch.quick.seconds", in: app).exists)
+        XCTAssertFalse(app.buttons["watch.quick.reset"].exists)
+
+        primary.tap()
+        XCTAssertTrue(waitForLabel("Pause", on: primary))
+        XCTAssertTrue(element("watch.quick.time", in: app).waitForExistence(timeout: 2))
+        XCTAssertFalse(element("watch.quick.minutes", in: app).exists, "Duration editing is idle-only.")
+
+        primary.tap()
+        XCTAssertTrue(waitForLabel("Resume", on: primary))
+        let reset = app.buttons["watch.quick.reset"]
+        XCTAssertTrue(reset.waitForExistence(timeout: 2))
+        XCTAssertEqual(reset.label, "Reset")
+
+        reset.tap()
+        XCTAssertTrue(waitForLabel("Start", on: primary))
+        XCTAssertFalse(app.buttons["watch.quick.reset"].exists)
+    }
+
+    @MainActor
+    private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any)[identifier]
+    }
+
+    @MainActor
+    private func waitForLabel(_ label: String, on element: XCUIElement) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label == %@", label),
+            object: element
+        )
+        return XCTWaiter().wait(for: [expectation], timeout: 3) == .completed
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {

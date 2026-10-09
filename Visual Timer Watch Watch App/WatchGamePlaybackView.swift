@@ -2,33 +2,34 @@ import SwiftUI
 
 /// Compact watchOS playback for a loaded `GameSequence`.
 ///
-/// Mirrors the iOS `GamePlaybackView` conductor wiring: the timer's
-/// `onFinish` plays the round-complete sound and advances the game via
-/// `GameViewModel.handleTimerFinished()`. Launch contract is the same as
-/// iOS — the caller runs `loadGame`/`startGame` before presenting this view.
+/// `WatchAppModel` owns the session, its completion alerts and the conductor
+/// wiring (`onFinish` → alert → `GameViewModel.handleTimerFinished()`), so the
+/// session keeps running when this screen is dismissed. This view renders
+/// state and forwards control taps.
 struct WatchGamePlaybackView: View {
 
     @ObservedObject var gameViewModel: GameViewModel
     @ObservedObject var timerViewModel: TimerViewModel
-    @ObservedObject var soundManager: SoundManager
 
-    /// Dismissed back to the template browser when the user ends the game.
+    let onPrimary: () -> Void
+    let onRestart: () -> Void
+    let onPrevious: () -> Void
+    let onSkip: () -> Void
+    let onEnd: () -> Void
+
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 6) {
+            VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
                 if gameViewModel.gamePhase == .gameOver {
                     gameOverContent
                 } else {
                     playingContent
                 }
             }
-            .padding(.horizontal, 4)
         }
-        .onAppear { wireTimerFinish() }
-        // Keep the conductor wired even if the view re-evaluates.
-        .onChange(of: gameViewModel.gamePhase) { _ in wireTimerFinish() }
+        .navigationTitle(gameViewModel.gameSequence?.title ?? "")
     }
 
     // MARK: - Playing
@@ -37,121 +38,106 @@ struct WatchGamePlaybackView: View {
     private var playingContent: some View {
         if let round = gameViewModel.currentRound {
             Text("\(round.emoji.isEmpty ? "" : round.emoji + " ")\(round.name)")
-                .font(.caption)
+                .font(.headline)
                 .foregroundStyle(round.color.swiftUIColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
         }
 
-        timerRing
+        WatchTimerDial(
+            progress: timerViewModel.visualProgress,
+            color: timerViewModel.timerColor
+        ) { date in
+            remainingTime(at: date)
+        }
+        .frame(
+            width: Theme.Watch.Dimension.sessionDialSize,
+            height: Theme.Watch.Dimension.sessionDialSize
+        )
 
-        Text(timeText(timerViewModel.timeRemaining))
-            .font(.system(.title2, design: .monospaced))
-            .foregroundStyle(.primary)
+        HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
+            if let primary = WatchPrimaryControl(state: timerViewModel.state) {
+                WatchControlButton(
+                    title: primary.title,
+                    systemImage: primary.symbol,
+                    accessibilityID: Theme.Watch.Identifier.sessionPrimary,
+                    isProminent: true,
+                    action: onPrimary
+                )
+            }
+            WatchControlButton(
+                title: Theme.Label.restart,
+                systemImage: Theme.Symbol.reset,
+                accessibilityID: Theme.Watch.Identifier.sessionRestart,
+                isProminent: false,
+                action: onRestart
+            )
+        }
 
         Text(gameViewModel.roundProgressText)
             .font(.caption2)
             .foregroundStyle(.secondary)
 
-        controlRow
-    }
-
-    private var timerRing: some View {
-        TimelineView(.animation(paused: !timerViewModel.visualProgress.isRunning)) { timeline in
-            let elapsed = timerViewModel.visualProgress.elapsedFraction(at: timeline.date)
-            ZStack {
-                Circle()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 8)
-                Circle()
-                    .trim(from: elapsed, to: 1.0)
-                    .stroke(timerViewModel.timerColor, lineWidth: 8)
-                    .rotationEffect(.degrees(-90))
-            }
-            .frame(width: 84, height: 84)
-            .overlay {
-                Image(systemName: playPauseIcon)
-                    .font(.title3)
-            }
-            .onTapGesture { handleCircleTap() }
-        }
-    }
-
-    private var controlRow: some View {
-        HStack(spacing: 12) {
-            Button {
-                gameViewModel.doOverToPrevious()
-            } label: {
-                Image(systemName: "arrow.uturn.backward")
-            }
+        HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
+            WatchControlButton(
+                title: Theme.Watch.Label.previous,
+                systemImage: Theme.Watch.Symbol.previous,
+                accessibilityID: Theme.Watch.Identifier.sessionPrevious,
+                isProminent: false,
+                action: onPrevious
+            )
             .disabled(gameViewModel.currentRoundIndex == 0)
 
-            Button {
-                gameViewModel.skipCurrentRound()
-            } label: {
-                Image(systemName: "forward.fill")
-            }
+            WatchControlButton(
+                title: Theme.Label.skip,
+                systemImage: Theme.Symbol.skip,
+                accessibilityID: Theme.Watch.Identifier.sessionSkip,
+                isProminent: false,
+                action: onSkip
+            )
         }
-        .font(.caption)
+
+        WatchControlButton(
+            title: Theme.Label.endGame,
+            systemImage: Theme.Symbol.endGame,
+            accessibilityID: Theme.Watch.Identifier.sessionEnd,
+            isProminent: false
+        ) {
+            onEnd()
+            dismiss()
+        }
     }
 
-    // MARK: - Game Over
+    private func remainingTime(at date: Date) -> some View {
+        let seconds = timerViewModel.visualProgress.remainingSeconds(at: date)
+        return Text(WatchTimeText.clock(seconds))
+            .font(.system(.title3, design: .rounded).monospacedDigit())
+            .lineLimit(1)
+            .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
+            .accessibilityLabel(Theme.Watch.Label.timeRemaining)
+            .accessibilityValue(WatchTimeText.spoken(seconds))
+            .accessibilityIdentifier(Theme.Watch.Identifier.sessionTime)
+    }
+
+    // MARK: - Session Complete
 
     private var gameOverContent: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill")
+        VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
+            Image(systemName: Theme.Watch.Symbol.sessionComplete)
                 .font(.title)
-                .foregroundStyle(.green)
-            Text("Session Complete")
-                .font(.caption)
-            Button("Done") {
-                gameViewModel.endGame()
+                .foregroundStyle(Theme.Watch.ColorValue.sessionComplete)
+                .accessibilityHidden(true)
+            Text(Theme.Watch.Label.sessionComplete)
+                .font(.headline)
+            WatchControlButton(
+                title: Theme.Watch.Label.done,
+                systemImage: Theme.Symbol.checkmark,
+                accessibilityID: Theme.Watch.Identifier.sessionDone,
+                isProminent: true
+            ) {
+                onEnd()
                 dismiss()
             }
-            .buttonStyle(.bordered)
         }
-    }
-
-    // MARK: - Conductor
-
-    private func wireTimerFinish() {
-        timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
-            soundManager?.playFinishSound()
-            gameViewModel?.handleTimerFinished()
-        }
-    }
-
-    private func handleCircleTap() {
-        switch timerViewModel.state {
-        case .notStarted:
-            if gameViewModel.gamePhase == .ready {
-                gameViewModel.startGame()
-            } else {
-                gameViewModel.startCurrentRound()
-            }
-            timerViewModel.play()
-        case .paused:
-            gameViewModel.recordResume()
-            timerViewModel.play()
-        case .running:
-            timerViewModel.pause()
-            if timerViewModel.state == .paused {
-                gameViewModel.recordPause()
-            }
-        case .finished:
-            break
-        }
-    }
-
-    private var playPauseIcon: String {
-        switch timerViewModel.state {
-        case .notStarted, .paused, .finished: return "play.fill"
-        case .running: return "pause.fill"
-        }
-    }
-
-    private func timeText(_ seconds: Int) -> String {
-        let m = max(0, seconds) / 60
-        let s = max(0, seconds) % 60
-        return String(format: "%d:%02d", m, s)
     }
 }

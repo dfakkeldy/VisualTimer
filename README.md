@@ -53,7 +53,12 @@ Useful docs:
   (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
   saved templates are sent to the paired Watch as full snapshots through
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
-  iPhone library. Signed paired-device delivery is not yet verified.
+  iPhone library. Signed paired-device delivery is not yet verified. Watch
+  timers show live remaining time and keep running while you move between
+  screens. On screen, a finished timer plays the selected sound with a haptic.
+  If you allow alerts, a local notification covers completion while the app
+  is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
+  tested on a physical Watch.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
