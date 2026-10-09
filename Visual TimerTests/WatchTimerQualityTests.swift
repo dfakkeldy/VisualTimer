@@ -279,6 +279,30 @@ final class WatchTimerQualityTests: XCTestCase {
         XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
     }
 
+    func testFailedCompletedAddDoesNotClearTheNextRunningTimer() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let finished = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(61)
+        timer.refreshCountdown(at: harness.clock.date)
+        harness.clock.date = start.addingTimeInterval(100)
+        timer.play(at: harness.clock.date)
+        let next = harness.coordinator.pendingNotification!.identifier
+
+        harness.scheduler.completeAdd(identifier: finished, succeeded: false)
+        harness.scheduler.completeAdd(identifier: next, succeeded: true)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        XCTAssertEqual(harness.feedback.alerts, [.haptic])
+        XCTAssertEqual(timer.state, .running)
+        XCTAssertEqual(harness.coordinator.pendingNotification?.identifier, next)
+    }
+
     func testBackgroundOwnedNotificationCanPresentOnceAfterReturn() {
         let timer = makeTimer(duration: 60)
         defer { timer.stopAndReset() }
@@ -414,7 +438,8 @@ final class WatchTimerQualityTests: XCTestCase {
         XCTAssertEqual(timer.state, .running, "The overdue pause must not pause the successor.")
         XCTAssertEqual(timer.totalDuration, 30)
         XCTAssertEqual(harness.scheduler.scheduled.map(\.title), ["First", "Second"])
-        XCTAssertEqual(harness.scheduler.cancelled, [harness.scheduler.scheduled[0].identifier])
+        XCTAssertTrue(harness.scheduler.cancelled.isEmpty, "The late first-round notification still owns its alert.")
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: harness.scheduler.scheduled[0].identifier, at: harness.clock.date), false)
         XCTAssertEqual(harness.coordinator.pendingNotification?.identifier, harness.scheduler.scheduled[1].identifier)
         XCTAssertTrue(harness.feedback.alerts.isEmpty, "The late round was already covered by its notification.")
     }
