@@ -240,26 +240,28 @@ final class WatchTimerQualityTests: XCTestCase {
         XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
     }
 
-    func testCancelledAddFailureCannotClaimOrClearTheResumedRun() {
-        let timer = makeTimer(duration: 60)
-        defer { timer.stopAndReset() }
-        let harness = makeHarness(timer: timer, permission: .allowed)
-        harness.scheduler.automaticallyCompleteAdds = false
-        let start = Date(timeIntervalSince1970: 1_000)
-        harness.clock.date = start
-        timer.play(at: start)
-        let cancelled = harness.coordinator.pendingNotification!.identifier
-        harness.clock.date = start.addingTimeInterval(10)
-        timer.pause(at: harness.clock.date)
-        harness.clock.date = start.addingTimeInterval(100)
-        timer.play(at: harness.clock.date)
-        let resumed = harness.coordinator.pendingNotification!.identifier
+    func testCancelledAddResultsCannotClaimOrClearTheResumedRun() {
+        for accepted in [false, true] {
+            let timer = makeTimer(duration: 60)
+            defer { timer.stopAndReset() }
+            let harness = makeHarness(timer: timer, permission: .allowed)
+            harness.scheduler.automaticallyCompleteAdds = false
+            let start = Date(timeIntervalSince1970: 1_000)
+            harness.clock.date = start
+            timer.play(at: start)
+            let cancelled = harness.coordinator.pendingNotification!.identifier
+            harness.clock.date = start.addingTimeInterval(10)
+            timer.pause(at: harness.clock.date)
+            harness.clock.date = start.addingTimeInterval(100)
+            timer.play(at: harness.clock.date)
+            let resumed = harness.coordinator.pendingNotification!.identifier
 
-        harness.scheduler.completeAdd(identifier: cancelled, succeeded: false)
-        XCTAssertEqual(harness.coordinator.pendingNotification?.identifier, resumed)
-        XCTAssertTrue(harness.feedback.alerts.isEmpty)
-        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: cancelled, at: harness.clock.date), true)
-        harness.scheduler.completeAdd(identifier: resumed, succeeded: true)
+            harness.scheduler.completeAdd(identifier: cancelled, succeeded: accepted)
+            XCTAssertEqual(harness.coordinator.pendingNotification?.identifier, resumed)
+            XCTAssertTrue(harness.feedback.alerts.isEmpty)
+            XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: cancelled, at: harness.clock.date), true)
+            harness.scheduler.completeAdd(identifier: resumed, succeeded: true)
+        }
     }
 
     func testFailedAddAfterInAppCompletionDoesNotReplayFeedback() {
@@ -319,6 +321,26 @@ final class WatchTimerQualityTests: XCTestCase {
         XCTAssertTrue(harness.feedback.alerts.isEmpty)
         XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
         XCTAssertNil(harness.coordinator.handleForegroundNotification(identifier: "unrelated", at: harness.clock.date))
+    }
+
+    func testSuccessfulAddAfterReturnKeepsTheSystemAlertWithoutReplay() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.scheduler.completeAdd(identifier: identifier, succeeded: true)
+
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), false)
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
     }
 
     func testObservedDeliveredNotificationDoesNotPresentAgain() {

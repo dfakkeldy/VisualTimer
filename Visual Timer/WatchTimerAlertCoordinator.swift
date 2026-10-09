@@ -80,7 +80,9 @@ final class WatchTimerAlertCoordinator {
     private var issuedNotificationCount: UInt64 = 0
     private var addsInFlight: Set<String> = []
     private var completedAddsAwaitingResult: Set<String> = []
-    /// Retained only until system presentation/delivery is observed.
+    /// Retired when presentation/delivery is observed. A delivery dismissed
+    /// while suspended can remain unobserved until this app process ends;
+    /// absence from a snapshot alone cannot prove a late alert will not arrive.
     private var systemOwnedNotifications: Set<String> = []
     private var progressSubscription: AnyCancellable?
 
@@ -170,7 +172,7 @@ final class WatchTimerAlertCoordinator {
     }
 
     /// A read-only system snapshot retires background ownership without
-    /// removing the user's delivered notifications or keeping UUID tombstones.
+    /// removing the user's delivered notifications.
     func recordDeliveredNotifications(_ identifiers: Set<String>) {
         systemOwnedNotifications.subtract(identifiers)
         completedAddsAwaitingResult.subtract(identifiers)
