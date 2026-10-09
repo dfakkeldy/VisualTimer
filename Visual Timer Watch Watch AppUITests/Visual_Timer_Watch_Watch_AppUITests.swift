@@ -62,6 +62,13 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
         XCTAssertTrue(reset.waitForExistence(timeout: 2))
         XCTAssertEqual(reset.label, "Reset")
 
+        primary.tap()
+        XCTAssertTrue(waitForLabel("Pause", on: primary), "Resume must restart the countdown.")
+        XCTAssertFalse(reset.exists)
+        primary.tap()
+        XCTAssertTrue(waitForLabel("Resume", on: primary))
+        XCTAssertTrue(reset.waitForExistence(timeout: 2))
+
         reset.tap()
         XCTAssertTrue(waitForLabel("Start", on: primary))
         XCTAssertFalse(app.buttons["watch.quick.reset"].exists)

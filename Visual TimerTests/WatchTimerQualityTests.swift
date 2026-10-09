@@ -297,6 +297,14 @@ final class WatchTimerQualityTests: XCTestCase {
         viewModel.crownValue = 1
         viewModel.adjust(.seconds, by: 5)
         XCTAssertEqual(timer.totalDuration, 59 * 60 + 19, "Running and paused timers ignore crown edits.")
+
+        viewModel.performPrimaryAction(at: Date(timeIntervalSince1970: 1_001))
+        XCTAssertEqual(timer.state, .paused)
+        viewModel.toggleSelection(.seconds)
+        XCTAssertNil(viewModel.selectedComponent)
+        viewModel.crownValue = 2
+        viewModel.adjust(.minutes, by: 1)
+        XCTAssertEqual(timer.totalDuration, 59 * 60 + 19, "Pausing must not enable duration editing.")
     }
 
     func testPrimaryControlMapsEveryTimerState() {
