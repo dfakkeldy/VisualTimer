@@ -1,8 +1,10 @@
 # Watch Quality Plan
 
-Status: implemented in source on 2026-10-08. Nothing in this plan was built,
-run or tried on a physical Watch by the author. Exact-head tests, signed
-builds and device QA belong to the normal gated review.
+Status: implemented in source on 2026-10-08; hosted simulator validation
+passed on 2026-10-09 at implementation head
+`78697ea9e66349f3a09f7eaace3b2bbc0e8c30e9`. The executed checks are
+recorded below. A signed paired-Watch build and physical behavior remain
+unverified.
 
 ## Diagnosis (Nightly `67800737`)
 
@@ -63,6 +65,22 @@ builds and device QA belong to the normal gated review.
   overdue pause with successor round, and quick-timer digits, controls and idle-only crown.
 - `Visual Timer Watch Watch AppUITests`: labelled Start → Pause → Resume →
   Reset flow with stable identifiers.
+
+## Executed validation
+
+[CI 37874975447](https://github.com/dfakkeldy/VisualTimer/actions/runs/37874975447)
+passed at the implementation head above. The build gate executed the iOS and
+watchOS builds, 115 iOS-hosted unit tests (including all 26 Watch quality
+tests), six iOS UI tests and the Watch Start/Pause/Resume/Reset UI test, with
+zero failures. The separate web job passed its domain tests, TypeScript,
+production build and committed-site verification. Apple result bundles were
+preserved by the workflow.
+
+These are simulator and automated checks. They do not establish signing,
+paired-device transfer, notification delivery, sound, haptics, Always On or
+CloudKit behavior on hardware. No profile, entitlement, account resource or
+release setting was changed to obtain this evidence. A later documentation
+commit does not extend these results to untested source changes.
 
 ## Not verified physically
 
