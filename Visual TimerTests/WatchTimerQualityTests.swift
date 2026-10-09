@@ -129,6 +129,42 @@ final class WatchTimerQualityTests: XCTestCase {
         XCTAssertEqual(timer.timeRemaining, 60)
     }
 
+    func testReturnJustAfterBackgroundDeadlineDoesNotReplayNotificationFeedback() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+
+        // No tick while suspended; the accepted notification owns the deadline.
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.coordinator.reconcile(at: harness.clock.date.addingTimeInterval(1))
+
+        XCTAssertTrue(harness.feedback.alerts.isEmpty, "Returning within the foreground tolerance must not replay a background alert.")
+        XCTAssertEqual(timer.state, .notStarted)
+    }
+
+    func testFailedNotificationAddFallsBackToOneHapticOnLateReturn() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.rejectRequests = true
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+
+        harness.clock.date = start.addingTimeInterval(90)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.coordinator.sceneDidChange(isActive: false, at: harness.clock.date)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+
+        XCTAssertEqual(harness.feedback.alerts, [.haptic], "A rejected notification cannot own completion feedback.")
+    }
+
     func testDeniedPermissionNeverSchedulesAndTapsOnceForAMissedCompletion() {
         let timer = makeTimer(duration: 60)
         defer { timer.stopAndReset() }
@@ -359,8 +395,10 @@ final class WatchTimerQualityTests: XCTestCase {
 private final class RecordingNotificationScheduler: WatchTimerNotificationScheduling {
     private(set) var scheduled: [WatchTimerNotification] = []
     private(set) var cancelled: [String] = []
+    var rejectRequests = false
 
     func schedule(_ notification: WatchTimerNotification) {
+        guard !rejectRequests else { return }
         scheduled.append(notification)
     }
 
