@@ -124,7 +124,7 @@ final class WatchTimerQualityTests: XCTestCase {
         harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
 
         XCTAssertTrue(harness.feedback.alerts.isEmpty)
-        XCTAssertEqual(harness.scheduler.cancelled, [harness.scheduler.scheduled[0].identifier])
+        XCTAssertTrue(harness.scheduler.cancelled.isEmpty, "A background-owned request must remain available for delayed delivery.")
         XCTAssertEqual(timer.state, .notStarted)
         XCTAssertEqual(timer.timeRemaining, 60)
     }
@@ -163,6 +163,155 @@ final class WatchTimerQualityTests: XCTestCase {
         harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
 
         XCTAssertEqual(harness.feedback.alerts, [.haptic], "A rejected notification cannot own completion feedback.")
+    }
+
+    func testReturnBeforeDeadlineStillPlaysTheForegroundAlert() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(59.5)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.clock.date = start.addingTimeInterval(60.4)
+        timer.refreshCountdown(at: harness.clock.date)
+
+        XCTAssertEqual(harness.feedback.alerts, [.soundAndHaptic])
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+        XCTAssertEqual(harness.feedback.alerts, [.soundAndHaptic])
+    }
+
+    func testDeniedNearDeadlineReturnPlaysOnlyOneHaptic() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .denied)
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date.addingTimeInterval(1))
+
+        XCTAssertEqual(harness.feedback.alerts, [.haptic])
+    }
+
+    func testFailureAfterBackgroundCompletionDefersOneHapticUntilReturn() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(61)
+        timer.refreshCountdown(at: harness.clock.date)
+        harness.scheduler.completeAdd(identifier: identifier, succeeded: false)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
+
+        harness.clock.date = start.addingTimeInterval(90)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        XCTAssertEqual(harness.feedback.alerts, [.haptic])
+    }
+
+    func testFailureAfterReturnPlaysOneHapticAndSuppressesTheFailedRequest() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty, "Wait for the unresolved add result.")
+
+        harness.scheduler.completeAdd(identifier: identifier, succeeded: false)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        XCTAssertEqual(harness.feedback.alerts, [.haptic])
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+    }
+
+    func testCancelledAddFailureCannotClaimOrClearTheResumedRun() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let cancelled = harness.coordinator.pendingNotification!.identifier
+        harness.clock.date = start.addingTimeInterval(10)
+        timer.pause(at: harness.clock.date)
+        harness.clock.date = start.addingTimeInterval(100)
+        timer.play(at: harness.clock.date)
+        let resumed = harness.coordinator.pendingNotification!.identifier
+
+        harness.scheduler.completeAdd(identifier: cancelled, succeeded: false)
+        XCTAssertEqual(harness.coordinator.pendingNotification?.identifier, resumed)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: cancelled, at: harness.clock.date), true)
+        harness.scheduler.completeAdd(identifier: resumed, succeeded: true)
+    }
+
+    func testFailedAddAfterInAppCompletionDoesNotReplayFeedback() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        harness.scheduler.automaticallyCompleteAdds = false
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.clock.date = start.addingTimeInterval(60.4)
+        timer.refreshCountdown(at: harness.clock.date)
+        harness.scheduler.completeAdd(identifier: identifier, succeeded: false)
+
+        XCTAssertEqual(harness.feedback.alerts, [.soundAndHaptic])
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+    }
+
+    func testBackgroundOwnedNotificationCanPresentOnceAfterReturn() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), false)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+        XCTAssertNil(harness.coordinator.handleForegroundNotification(identifier: "unrelated", at: harness.clock.date))
+    }
+
+    func testObservedDeliveredNotificationDoesNotPresentAgain() {
+        let timer = makeTimer(duration: 60)
+        defer { timer.stopAndReset() }
+        let harness = makeHarness(timer: timer, permission: .allowed)
+        let start = Date(timeIntervalSince1970: 1_000)
+        harness.clock.date = start
+        timer.play(at: start)
+        let identifier = harness.coordinator.pendingNotification!.identifier
+        harness.coordinator.sceneDidChange(isActive: false, at: start.addingTimeInterval(5))
+        harness.clock.date = start.addingTimeInterval(60.4)
+        harness.coordinator.sceneDidChange(isActive: true, at: harness.clock.date)
+        harness.coordinator.recordDeliveredNotifications([identifier])
+
+        XCTAssertEqual(harness.coordinator.handleForegroundNotification(identifier: identifier, at: harness.clock.date), true)
+        XCTAssertTrue(harness.feedback.alerts.isEmpty)
     }
 
     func testDeniedPermissionNeverSchedulesAndTapsOnceForAMissedCompletion() {
@@ -396,10 +545,24 @@ private final class RecordingNotificationScheduler: WatchTimerNotificationSchedu
     private(set) var scheduled: [WatchTimerNotification] = []
     private(set) var cancelled: [String] = []
     var rejectRequests = false
+    var automaticallyCompleteAdds = true
+    private var addCompletions: [String: @MainActor (Bool) -> Void] = [:]
 
-    func schedule(_ notification: WatchTimerNotification) {
-        guard !rejectRequests else { return }
+    func schedule(_ notification: WatchTimerNotification, completion: @escaping @MainActor (Bool) -> Void) {
         scheduled.append(notification)
+        if automaticallyCompleteAdds {
+            completion(!rejectRequests)
+        } else {
+            addCompletions[notification.identifier] = completion
+        }
+    }
+
+    func completeAdd(identifier: String, succeeded: Bool) {
+        guard let completion = addCompletions.removeValue(forKey: identifier) else {
+            XCTFail("No unresolved add for \(identifier)")
+            return
+        }
+        completion(succeeded)
     }
 
     func cancel(identifier: String) {

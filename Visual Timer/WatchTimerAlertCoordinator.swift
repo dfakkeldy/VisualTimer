@@ -32,7 +32,8 @@ struct WatchTimerNotification: Equatable {
 /// Platform adapter that schedules and removes completion notifications.
 @MainActor
 protocol WatchTimerNotificationScheduling: AnyObject {
-    func schedule(_ notification: WatchTimerNotification)
+    /// Reports whether the system accepted the request, after its asynchronous add.
+    func schedule(_ notification: WatchTimerNotification, completion: @escaping @MainActor (Bool) -> Void)
     /// Removes the request whether it is still pending or already delivered.
     func cancel(identifier: String)
 }
@@ -63,7 +64,7 @@ final class WatchTimerAlertCoordinator {
     private(set) var isAppActive = true
     /// The running countdown's finish date, or nil while idle or paused.
     private(set) var deadline: Date?
-    /// The notification scheduled for `deadline`, when permission allowed one.
+    /// The requested notification for `deadline`; an unresolved add can still fail.
     private(set) var pendingNotification: WatchTimerNotification?
 
     private let timer: TimerViewModel
@@ -74,6 +75,13 @@ final class WatchTimerAlertCoordinator {
     private let notificationText: () -> (title: String, body: String)
     /// A completion passed off screen with no notification to report it.
     private var missedAlertPending = false
+    private var deadlinePassedWhileInactive = false
+    private var notificationWasPresented = false
+    private var issuedNotificationCount: UInt64 = 0
+    private var addsInFlight: Set<String> = []
+    private var completedAddsAwaitingResult: Set<String> = []
+    /// Retained only until system presentation/delivery is observed.
+    private var systemOwnedNotifications: Set<String> = []
     private var progressSubscription: AnyCancellable?
 
     init(
@@ -89,7 +97,7 @@ final class WatchTimerAlertCoordinator {
         self.timer = timer
         self.scheduler = scheduler
         self.feedback = feedback
-        self.identifierPrefix = identifierPrefix
+        self.identifierPrefix = "\(identifierPrefix).\(UUID().uuidString)"
         self.permission = permission
         self.now = now
         self.notificationText = notificationText
@@ -117,6 +125,9 @@ final class WatchTimerAlertCoordinator {
     /// Records scene activity. Becoming active reconciles the countdown
     /// against `date` and reports a completion missed while off screen once.
     func sceneDidChange(isActive: Bool, at date: Date = Date()) {
+        if isActive, !isAppActive, let deadline, date >= deadline {
+            deadlinePassedWhileInactive = true
+        }
         isAppActive = isActive
         guard isActive else { return }
         reconcile(at: date)
@@ -131,14 +142,55 @@ final class WatchTimerAlertCoordinator {
         timer.refreshCountdown(at: date)
     }
 
+    /// Nil means another coordinator/process owns this identifier. False lets
+    /// the system present a background-owned alert; true suppresses a request
+    /// already handled in-app or cancelled, even after its add settles.
+    func handleForegroundNotification(identifier: String, at date: Date = Date()) -> Bool? {
+        guard ownsIssuedIdentifier(identifier) else { return nil }
+        if !isAppActive {
+            if pendingNotification?.identifier == identifier {
+                notificationWasPresented = true
+                completedAddsAwaitingResult.remove(identifier)
+                return false
+            }
+            if systemOwnedNotifications.remove(identifier) != nil {
+                completedAddsAwaitingResult.remove(identifier)
+                return false
+            }
+            return true
+        }
+        if pendingNotification?.identifier == identifier {
+            reconcile(at: date)
+        }
+        if systemOwnedNotifications.remove(identifier) != nil {
+            completedAddsAwaitingResult.remove(identifier)
+            return false
+        }
+        return true
+    }
+
+    /// A read-only system snapshot retires background ownership without
+    /// removing the user's delivered notifications or keeping UUID tombstones.
+    func recordDeliveredNotifications(_ identifiers: Set<String>) {
+        systemOwnedNotifications.subtract(identifiers)
+        completedAddsAwaitingResult.subtract(identifiers)
+        if let pendingNotification, identifiers.contains(pendingNotification.identifier) {
+            notificationWasPresented = true
+        }
+    }
+
     // MARK: - Decisions
 
     static func completionAlert(
         isAppActive: Bool,
         lateness: TimeInterval,
-        notificationScheduled: Bool
+        notificationScheduled: Bool,
+        deadlinePassedWhileInactive: Bool = false
     ) -> WatchCompletionAlert {
         guard isAppActive else { return .none }
+        if deadlinePassedWhileInactive {
+            return notificationScheduled ? .none : .haptic
+        }
         if lateness <= onTimeTolerance { return .soundAndHaptic }
         return notificationScheduled ? .none : .haptic
     }
@@ -148,21 +200,32 @@ final class WatchTimerAlertCoordinator {
     private func timerDidFinish() {
         let finished = pendingNotification
         let lateness = deadline.map { now().timeIntervalSince($0) } ?? 0
-        pendingNotification = nil
-        deadline = nil
 
         let alert = Self.completionAlert(
             isAppActive: isAppActive,
             lateness: lateness,
-            notificationScheduled: finished != nil
+            notificationScheduled: finished != nil,
+            deadlinePassedWhileInactive: deadlinePassedWhileInactive || notificationWasPresented
         )
-        if isAppActive, let finished {
-            // On screen: the app handles this completion, so remove the
-            // pending or delivered notification instead of duplicating it.
-            scheduler.cancel(identifier: finished.identifier)
+        if let finished {
+            if alert != .none {
+                scheduler.cancel(identifier: finished.identifier)
+            } else if !notificationWasPresented {
+                // Preserve a system-owned request even after foreground return;
+                // it may still need to present after a delayed delivery.
+                systemOwnedNotifications.insert(finished.identifier)
+                if addsInFlight.contains(finished.identifier) {
+                    completedAddsAwaitingResult.insert(finished.identifier)
+                }
+            }
         }
-        // Off screen the request stays, so watchOS can still deliver it.
-        missedAlertPending = !isAppActive && finished == nil
+        if !isAppActive && finished == nil {
+            missedAlertPending = true
+        }
+        pendingNotification = nil
+        deadline = nil
+        deadlinePassedWhileInactive = false
+        notificationWasPresented = false
         if alert != .none {
             feedback.play(alert)
         }
@@ -173,6 +236,7 @@ final class WatchTimerAlertCoordinator {
         guard newDeadline != deadline else { return }
         cancelPendingNotification()
         deadline = newDeadline
+        deadlinePassedWhileInactive = false
         scheduleNotificationIfAllowed()
     }
 
@@ -182,19 +246,52 @@ final class WatchTimerAlertCoordinator {
               let deadline,
               deadline > now() else { return }
         let text = notificationText()
+        issuedNotificationCount += 1
         let notification = WatchTimerNotification(
-            identifier: "\(identifierPrefix).\(UUID().uuidString)",
+            identifier: "\(identifierPrefix).\(issuedNotificationCount)",
             fireDate: deadline,
             title: text.title,
             body: text.body
         )
         pendingNotification = notification
-        scheduler.schedule(notification)
+        notificationWasPresented = false
+        addsInFlight.insert(notification.identifier)
+        scheduler.schedule(notification) { [weak self] accepted in
+            self?.notificationAddDidComplete(identifier: notification.identifier, accepted: accepted)
+        }
+    }
+
+    private func notificationAddDidComplete(identifier: String, accepted: Bool) {
+        addsInFlight.remove(identifier)
+        if pendingNotification?.identifier == identifier {
+            if !accepted, !notificationWasPresented {
+                pendingNotification = nil
+                scheduler.cancel(identifier: identifier)
+            }
+            return
+        }
+        guard completedAddsAwaitingResult.remove(identifier) != nil else { return }
+        if !accepted {
+            systemOwnedNotifications.remove(identifier)
+            if isAppActive {
+                feedback.play(.haptic)
+            } else {
+                missedAlertPending = true
+            }
+        }
+    }
+
+    private func ownsIssuedIdentifier(_ identifier: String) -> Bool {
+        let prefix = identifierPrefix + "."
+        guard identifier.hasPrefix(prefix),
+              let number = UInt64(identifier.dropFirst(prefix.count)) else { return false }
+        return number > 0 && number <= issuedNotificationCount
     }
 
     private func cancelPendingNotification() {
         guard let pendingNotification else { return }
         scheduler.cancel(identifier: pendingNotification.identifier)
         self.pendingNotification = nil
+        notificationWasPresented = false
     }
 }

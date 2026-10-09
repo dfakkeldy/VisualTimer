@@ -32,7 +32,6 @@ final class WatchAppModel: ObservableObject {
     private let notifications: WatchNotificationScheduler
     private let quickAlerts: WatchTimerAlertCoordinator
     private let sessionAlerts: WatchTimerAlertCoordinator
-    private var isSceneActive = true
 
     init() {
         let soundManager = SoundManager()
@@ -71,8 +70,8 @@ final class WatchAppModel: ObservableObject {
             }
         )
 
-        notifications.handleForegroundPresentation = { [weak self] in
-            self?.handleForegroundNotification() ?? false
+        notifications.handleForegroundPresentation = { [weak self] identifier in
+            self?.handleForegroundNotification(identifier: identifier) ?? false
         }
         quickTimer.$state
             .removeDuplicates()
@@ -90,15 +89,18 @@ final class WatchAppModel: ObservableObject {
     // MARK: - Scene
 
     func sceneDidBecomeActive(at date: Date = Date()) {
-        isSceneActive = true
         quickAlerts.sceneDidChange(isActive: true, at: date)
         sessionAlerts.sceneDidChange(isActive: true, at: date)
         refreshSavedTemplates()
-        Task { await refreshNotificationPermission() }
+        Task {
+            await refreshNotificationPermission()
+            let delivered = await notifications.deliveredNotificationIdentifiers()
+            quickAlerts.recordDeliveredNotifications(delivered)
+            sessionAlerts.recordDeliveredNotifications(delivered)
+        }
     }
 
     func sceneDidResignActive() {
-        isSceneActive = false
         quickAlerts.sceneDidChange(isActive: false)
         sessionAlerts.sceneDidChange(isActive: false)
     }
@@ -178,14 +180,14 @@ final class WatchAppModel: ObservableObject {
     }
 
     /// A completion notification arrived while Turn Timer is frontmost.
-    /// When active, reconcile now so the in-app alert plays on time and the
-    /// banner is suppressed; when inactive, let watchOS show it.
-    private func handleForegroundNotification() -> Bool {
-        guard isSceneActive else { return false }
+    /// Route by identifier so a late background-owned alert can still present,
+    /// while cancelled or in-app-handled requests are suppressed.
+    private func handleForegroundNotification(identifier: String) -> Bool {
         let now = Date()
-        quickAlerts.reconcile(at: now)
-        sessionAlerts.reconcile(at: now)
-        return true
+        if let handled = quickAlerts.handleForegroundNotification(identifier: identifier, at: now) {
+            return handled
+        }
+        return sessionAlerts.handleForegroundNotification(identifier: identifier, at: now) ?? false
     }
 
     private static func sessionNotificationText(for game: GameViewModel?) -> (title: String, body: String) {

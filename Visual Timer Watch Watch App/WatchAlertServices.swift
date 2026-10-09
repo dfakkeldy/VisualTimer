@@ -16,7 +16,7 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
 
     /// Returns true when the app is on screen and handled the completion
     /// itself, so the banner would duplicate the in-app alert.
-    var handleForegroundPresentation: (() -> Bool)?
+    var handleForegroundPresentation: ((String) -> Bool)?
 
     /// `UNTimeIntervalNotificationTrigger` requires a positive interval.
     private static let minimumDelay: TimeInterval = 1
@@ -44,6 +44,11 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
         }
     }
 
+    func deliveredNotificationIdentifiers() async -> Set<String> {
+        let notifications = await UNUserNotificationCenter.current().deliveredNotifications()
+        return Set(notifications.map { $0.request.identifier })
+    }
+
     /// Call only from an explicit user action such as the Allow Alerts row.
     func requestPermission() async -> WatchNotificationPermission {
         do {
@@ -56,7 +61,7 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
 
     // MARK: - WatchTimerNotificationScheduling
 
-    func schedule(_ notification: WatchTimerNotification) {
+    func schedule(_ notification: WatchTimerNotification, completion: @escaping @MainActor (Bool) -> Void) {
         let identifier = notification.identifier
         let title = notification.title
         let body = notification.body
@@ -73,8 +78,10 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
                 content: content,
                 trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
             )
+            var accepted = false
             do {
                 try await UNUserNotificationCenter.current().add(request)
+                accepted = true
             } catch {
                 logger.error("Unable to schedule a Watch timer notification.")
             }
@@ -82,7 +89,10 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
             // A pause or reset can overtake an add that was still in flight.
             if cancelledWhileAdding.remove(identifier) != nil {
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+                UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
+                accepted = false
             }
+            completion(accepted)
         }
     }
 
@@ -105,7 +115,7 @@ final class WatchNotificationScheduler: NSObject, WatchTimerNotificationScheduli
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         let handledInApp = await MainActor.run { [weak self] in
-            self?.handleForegroundPresentation?() ?? false
+            self?.handleForegroundPresentation?(notification.request.identifier) ?? false
         }
         return handledInApp ? [] : [.banner, .list, .sound]
     }
