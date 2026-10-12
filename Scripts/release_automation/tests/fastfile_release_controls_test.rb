@@ -4,6 +4,9 @@ RELEASE_EVENTS = []
 RELEASE_LANES = {}
 RELEASE_UPLOADS = []
 TESTFLIGHT_UPLOADS = []
+MATCH_CALLS = []
+STUB_TARGET_NAMES = []
+STUB_BUNDLE_IDS = {}
 
 module SharedValues
   MATCH_PROVISIONING_PROFILE_MAPPING = :match_profile_mapping
@@ -30,8 +33,9 @@ Object.class_eval do
     RELEASE_EVENTS << :setup_ci
   end
 
-  def match(**)
+  def match(**options)
     RELEASE_EVENTS << :match
+    MATCH_CALLS << options
   end
 
   def lane_context
@@ -46,7 +50,11 @@ Object.class_eval do
   private
 
   def project_target_names
-    []
+    STUB_TARGET_NAMES.dup
+  end
+
+  def project_signing_bundle_ids
+    STUB_BUNDLE_IDS.dup
   end
 
   def app_store_connect_key
@@ -74,6 +82,9 @@ class FastfileReleaseControlsTest < Minitest::Test
     RELEASE_EVENTS.clear
     RELEASE_UPLOADS.clear
     TESTFLIGHT_UPLOADS.clear
+    MATCH_CALLS.clear
+    STUB_TARGET_NAMES.replace([])
+    STUB_BUNDLE_IDS.clear
     @original_ci = ENV["CI"]
     @original_submit = ENV["APP_STORE_SUBMIT_FOR_REVIEW"]
     @original_automatic = ENV["APP_STORE_AUTOMATIC_RELEASE"]
@@ -104,6 +115,40 @@ class FastfileReleaseControlsTest < Minitest::Test
     assert_equal false, upload_options.fetch(:submit_for_review)
     assert_equal false, upload_options.fetch(:automatic_release)
     assert_equal false, upload_options.fetch(:run_precheck_before_submit)
+  end
+
+  def test_signing_uses_the_train_project_watch_bundle_id
+    ENV["CI"] = "true"
+    STUB_TARGET_NAMES.replace(SIGNING_TARGETS.keys)
+    STUB_BUNDLE_IDS.replace(
+      "Visual Timer" => "Dan.Visual-Timer",
+      "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
+      "Visual Timer Watch Watch App" => "Dan.Visual-Timer.watchkitapp",
+      "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets"
+    )
+
+    sync_release_signing(:api_key)
+
+    identifiers = MATCH_CALLS.fetch(0).fetch(:app_identifier)
+    assert_includes identifiers, "Dan.Visual-Timer.watchkitapp"
+    refute_includes identifiers, "Dan.Visual-Timer-Watch.watchkitapp"
+  end
+
+  def test_signing_keeps_legacy_watch_bundle_id_when_the_project_still_uses_it
+    ENV["CI"] = "true"
+    STUB_TARGET_NAMES.replace(SIGNING_TARGETS.keys)
+    STUB_BUNDLE_IDS.replace(
+      "Visual Timer" => "Dan.Visual-Timer",
+      "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
+      "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp",
+      "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets"
+    )
+
+    sync_release_signing(:api_key)
+
+    identifiers = MATCH_CALLS.fetch(0).fetch(:app_identifier)
+    assert_includes identifiers, "Dan.Visual-Timer-Watch.watchkitapp"
+    refute_includes identifiers, "Dan.Visual-Timer.watchkitapp"
   end
 
   def test_beta_channels_only_target_a_group_for_external_distribution
