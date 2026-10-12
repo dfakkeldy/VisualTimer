@@ -122,6 +122,18 @@ jobs:
             echo "refresh_signing_profiles=$refresh_signing_profiles"
           } >> "$GITHUB_OUTPUT"
 
+  skip_inactive_cron:
+    needs: resolve
+    if: needs.resolve.result == 'success' && needs.resolve.outputs.should_run != 'true'
+    name: Skip inactive Halifax cron
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record skipped schedule
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::notice title=Inactive cron skipped::This schedule is not the active America/Halifax slot. No release train was built or uploaded."
+
   ship:
     needs: resolve
     if: needs.resolve.outputs.should_run == 'true'
