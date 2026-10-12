@@ -4,6 +4,10 @@ PROJECT_PATH = File.join(REPO_ROOT, "Visual Timer.xcodeproj")
 IOS_SCHEME = "Visual Timer"
 TEAM_ID = "8AXNA5B37R"
 
+# Fallback identifiers for trains that still ship the pre-embed Watch product.
+# Nightly's embedded companion uses Dan.Visual-Timer.watchkitapp; signing_targets
+# prefers PRODUCT_BUNDLE_IDENTIFIER from the checked-out train project so the
+# default-branch Fastfile overlay does not stamp a stale Watch ID onto a newer train.
 SIGNING_TARGETS = {
   "Visual Timer" => "Dan.Visual-Timer",
   "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
@@ -51,9 +55,32 @@ def project_target_names
   Xcodeproj::Project.open(PROJECT_PATH).targets.map(&:name)
 end
 
+def project_signing_bundle_ids
+  require "xcodeproj"
+
+  project = Xcodeproj::Project.open(PROJECT_PATH)
+  project.targets.each_with_object({}) do |target, acc|
+    next unless SIGNING_TARGETS.key?(target.name)
+
+    release = target.build_configurations.find { |c| c.name == "Release" } ||
+      target.build_configurations.first
+    next if release.nil?
+
+    identifier = release.build_settings["PRODUCT_BUNDLE_IDENTIFIER"]
+    next if identifier.nil? || identifier.to_s.empty?
+
+    acc[target.name] = identifier
+  end
+end
+
 def signing_targets
   target_names = project_target_names
-  SIGNING_TARGETS.select { |target, _| target_names.include?(target) }
+  selected = SIGNING_TARGETS.select { |target, _| target_names.include?(target) }
+  return selected if selected.empty?
+
+  selected.merge(project_signing_bundle_ids) do |_target, fallback, actual|
+    actual.nil? || actual.to_s.empty? ? fallback : actual
+  end.select { |target, _| selected.key?(target) }
 end
 
 def sync_release_signing(api_key)

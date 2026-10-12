@@ -71,12 +71,18 @@ If entitlements change, dispatch the release workflow with
 `refresh_signing_profiles=true` so App Store profiles are regenerated instead of
 read-only fetched.
 
-Current known app identifiers:
+Known app identifiers (match fetches the subset present on the train project):
 
 - `Dan.Visual-Timer`
+- `Dan.Visual-Timer.TurnTimerWidgets`
 - `Dan.Visual-Timer-Watch`
-- Widget and watch-extension identifiers are staged on `nightly` and should be
-  kept in sync with the project before release.
+- `Dan.Visual-Timer-Watch.watchkitapp` (legacy Watch product on `weekly`/`main`)
+- `Dan.Visual-Timer.watchkitapp` (embedded companion on `nightly`)
+
+Release trains read those identifiers from the checked-out Xcode project rather
+than stamping `main`'s hardcoded Watch ID onto every train. If a new identifier
+has no App Store profile in the match repo yet, dispatch Release Trains with
+`refresh_signing_profiles=true` once to create it.
 
 ## Validation
 
