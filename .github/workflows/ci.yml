@@ -68,6 +68,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Test change-aware delivery guard
+        run: python3 -m unittest discover -s .github/scripts/tests -p test_release_delivery.py -v
+
       - name: Validate release controls
         run: ruby Scripts/release_automation/tests/fastfile_release_controls_test.rb
 
