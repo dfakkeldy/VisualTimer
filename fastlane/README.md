@@ -110,3 +110,10 @@ three Fastlane outcomes:
 - build distributed to the intended tester group
 
 Green resolver or build steps alone do not prove TestFlight visibility.
+
+## Change-aware workflow delivery
+
+The release workflows compare effective build inputs before allocating the
+macOS delivery job. Unchanged platform/channel receipts skip duplicate binaries;
+`force=true` deliberately rebuilds through the existing gates. See
+[delivery behavior and baseline recovery](../.github/RELEASE_DELIVERY.md).
