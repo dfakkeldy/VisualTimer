@@ -152,8 +152,8 @@ default-branch copy. Feature work branches from `nightly`; pull requests target
 
 | Branch | Purpose | Distribution | Merge gate | Required reviews | Promotion source |
 |---|---|---|---|---:|---|
-| `nightly` | Fast integration | Daily 03:00 Halifax TestFlight build to the internal `nightly` group | `Build gate + tests` | 0 | `feature/*` |
-| `weekly` | Weekly beta train | Monday 09:00 Halifax TestFlight build to the external `weekly` group | `Build gate + tests` | 0 | `nightly` |
+| `nightly` | Fast integration | Daily 03:00 Halifax check; TestFlight to the internal `nightly` group only when app inputs changed | `Build gate + tests` | 0 | `feature/*` |
+| `weekly` | Weekly beta train | Monday 09:00 Halifax check; TestFlight to the external `weekly` group only when app inputs changed | `Build gate + tests` | 0 | `nightly` |
 | `main` | Stable App Store release branch | App Store Connect upload on app-affecting pushes; review only when explicitly enabled | `Build gate + tests` | 0 | `weekly` |
 
 Hotfixes branch from `main`, merge back to `main` by pull request, then flow
@@ -163,6 +163,15 @@ Release automation runs from the default-branch workflow, then checks out the
 selected train branch before building. The workflow restores the default-branch
 `fastlane` configuration after checkout so signing and distribution policy stay
 centralized while the app code comes from the selected train.
+
+Scheduled trains still check on that daily and Monday cadence. They compare
+effective app build inputs with the last successful platform/channel delivery
+and skip the macOS build and upload when those inputs are unchanged.
+Documentation-only edits do not create a new binary. Dispatch the workflow with
+`force=true` for an intentional rebuild through the same gates. The scheduler
+runs the controller from the default branch, so this skip behavior takes effect
+only after promotion to `main`. See
+[change-aware release delivery](.github/RELEASE_DELIVERY.md).
 
 Distribution requires the `APP_STORE_CONNECT_API_KEY_JSON`, `MATCH_PASSWORD`,
 and `MATCH_GIT_SSH_KEY` repository secrets; without them, release-train runs
