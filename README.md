@@ -6,11 +6,13 @@ starter templates for common timed sessions.
 
 ## Status
 
-`main` is the deployable GitHub Pages and App Store release branch. `nightly`
-currently carries newer app work that is staged for promotion, including widget,
-watch, history-sync, and release-validation improvements. Keep user-facing docs
-honest about which branch is being described, and promote app changes through
-`nightly` -> `weekly` -> `main` before treating them as App Store-ready.
+Re-checked 2026-10-06: nightly build **1.0 (73)** has upload, processing and
+internal-distribution receipts; weekly build **1.0 (66)** has external receipts
+for an older payload. Main remains older. App Store review/live state is
+unverified. The [readiness ledger](docs/app-store/readiness.md) records exact
+SHAs, CI, blockers and the required `nightly` → `weekly` → `main` ladder.
+[Submission materials](docs/app-store/submission-packet.md) are drafts. No
+promotion, upload or submission is authorized by this preparation.
 
 Useful docs:
 
@@ -35,7 +37,9 @@ Useful docs:
   full local history, export, and iCloud sync available with Pro.
 - **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
   iCloud sync, sharing, widgets, and advanced customization with a one-time
-  $4.99 StoreKit purchase.
+  StoreKit purchase. The app shows StoreKit's localized price and has no
+  hardcoded fallback amount; the local `TurnTimer.storekit` value is for
+  simulation and does not verify the App Store Connect price.
 - **Shared template files** - Import and export portable `.turntimer` template
   files without overwriting existing local work.
 - **Pro iCloud template sync** - Pro users can sync saved templates across their
@@ -45,18 +49,32 @@ Useful docs:
 - **Template widgets** - Home Screen and Lock Screen widgets read compact App
   Group snapshots and launch starter or saved templates through `turntimer://`
   deep links.
-- **Watch app** - Keep companion watch target support.
+- **Watch app** - The iPhone app embeds its Watch companion
+  (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
+  saved templates are sent to the paired Watch as full snapshots through
+  WatchConnectivity; revoking Pro clears Watch templates without deleting the
+  iPhone library. Signed paired-device delivery is not yet verified. Watch
+  timers show live remaining time and keep running while you move between
+  screens. On screen, a finished timer plays the selected sound with a haptic.
+  If you allow alerts, a local notification covers completion while the app
+  is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
+  tested on a physical Watch.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
-Staged on `nightly` ahead of the next release promotion: Pro iCloud history
-sync, widget snapshots/deep links, watch template playback, and release-train
-validation updates.
+These scope bullets describe implemented source, not signed-device acceptance
+or the old main release. Production sync, saved Watch-template transfer and
+timer lock/background behavior still need the focused checks in the readiness
+ledger. No background-alarm guarantee is implied.
 
 ## Core Features
 
 - **Visual pie countdown** - A circular timer depletes clockwise from the
-  12 o'clock position using SwiftUI drawing and animation.
+  12 o'clock position using SwiftUI drawing and animation. The iOS dial adds
+  glasslike lighting and a completion ripple while preserving the quick timer's
+  colour cycle and each round's chosen colour. Controls use Liquid Glass on
+  iOS 26+, with material fallbacks on iOS 18 and accessibility alternatives for
+  reduced motion, reduced transparency, and increased contrast.
 - **Custom sounds** - Built-in tones are generated programmatically as 16-bit
   PCM WAV files. The chosen sound plays when a countdown reaches zero.
 - **Sleep prevention** - The screen stays awake while a timer is running and
@@ -81,7 +99,8 @@ validation updates.
 
 ## Product Roadmap
 
-Turn Timer is planned as a free timer with a $4.99 one-time Pro unlock. The
+Turn Timer is planned as a free timer with a one-time Pro unlock (no
+subscription; the store price is set in App Store Connect). The
 core timer, built-in starter templates, and one custom saved template remain
 free. Pro value is built around reuse and portability: unlimited templates,
 history/export, iCloud sync, sharing, widgets, and Apple Watch convenience.
@@ -138,8 +157,8 @@ default-branch copy. Feature work branches from `nightly`; pull requests target
 
 | Branch | Purpose | Distribution | Merge gate | Required reviews | Promotion source |
 |---|---|---|---|---:|---|
-| `nightly` | Fast integration | Daily 03:00 Halifax TestFlight build to the internal `nightly` group | `Build gate + tests` | 0 | `feature/*` |
-| `weekly` | Weekly beta train | Monday 09:00 Halifax TestFlight build to the external `weekly` group | `Build gate + tests` | 0 | `nightly` |
+| `nightly` | Fast integration | Daily 03:00 Halifax check; TestFlight to the internal `nightly` group only when app inputs changed | `Build gate + tests` | 0 | `feature/*` |
+| `weekly` | Weekly beta train | Monday 09:00 Halifax check; TestFlight to the external `weekly` group only when app inputs changed | `Build gate + tests` | 0 | `nightly` |
 | `main` | Stable App Store release branch | App Store Connect upload on app-affecting pushes; review only when explicitly enabled | `Build gate + tests` | 0 | `weekly` |
 
 Hotfixes branch from `main`, merge back to `main` by pull request, then flow
@@ -149,6 +168,15 @@ Release automation runs from the default-branch workflow, then checks out the
 selected train branch before building. The workflow restores the default-branch
 `fastlane` configuration after checkout so signing and distribution policy stay
 centralized while the app code comes from the selected train.
+
+Scheduled trains still check on that daily and Monday cadence. They compare
+effective app build inputs with the last successful platform/channel delivery
+and skip the macOS build and upload when those inputs are unchanged.
+Documentation-only edits do not create a new binary. Dispatch the workflow with
+`force=true` for an intentional rebuild through the same gates. The scheduler
+runs the controller from the default branch, so this skip behavior takes effect
+only after promotion to `main`. See
+[change-aware release delivery](.github/RELEASE_DELIVERY.md).
 
 Distribution requires the `APP_STORE_CONNECT_API_KEY_JSON`, `MATCH_PASSWORD`,
 and `MATCH_GIT_SSH_KEY` repository secrets; without them, release-train runs
@@ -166,6 +194,10 @@ The public website is served from `main` at `docs/`. The site root is
 `docs/index.html`, and the build-in-public devlog lives at
 `docs/devlog.html`. Weekly devlog automation opens a PR against `main`; it does
 not publish social posts automatically.
+
+The installable web app (`web/` and the committed `docs/app/` package) lives on
+`nightly` and `weekly` until that tree is promoted to `main`. GitHub Pages does
+not host `/app/` until `docs/app/` exists on `main`.
 
 ## Getting Started
 
@@ -205,10 +237,11 @@ StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
 See [`web/README.md`](web/README.md) for the web architecture and support
 details.
 
-The project website hosts the production web client at
-`https://dfakkeldy.github.io/VisualTimer/app/`. Regenerate the committed Pages
-package with `make web-pages`; this preserves the existing homepage, devlog,
-support, and privacy routes.
+Until `docs/app/` is promoted to `main`, run the PWA locally with the commands
+above. `make web-pages` regenerates the committed `docs/app/` package on this
+branch and leaves the existing homepage, devlog, support, and privacy routes
+intact. It does not publish a live GitHub Pages `/app/` URL while Pages still
+reads `main`.
 
 ## CloudKit and Widget Setup
 
@@ -277,3 +310,8 @@ Signed-device validation checklist:
 7. Add Home Screen and Lock Screen widgets, confirm starter and saved templates
    render with the expected durations, and tap each widget to confirm the app
    opens the matching template.
+
+## License
+
+Turn Timer's source code is released under the [MIT License](LICENSE).
+Dependencies keep their own licences.

@@ -11,7 +11,7 @@ DEFAULT_PRIVACY_POLICY_URL = "https://dfakkeldy.github.io/VisualTimer/privacy.ht
 SIGNING_TARGETS = {
   "Visual Timer" => "Dan.Visual-Timer",
   "Visual Timer Watch" => "Dan.Visual-Timer-Watch",
-  "Visual Timer Watch Watch App" => "Dan.Visual-Timer-Watch.watchkitapp",
+  "Visual Timer Watch Watch App" => "Dan.Visual-Timer.watchkitapp",
   "TurnTimerWidgets" => "Dan.Visual-Timer.TurnTimerWidgets"
 }.freeze
 

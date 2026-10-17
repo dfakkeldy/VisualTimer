@@ -89,6 +89,7 @@ final class TimerViewModel: ObservableObject {
         case .notStarted, .paused:
             state = .running
             visualProgress = visualProgress.running(from: date)
+            timeRemaining = visualProgress.remainingSeconds(at: date)
 #if !os(watchOS)
             UIApplication.shared.isIdleTimerDisabled = true
 #endif
@@ -102,6 +103,9 @@ final class TimerViewModel: ObservableObject {
     /// Releases the screen-sleep lock.
     func pause(at date: Date = Date()) {
         guard case .running = state else { return }
+        // An overdue round may finish and reconfigure its successor here.
+        // Do not apply this pause tap to that newly started round.
+        guard !refreshCountdown(at: date) else { return }
         state = .paused
         visualProgress = visualProgress.paused(at: date)
 #if !os(watchOS)
@@ -160,15 +164,14 @@ final class TimerViewModel: ObservableObject {
 
     // MARK: - Countdown Engine
 
-    /// Fires a 1 Hz timer on the main runloop. Each tick decrements
-    /// `timeRemaining` by one. When it reaches zero the timer finishes,
-    /// the sound callback fires, and the state machine auto-resets.
+    /// Fires a 1 Hz refresh signal. Elapsed Date time, rather than the
+    /// number of delivered callbacks, controls countdown and completion.
     private func beginCountdown() {
         timerSubscription = Timer
             .publish(every: tickInterval, on: .main, in: .common)
             .autoconnect()
-            .sink { [weak self] _ in
-                self?.handleTimerTick()
+            .sink { [weak self] date in
+                self?.refreshCountdown(at: date)
             }
     }
 
@@ -177,12 +180,13 @@ final class TimerViewModel: ObservableObject {
         timerSubscription = nil
     }
 
-    private func handleTimerTick() {
-        guard case .running = state else { return }
-
-        if timeRemaining > 0 {
-            timeRemaining -= 1
-        }
+    /// Reconcile after a delayed tick or foreground return.
+    /// Returns true if this call completed the timer that was running.
+    /// The callback still starts at most one successor at return time.
+    @discardableResult
+    func refreshCountdown(at date: Date = Date()) -> Bool {
+        guard case .running = state else { return false }
+        timeRemaining = visualProgress.remainingSeconds(at: date)
 
         if timeRemaining == 0 {
             endCountdown()
@@ -195,10 +199,12 @@ final class TimerViewModel: ObservableObject {
             // If the callback already reconfigured the timer for the next
             // round (e.g. GameViewModel.advanceToNextRound called play()),
             // don't overwrite the new state.
-            guard state == .finished else { return }
+            guard state == .finished else { return true }
             timeRemaining = totalDuration
             visualProgress = TimerVisualProgress(totalDuration: totalDuration)
             state = .notStarted
+            return true
         }
+        return false
     }
 }

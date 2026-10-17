@@ -34,6 +34,60 @@ final class Visual_TimerUITests: XCTestCase {
     }
 
     @MainActor
+    func testPolishedTimerPauseAndReset() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-savedTimerDuration", "25"]
+        app.launch()
+
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        attachScreen("Timer — ready")
+        app.buttons["Play"].tap()
+        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 3))
+        // XCTest snapshots may miss a single one-second label on a busy runner.
+        // Verify progress, then a frozen paused value and the original reset value.
+        let countdown = app.staticTexts["timer.time-remaining"]
+        let progressed = NSPredicate(format: "label MATCHES %@", "^00:(0[1-9]|1[0-9]|2[0-4])$")
+        let progress = XCTNSPredicateExpectation(predicate: progressed, object: countdown)
+        XCTAssertEqual(XCTWaiter.wait(for: [progress], timeout: 5), .completed)
+        app.buttons["Pause"].tap()
+        XCTAssertTrue(app.buttons["Unpause"].waitForExistence(timeout: 3))
+        let pausedValue = countdown.label
+        let changedWhilePaused = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label != %@", pausedValue), object: countdown
+        )
+        changedWhilePaused.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [changedWhilePaused], timeout: 1.5), .completed)
+        attachScreen("Timer — partial and paused")
+        app.buttons["Reset"].tap()
+        XCTAssertTrue(app.staticTexts["00:25"].waitForExistence(timeout: 3))
+
+        XCTAssertTrue(app.buttons["Play"].isHittable)
+        XCTAssertTrue(app.buttons["Increase duration"].isHittable)
+        attachScreen("Timer — reset")
+    }
+
+    @MainActor
+    func testPolishedTimerReplenishesAfterCompletion() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-savedTimerDuration", "5"]
+        app.launch()
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
+        app.buttons["Play"].tap()
+        XCTAssertTrue(app.buttons["Pause"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["00:05"].exists)
+        attachScreen("Timer — next palette colour")
+    }
+
+    @MainActor
+    private func attachScreen(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
