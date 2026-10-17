@@ -108,14 +108,12 @@ unusable layout over cosmetic work.
 
 ## Privacy and capabilities
 
-- iOS `PrivacyInfo.xcprivacy`: tracking false, empty collected-data list,
-  UserDefaults `CA92.1`, FileTimestamp `C617.1`. Synchronized target membership
-  includes it in source. Verify approved reasons and the archive privacy
-  report. Watch compiles shared timer/sound UserDefaults code and
-  `GameRecord.swift` with FileTimestamp access; no watch-specific manifest is
-  committed. Check each shipped executable's required-reason
-  coverage, including Watch if it ships, rather than assuming the iOS manifest
-  covers a separately built target.
+- iOS, Watch, and widget each have their own `PrivacyInfo.xcprivacy`. All three
+  declare tracking false and an empty collected-data list. iOS and Watch declare
+  UserDefaults `CA92.1` and FileTimestamp `C617.1`. The widget declares
+  UserDefaults `CA92.1`. Verify the archive privacy report and that each shipped
+  bundle contains its manifest. A signed archive or upload has not proven that
+  yet.
 - No third-party app SDK package, ads/tracking/analytics SDK or developer-run
   account flow was found in Apple source. Local templates/history and purchase
   entitlement state are stored on-device. Pro uses private CloudKit container
