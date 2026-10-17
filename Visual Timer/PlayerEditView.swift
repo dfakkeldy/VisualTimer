@@ -83,6 +83,9 @@ struct PlayerEditView: View {
                                     }
                                 }
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(RoundColor.paletteNames[index]) color")
+                        .accessibilityValue(selectedColorIndex == index ? "Selected" : "Not selected")
                     }
                 }
             }

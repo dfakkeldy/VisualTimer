@@ -10,7 +10,7 @@ struct HistoryView: View {
         self.proAccess = proAccess
     }
 
-    @State private var deleteTarget: GameRecord?
+    @State private var deleteTargets: [GameRecord] = []
     @State private var requestedProFeature: ProFeature?
     @State private var showDeleteConfirmation = false
 
@@ -33,13 +33,15 @@ struct HistoryView: View {
             .onAppear {
                 history.loadRecords()
             }
-            .alert("Delete Session", isPresented: $showDeleteConfirmation, presenting: deleteTarget) { record in
+            .alert(deleteConfirmationTitle, isPresented: $showDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
-                    history.deleteRecord(id: record.id)
+                    deleteConfirmedRecords()
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: { record in
-                Text("Delete \"\(record.gameTitle)\" from history? This cannot be undone.")
+                Button("Cancel", role: .cancel) {
+                    clearDeleteTargets()
+                }
+            } message: {
+                Text(deleteConfirmationMessage)
             }
             .sheet(item: $requestedProFeature) { feature in
                 ProPaywallView(feature: feature, proAccess: proAccess)
@@ -79,9 +81,7 @@ struct HistoryView: View {
                 let recordsToDelete = offsets.compactMap { index in
                     visibleRecords.indices.contains(index) ? visibleRecords[index] : nil
                 }
-                for record in recordsToDelete {
-                    history.deleteRecord(id: record.id)
-                }
+                requestDelete(recordsToDelete)
             }
 
             if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
@@ -115,11 +115,39 @@ struct HistoryView: View {
         let elapsed = formatElapsed(session.totalElapsedSeconds)
         var parts: [String] = []
         parts.append(elapsed)
-        parts.append("\(session.roundCount) rounds")
-        if session.skipCount > 0 { parts.append("\(session.skipCount) skips") }
-        if session.doOverCount > 0 { parts.append("\(session.doOverCount) do-overs") }
+        parts.append(TurnTimerCountText.label(for: session.roundCount, singular: "round"))
+        if session.skipCount > 0 { parts.append(TurnTimerCountText.label(for: session.skipCount, singular: "skip")) }
+        if session.doOverCount > 0 { parts.append(TurnTimerCountText.label(for: session.doOverCount, singular: "do-over")) }
         parts.append(playedAtFormatter.string(from: record.playedAt))
         return parts.joined(separator: " · ")
+    }
+
+    private var deleteConfirmationTitle: String {
+        deleteTargets.count == 1 ? "Delete Session" : "Delete Sessions"
+    }
+
+    private var deleteConfirmationMessage: String {
+        if let record = deleteTargets.first, deleteTargets.count == 1 {
+            return "Delete \"\(record.gameTitle)\" from history? This cannot be undone."
+        }
+        return "Delete \(deleteTargets.count) sessions from history? This cannot be undone."
+    }
+
+    private func requestDelete(_ records: [GameRecord]) {
+        guard !records.isEmpty else { return }
+        deleteTargets = records
+        showDeleteConfirmation = true
+    }
+
+    private func deleteConfirmedRecords() {
+        for record in deleteTargets {
+            history.deleteRecord(id: record.id)
+        }
+        clearDeleteTargets()
+    }
+
+    private func clearDeleteTargets() {
+        deleteTargets = []
     }
 
     private func formatElapsed(_ seconds: TimeInterval) -> String {

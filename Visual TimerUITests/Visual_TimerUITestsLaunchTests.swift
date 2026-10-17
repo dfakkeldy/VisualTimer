@@ -22,10 +22,12 @@ final class Visual_TimerUITestsLaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        XCTAssertTrue(app.tabBars.buttons["Timer"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.tabBars.buttons["Templates"].exists)
+        XCTAssertTrue(app.tabBars.buttons["History"].exists)
+        XCTAssertTrue(app.buttons["Decrease duration"].exists)
+        XCTAssertTrue(app.buttons["Increase duration"].exists)
+        XCTAssertTrue(app.buttons["Settings"].exists)
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"

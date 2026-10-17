@@ -1,8 +1,23 @@
 import CloudKit
 import XCTest
+import SwiftUI
 @testable import Visual_Timer
 
 final class Visual_TimerTests: XCTestCase {
+
+    // MARK: - Cloud sync scheduling
+
+    func testTemplateCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/TemplateCloudSyncEngine.swift"
+        )
+    }
+
+    func testHistoryCloudSyncEngineOnlyManuallySendsFromSerializedRefresh() throws {
+        try assertManualSendLifecycle(
+            sourcePath: "Visual Timer/CloudSync/HistoryCloudSyncEngine.swift"
+        )
+    }
 
     // MARK: - Round Model
 
@@ -160,6 +175,22 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(round.isActive, true)
     }
 
+    func testParser_roundTripPreservesCountsAsPlayer() {
+        let parser = GameFileParser()
+        var game = GameSequence(title: "Routine")
+        game.rounds = [
+            Round(name: "Turn", durationSeconds: 30, orderIndex: 0, countsAsPlayer: true),
+            Round(name: "Timeout", durationSeconds: 60, orderIndex: 1, countsAsPlayer: false),
+        ]
+
+        let serialized = parser.serialize(game)
+        let (parsed, errors) = parser.parse(serialized)
+
+        XCTAssertTrue(errors.isEmpty, "Unexpected parse errors: \(errors.map(\.message))")
+        XCTAssertTrue(serialized.contains("countsAsPlayer: false"))
+        XCTAssertEqual(parsed.rounds.map(\.countsAsPlayer), [true, false])
+    }
+
     // MARK: - StarterTemplateLibrary
 
     func testStarterTemplateLibrary_containsPhaseOneTemplates() {
@@ -171,6 +202,7 @@ final class Visual_TimerTests: XCTestCase {
             "Plant Watering",
             "Classroom Stations",
             "Meeting Agenda",
+            "Morning Routine",
         ])
     }
 
@@ -182,6 +214,28 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(template.game.roundCount, 1)
         XCTAssertEqual(rounds.map(\.name), ["Alice", "Bob", "Charlie", "Timeout"])
         XCTAssertEqual(rounds.map(\.countsAsPlayer), [true, true, true, false])
+    }
+
+    func testStarterTemplateLibrary_morningRoutineEndsAtCommute() throws {
+        let template = try XCTUnwrap(StarterTemplateLibrary.template(id: "morning-routine"))
+        let rounds = template.game.rounds
+
+        XCTAssertEqual(template.title, "Morning Routine")
+        XCTAssertEqual(template.subtitle, "Get ready and out the door in 40 minutes.")
+        XCTAssertEqual(template.game.roundCount, 1)
+        XCTAssertEqual(rounds.map(\.name), [
+            "Wake Up",
+            "Wash Up",
+            "Get Dressed",
+            "Breakfast",
+            "Brush Teeth",
+            "Pack Essentials",
+            "Shoes & Coat",
+            "Start Commute",
+        ])
+        XCTAssertEqual(rounds.map(\.durationSeconds), [900, 300, 120, 600, 120, 180, 120, 60])
+        XCTAssertEqual(rounds.map(\.countsAsPlayer), Array(repeating: false, count: 8))
+        XCTAssertEqual(rounds.map(\.orderIndex), Array(0 ..< 8))
     }
 
     func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
@@ -269,6 +323,22 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.game.rounds.map(\.durationSeconds), [60, 300])
     }
 
+    func testTemplateDocumentCodec_decodingNormalizesUnsafeGameFields() throws {
+        let codec = TemplateDocumentCodec()
+        let document = TurnTimerTemplateDocument(title: "Unsafe", game: makeTemplateGame(title: "Unsafe"))
+        let data = try codec.encode(document)
+        var json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        json = json.replacingOccurrences(of: "\"index\" : 0", with: "\"index\" : -3")
+        json = json.replacingOccurrences(of: "\"durationSeconds\" : 60", with: "\"durationSeconds\" : 0")
+        json = json.replacingOccurrences(of: "\"roundCount\" : 1", with: "\"roundCount\" : 0")
+
+        let decoded = try codec.decode(Data(json.utf8))
+
+        XCTAssertEqual(decoded.game.roundCount, 1)
+        XCTAssertEqual(decoded.game.rounds.first?.durationSeconds, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(decoded.game.rounds.first?.color, .default)
+    }
+
     func testTemplateLibraryStore_importTemplateDuplicatesWithoutOverwriting() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -285,6 +355,20 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(templates.count, 2)
         XCTAssertTrue(FileManager.default.fileExists(atPath: saved.url.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: imported.url.path))
+    }
+
+    func testTemplateLibraryStore_savedMetadataCountsActiveRounds() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var game = makeTemplateGame(title: "Active Count")
+        game.rounds[1].isActive = false
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+
+        let saved = try store.save(game: game)
+
+        XCTAssertEqual(saved.roundCount, 1)
+        XCTAssertEqual(saved.totalSeconds, 60)
+        XCTAssertEqual(saved.subtitle, "1 round • once")
     }
 
     func testTemplateLibraryStore_migratesLegacyVTGameToTurnTimerFile() throws {
@@ -304,6 +388,238 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(document.game.rounds.map(\.name), ["Prep", "Cook"])
     }
 
+    func testGameEditorViewModel_loadLegacyTemplatePreservesDraftOnParseFailure() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("Broken.vtgame")
+        try """
+        title: Broken Import
+
+        [round]
+        name: Bad Round
+        time: nope
+        """.write(to: url, atomically: true, encoding: .utf8)
+        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory))
+        editor.gameTitle = "Current Draft"
+        editor.rounds = [Round(name: "Keep Me", durationSeconds: 30, orderIndex: 0)]
+        editor.roundCount = 3
+
+        let (didLoad, errors) = editor.load(from: url)
+
+        XCTAssertFalse(didLoad)
+        XCTAssertFalse(errors.isEmpty)
+        XCTAssertEqual(editor.gameTitle, "Current Draft")
+        XCTAssertEqual(editor.rounds.map(\.name), ["Keep Me"])
+        XCTAssertEqual(editor.roundCount, 3)
+    }
+
+    func testGameEditorViewModel_saveToDocumentsRejectsTemplatesWithoutActiveRounds() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: directory)
+        let editor = GameEditorViewModel(templateLibrary: templateLibrary)
+        editor.gameTitle = "Inactive Routine"
+        editor.rounds = [Round(name: "Hidden", durationSeconds: 30, isActive: false, orderIndex: 0)]
+
+        let result = editor.saveToDocuments(isProUnlocked: true)
+
+        guard case .failed(let errors) = result else {
+            return XCTFail("Expected saving to fail")
+        }
+        XCTAssertEqual(errors.map(\.message), ["Add at least one active round before saving."])
+        XCTAssertTrue(templateLibrary.listTemplates().isEmpty)
+    }
+
+    // MARK: - TurnTimerDeepLink
+
+    @MainActor
+    func testTurnTimerDeepLinkParsesSavedTemplateURL() throws {
+        let id = UUID()
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://template/\(id.uuidString)")!))
+
+        XCTAssertEqual(link, .template(id))
+    }
+
+    @MainActor
+    func testTurnTimerDeepLinkParsesStarterTemplateURL() throws {
+        let link = try XCTUnwrap(TurnTimerDeepLink(url: URL(string: "turntimer://starter/game-night")!))
+
+        XCTAssertEqual(link, .starter("game-night"))
+    }
+
+    // MARK: - WidgetSnapshotStore
+
+    func testWidgetSnapshotStoreWritesStarterAndSavedTemplateMetadata() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplateID = UUID(uuidString: "E80D978E-C9F9-4F1A-89DA-A1126FF69272")!
+        let savedURL = directory
+            .appendingPathComponent("Templates", isDirectory: true)
+            .appendingPathComponent("\(savedTemplateID.uuidString).turntimer")
+        let savedTemplate = SavedTemplate(
+            id: savedTemplateID,
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 3,
+            totalSeconds: 480,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: savedURL
+        )
+        let store = WidgetSnapshotStore(
+            containerURLProvider: { directory },
+            dateProvider: { Date(timeIntervalSince1970: 1_000) }
+        )
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: true)
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, StarterTemplateLibrary.templates.count + 1)
+
+        let starterSnapshot = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(starterSnapshot.id, "game-night")
+        XCTAssertEqual(starterSnapshot.source, .starter)
+        XCTAssertEqual(starterSnapshot.starterID, "game-night")
+        XCTAssertNil(starterSnapshot.templateID)
+        XCTAssertEqual(starterSnapshot.totalSeconds, 300)
+        XCTAssertEqual(starterSnapshot.roundCount, 4)
+        XCTAssertEqual(starterSnapshot.modifiedAt, Date(timeIntervalSince1970: 1_000))
+        XCTAssertEqual(starterSnapshot.launchURL, URL(string: "turntimer://starter/game-night")!)
+
+        let savedSnapshot = try XCTUnwrap(snapshots.last)
+        XCTAssertEqual(savedSnapshot.id, savedTemplateID.uuidString)
+        XCTAssertEqual(savedSnapshot.title, "Saved Game")
+        XCTAssertEqual(savedSnapshot.subtitle, "2 rounds • 3x")
+        XCTAssertEqual(savedSnapshot.source, .saved)
+        XCTAssertEqual(savedSnapshot.templateID, savedTemplateID)
+        XCTAssertNil(savedSnapshot.starterID)
+        XCTAssertEqual(savedSnapshot.totalSeconds, 480)
+        XCTAssertEqual(savedSnapshot.roundCount, 2)
+        XCTAssertEqual(savedSnapshot.modifiedAt, Date(timeIntervalSince1970: 2_000))
+        XCTAssertEqual(savedSnapshot.launchURL, URL(string: "turntimer://template/\(savedTemplateID.uuidString)")!)
+
+        let data = try Data(contentsOf: directory.appendingPathComponent("WidgetTemplates.json"))
+        let json = try XCTUnwrap(String(data: data, encoding: .utf8))
+        XCTAssertFalse(json.contains(savedURL.path))
+    }
+
+    func testWidgetSnapshotStoreReadsEmptySnapshotsWhenFileIsMissing() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        XCTAssertEqual(try store.readSnapshots(), [])
+    }
+
+    func testWidgetSnapshotStoreWritesLockedSnapshotWhenProUnavailable() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let savedTemplate = SavedTemplate(
+            id: UUID(),
+            title: "Saved Game",
+            roundCount: 2,
+            repeatCount: 1,
+            totalSeconds: 120,
+            modifiedAt: Date(timeIntervalSince1970: 2_000),
+            url: directory.appendingPathComponent("Saved.turntimer")
+        )
+        let store = WidgetSnapshotStore(containerURLProvider: { directory })
+
+        try store.writeSnapshots(savedTemplates: [savedTemplate], isProUnlocked: false)
+
+        let snapshots = try store.readSnapshots()
+        XCTAssertEqual(snapshots.count, 1)
+        let locked = try XCTUnwrap(snapshots.first)
+        XCTAssertEqual(locked.source, .locked)
+        XCTAssertEqual(locked.title, "Turn Timer Pro")
+        XCTAssertEqual(locked.launchURL, URL(string: "turntimer://pro")!)
+    }
+
+    func testWidgetTemplateSelectionFiltersLockedPlaceholders() {
+        let saved = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "1 round",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 60,
+            roundCount: 1,
+            modifiedAt: Date(timeIntervalSince1970: 1_000)
+        )
+
+        let selectable = WidgetTemplateSnapshot.selectableSnapshots(from: [
+            .proLocked,
+            saved,
+        ])
+
+        XCTAssertEqual(selectable.map(\.id), [saved.id])
+    }
+
+    func testGameEditorViewModelPublishesLockedWidgetSnapshotsUntilProEnabled() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let documentsDirectory = directory.appendingPathComponent("Documents", isDirectory: true)
+        let appGroupDirectory = directory.appendingPathComponent("AppGroup", isDirectory: true)
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: documentsDirectory)
+        _ = try templateLibrary.save(game: makeTemplateGame(title: "Pro Game"))
+        let snapshotStore = WidgetSnapshotStore(
+            containerURLProvider: { appGroupDirectory },
+            dateProvider: { Date(timeIntervalSince1970: 3_000) }
+        )
+        let viewModel = GameEditorViewModel(
+            templateLibrary: templateLibrary,
+            widgetSnapshotStore: snapshotStore
+        )
+
+        viewModel.refreshSavedTemplates()
+
+        XCTAssertEqual(try snapshotStore.readSnapshots().map(\.source), [.locked])
+
+        viewModel.setWidgetPublishingEnabled(true)
+
+        let unlockedSnapshots = try snapshotStore.readSnapshots()
+        XCTAssertFalse(unlockedSnapshots.contains { $0.source == .locked })
+        XCTAssertTrue(unlockedSnapshots.contains { $0.title == "Pro Game" })
+    }
+
+    func testWidgetTemplateSnapshotFormatsStaticDurationText() {
+        let snapshot = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "2 rounds",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 4_800,
+            roundCount: 2,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+
+        XCTAssertEqual(snapshot.durationText, "1:20:00")
+    }
+
+    func testWidgetTemplateSnapshotFormatsRoundCountText() {
+        var snapshot = WidgetTemplateSnapshot(
+            id: "saved-template",
+            title: "Saved Game",
+            subtitle: "1 round",
+            source: .saved,
+            templateID: UUID(),
+            starterID: nil,
+            totalSeconds: 60,
+            roundCount: 1,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+
+        XCTAssertEqual(snapshot.roundCountText, "1 round")
+
+        snapshot.roundCount = 2
+        XCTAssertEqual(snapshot.roundCountText, "2 rounds")
+    }
+
     func testTemplateCloudRecordMapper_roundTripPreservesTemplatePayload() throws {
         let game = makeTemplateGame(title: "Synced Template")
         let document = TurnTimerTemplateDocument(title: "Synced Template", game: game)
@@ -316,6 +632,272 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(decoded.templateID, document.templateID)
         XCTAssertEqual(decoded.title, "Synced Template")
         XCTAssertEqual(decoded.game.rounds.map(\.name), ["Prep", "Cook"])
+    }
+
+    func testTemplateCloudRecordMapperRejectsPayloadIDMismatch() throws {
+        let document = TurnTimerTemplateDocument(title: "Synced Template", game: makeTemplateGame(title: "Synced Template"))
+        let mapper = TemplateCloudRecordMapper()
+        let wrongID = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+        let record = CKRecord(
+            recordType: TemplateSyncConfiguration.recordType,
+            recordID: mapper.recordID(for: wrongID)
+        )
+        try mapper.apply(document: document, to: record)
+
+        XCTAssertThrowsError(try mapper.document(from: record))
+    }
+
+    func testHistoryCloudRecordMapper_roundTripPreservesHistoryPayload() throws {
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+        let mapper = HistoryCloudRecordMapper()
+
+        let cloudRecord = try mapper.record(from: document)
+        let decoded = try mapper.document(from: cloudRecord)
+
+        XCTAssertEqual(cloudRecord.recordType, HistorySyncConfiguration.recordType)
+        XCTAssertEqual(decoded.record.id, record.id)
+        XCTAssertEqual(decoded.record.gameTitle, record.gameTitle)
+        XCTAssertEqual(decoded.record.session.events.count, record.session.events.count)
+    }
+
+    func testHistoryCloudRecordMapperRejectsPayloadIDMismatch() throws {
+        let history = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: history, modifiedAt: Date(timeIntervalSince1970: 2_000))
+        let mapper = HistoryCloudRecordMapper()
+        let validRecord = try mapper.record(from: document)
+        let wrongID = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+        let mismatchedRecord = CKRecord(
+            recordType: HistorySyncConfiguration.recordType,
+            recordID: mapper.recordID(for: wrongID)
+        )
+        mismatchedRecord["payload"] = validRecord["payload"]
+
+        XCTAssertThrowsError(try mapper.document(from: mismatchedRecord))
+    }
+
+    func testHistoryCloudRecordMapperRejectsFutureSchemaVersion() throws {
+        let history = makeHistoryRecords(count: 1)[0]
+        let futureDocument = HistoryDocument(
+            schemaVersion: HistoryDocument.currentSchemaVersion + 1,
+            record: history,
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        let mapper = HistoryCloudRecordMapper()
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let record = CKRecord(
+            recordType: HistorySyncConfiguration.recordType,
+            recordID: mapper.recordID(for: history.id)
+        )
+        record["payload"] = try encoder.encode(futureDocument) as NSData
+
+        XCTAssertThrowsError(try mapper.document(from: record))
+    }
+
+    func testHistorySyncConfigurationDefersCloudKitContainerCreation() {
+        let configuration = HistorySyncConfiguration(containerIdentifier: "iCloud.Test.Container")
+        let storedPropertyLabels = Set(Mirror(reflecting: configuration).children.compactMap(\.label))
+
+        XCTAssertTrue(storedPropertyLabels.contains("containerIdentifier"))
+        XCTAssertFalse(storedPropertyLabels.contains("container"))
+    }
+
+    @MainActor
+    func testTemplateCloudSyncEnginePreservesNewerLocalTemplateWhenRemoteDeletionArrives() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = TemplateLibraryStore(documentsDirectory: directory)
+        let document = TurnTimerTemplateDocument(
+            title: "Local Edit",
+            game: makeTemplateGame(title: "Local Edit"),
+            modifiedAt: Date(timeIntervalSince1970: 2_000)
+        )
+        let saved = try store.save(document: document)
+        let engine = TemplateCloudSyncEngine(
+            templateLibrary: store,
+            configuration: TemplateSyncConfiguration()
+        )
+
+        let didApplyDeletion = engine.applyRemoteTemplateDeletion(
+            id: saved.id,
+            lastSuccessfulSyncDate: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertFalse(didApplyDeletion)
+        XCTAssertNotNil(try store.loadDocument(id: saved.id))
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEnginePersistsDeletedHistoryIDsAcrossRelaunch() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let firstDeletedID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let secondDeletedID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+
+        engine.queueDeletedHistory(id: firstDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString]
+        )
+
+        let relaunchedEngine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        relaunchedEngine.queueDeletedHistory(id: secondDeletedID)
+
+        XCTAssertEqual(
+            Set(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey) ?? []),
+            [firstDeletedID.uuidString, secondDeletedID.uuidString]
+        )
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEngineClearsUnknownItemDeleteTombstone() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let store = HistoryStore(documentsDirectory: directory)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        let recordID = HistoryCloudRecordMapper().recordID(for: deletedID)
+
+        engine.queueDeletedHistory(id: deletedID)
+        let result = engine.handleSentDeletedRecordResults(
+            deletedRecordIDs: [],
+            failedRecordDeletes: [recordID: CKError(.unknownItem)]
+        )
+
+        XCTAssertEqual(result.confirmedRecordIDs.map(\.recordName), [deletedID.uuidString])
+        XCTAssertFalse(result.hasRetryableFailures)
+        XCTAssertEqual(defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey), [])
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEngineDoesNotApplyRemoteModificationForPendingDelete() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let suiteName = "VisualTimerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let deletedID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let store = HistoryStore(documentsDirectory: directory)
+        var localRecord = makeHistoryRecords(count: 1)[0]
+        localRecord.id = deletedID
+        store.save(localRecord)
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration(),
+            userDefaults: defaults
+        )
+        engine.queueDeletedHistory(id: deletedID)
+        store.delete(id: deletedID)
+
+        var remoteRecord = localRecord
+        remoteRecord.gameTitle = "Remote Resurrection"
+        let didApply = engine.applyFetchedHistoryDocument(
+            HistoryDocument(record: remoteRecord, modifiedAt: Date(timeIntervalSince1970: 10_000))
+        )
+
+        XCTAssertTrue(didApply)
+        XCTAssertNil(store.load(id: deletedID))
+        XCTAssertEqual(
+            defaults.stringArray(forKey: HistorySyncConfiguration.pendingDeletedHistoryIDsKey),
+            [deletedID.uuidString]
+        )
+    }
+
+    @MainActor
+    func testHistoryCloudSyncEnginePreservesNewerLocalHistoryWhenRemoteDeletionArrives() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(document: HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000)))
+        let engine = HistoryCloudSyncEngine(
+            historyStore: store,
+            configuration: HistorySyncConfiguration()
+        )
+
+        let didApplyDeletion = engine.applyRemoteHistoryDeletion(
+            id: record.id,
+            lastSuccessfulSyncDate: Date(timeIntervalSince1970: 1_000)
+        )
+
+        XCTAssertFalse(didApplyDeletion)
+        XCTAssertNotNil(store.load(id: record.id))
+    }
+
+    func testCloudKitValidationReportSummarizesFailures() {
+        let report = CloudKitValidationReport(checks: [
+            .init(name: "Account", status: .passed, detail: "Available"),
+            .init(name: "Probe", status: .failed, detail: "Missing Template schema"),
+        ])
+
+        XCTAssertFalse(report.isReadyForRelease)
+        XCTAssertEqual(report.failedChecks.map(\.name), ["Probe"])
+    }
+
+    func testCloudSyncZoneNotFoundMessageIsNotTemplateSpecific() {
+        XCTAssertEqual(CloudSyncError.zoneNotFound.localizedDescription, "Cloud sync zone was not found.")
+    }
+
+    func testCloudKitValidationRunnerChecksTemplateAndHistoryResources() async {
+        final class ValidationProbe {
+            var savedZoneNames: [String] = []
+            var recordTypes: [String] = []
+        }
+
+        let probe = ValidationProbe()
+        let operations = CloudKitValidationRunner.Operations(
+            accountStatus: { .available },
+            saveZone: { zoneID in
+                probe.savedZoneNames.append(zoneID.zoneName)
+            },
+            saveFetchDeleteRecord: { record in
+                probe.recordTypes.append(record.recordType)
+            }
+        )
+        let runner = CloudKitValidationRunner(operations: operations)
+
+        let report = await runner.run()
+
+        XCTAssertEqual(probe.savedZoneNames, [
+            TemplateSyncConfiguration.zoneName,
+            HistorySyncConfiguration.zoneName,
+        ])
+        XCTAssertEqual(probe.recordTypes, [
+            TemplateSyncConfiguration.recordType,
+            HistorySyncConfiguration.recordType,
+        ])
+        XCTAssertTrue(report.checks.contains { $0.name == "History zone" && $0.status == .passed })
+        XCTAssertTrue(report.checks.contains { $0.name == "History schema" && $0.status == .passed })
     }
 
     // MARK: - HistoryAccessPolicy
@@ -336,6 +918,455 @@ final class Visual_TimerTests: XCTestCase {
 
         XCTAssertEqual(visible.count, 7)
         XCTAssertFalse(HistoryAccessPolicy.isLimited(records: records, isProUnlocked: true))
+    }
+
+    func testHistoryStore_saveDocumentCanLoadRecordFromInjectedDirectory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        let document = HistoryDocument(record: record, modifiedAt: Date(timeIntervalSince1970: 2_000))
+
+        store.save(document: document)
+
+        let loaded = try XCTUnwrap(store.load(id: record.id))
+        XCTAssertEqual(loaded.id, record.id)
+        XCTAssertEqual(loaded.gameTitle, record.gameTitle)
+        let loadedDocument = try XCTUnwrap(store.loadDocument(id: record.id))
+        XCTAssertEqual(loadedDocument.modifiedAt.timeIntervalSince1970, 2_000, accuracy: 1)
+        XCTAssertEqual(store.loadAll().map(\.id), [record.id])
+    }
+
+    func testHistoryStoreExportURLSanitizesRecordTitle() throws {
+        let store = HistoryStore()
+        var record = makeHistoryRecords(count: 1)[0]
+        record.gameTitle = "A/B:C"
+
+        let url = try XCTUnwrap(store.exportURL(for: record))
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertEqual(url.lastPathComponent, "A-B-C.vtlog")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    func testHistoryViewModelLoadsRecordsFromInjectedStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+
+        let viewModel = HistoryViewModel(store: store)
+
+        XCTAssertEqual(viewModel.records.map(\.id), [record.id])
+    }
+
+    func testHistoryViewModelNotifiesDeletedRecord() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let record = makeHistoryRecords(count: 1)[0]
+        store.save(record)
+        let viewModel = HistoryViewModel(store: store)
+        var deletedIDs: [UUID] = []
+        viewModel.onRecordDeleted = { deletedIDs.append($0) }
+
+        viewModel.deleteRecord(id: record.id)
+
+        XCTAssertEqual(deletedIDs, [record.id])
+        XCTAssertTrue(viewModel.records.isEmpty)
+        XCTAssertNil(store.load(id: record.id))
+    }
+
+    func testGameViewModelSavesCompletedSessionThroughInjectedHistoryStore() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeTemplateGame(title: "Tracked Session"))
+        gameViewModel.startGame()
+        gameViewModel.endGame()
+
+        let records = store.loadAll()
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertEqual(records.first?.gameTitle, "Tracked Session")
+    }
+
+    @MainActor
+    func testPauseAfterDelayedCallbacksReconcilesCountdownWithPie() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+
+        timer.pause(at: start.addingTimeInterval(40.25))
+
+        XCTAssertEqual(timer.state, .paused)
+        XCTAssertEqual(timer.timeRemaining, 20)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(40.25)), 40.25 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testDelayedTimerRefreshUsesElapsedTimeInsteadOfCallbackCount() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(40.25)))
+        XCTAssertEqual(timer.timeRemaining, 20)
+        XCTAssertEqual(timer.visualProgress.remainingSeconds(at: start.addingTimeInterval(40.25)), 20)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(40.25)), 40.25 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testTimerPauseResumeKeepsFractionalTimeAndExcludesPausedTime() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        timer.play(at: start)
+        timer.pause(at: start.addingTimeInterval(10.25))
+        XCTAssertEqual(timer.state, .paused)
+        XCTAssertEqual(timer.timeRemaining, 50)
+
+        timer.play(at: start.addingTimeInterval(100))
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(100.75)))
+        XCTAssertEqual(timer.timeRemaining, 49)
+        XCTAssertEqual(timer.visualProgress.elapsedFraction(at: start.addingTimeInterval(100.75)), 11.0 / 60, accuracy: 0.0001)
+    }
+
+    @MainActor
+    func testOverdueTimerCompletesExactlyOnceAndStillResets() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        var completions = 0
+        timer.onFinish = { completions += 1 }
+        timer.play(at: start)
+
+        XCTAssertTrue(timer.refreshCountdown(at: start.addingTimeInterval(70)))
+        XCTAssertFalse(timer.refreshCountdown(at: start.addingTimeInterval(80)))
+        XCTAssertEqual(completions, 1)
+        XCTAssertEqual(timer.state, .notStarted)
+        XCTAssertEqual(timer.timeRemaining, 60)
+    }
+
+    @MainActor
+    func testOverduePauseDoesNotPauseTheSuccessorOrCatchUpMultipleRounds() {
+        let timer = TimerViewModel()
+        defer { timer.stopAndReset() }
+        timer.reconfigureForRound(duration: 60, color: nil)
+        let start = Date(timeIntervalSince1970: 1_000)
+        let returnDate = start.addingTimeInterval(180)
+        var completions = 0
+        timer.onFinish = { [weak timer] in
+            guard let timer else { return }
+            completions += 1
+            timer.reconfigureForRound(duration: 30, color: nil)
+            timer.play(at: returnDate)
+        }
+        timer.play(at: start)
+
+        timer.pause(at: returnDate)
+        XCTAssertEqual(completions, 1)
+        XCTAssertEqual(timer.state, .running)
+        XCTAssertEqual(timer.totalDuration, 30)
+        XCTAssertEqual(timer.timeRemaining, 30)
+        XCTAssertFalse(timer.refreshCountdown(at: returnDate))
+        XCTAssertEqual(completions, 1)
+        XCTAssertFalse(timer.refreshCountdown(at: returnDate.addingTimeInterval(5)))
+        XCTAssertEqual(timer.timeRemaining, 25)
+    }
+
+    @MainActor
+    func testTimerViewModelSetDurationClampsToMinimumDuration() {
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+        let viewModel = TimerViewModel()
+
+        viewModel.setDuration(0)
+
+        XCTAssertEqual(viewModel.totalDuration, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(viewModel.timeRemaining, Theme.TimerMechanic.minimumDuration)
+        XCTAssertEqual(UserDefaults.standard.integer(forKey: "savedTimerDuration"), Theme.TimerMechanic.minimumDuration)
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    @MainActor
+    func testTimerColoursKeepCyclingAndRoundOverridesSurvivePauseAndReset() async {
+        let viewModel = TimerViewModel()
+        defer { viewModel.stopAndReset() }
+
+        // Exercise the actual completion callback, including wrapping the palette.
+        viewModel.timerColorIndex = Theme.ColorValue.timerPalette.count - 1
+        viewModel.reconfigureForRound(duration: 1, color: nil)
+        let completed = expectation(description: "Timer completes")
+        viewModel.onFinish = { completed.fulfill() }
+        viewModel.play()
+        await fulfillment(of: [completed], timeout: 5)
+        XCTAssertEqual(viewModel.timerColorIndex, Theme.ColorValue.timerPalette.count)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
+
+        let roundColour = Color(red: 0.2, green: 0.7, blue: 0.5)
+        viewModel.reconfigureForRound(duration: 30, color: roundColour)
+        viewModel.play()
+        viewModel.pause()
+        viewModel.reset()
+        XCTAssertEqual(viewModel.timerColor, roundColour)
+        XCTAssertEqual(viewModel.timeRemaining, 30)
+
+        viewModel.reconfigureForRound(duration: 30, color: .purple)
+        XCTAssertEqual(viewModel.timerColor, .purple)
+        viewModel.reconfigureForRound(duration: 30, color: nil)
+        XCTAssertEqual(viewModel.timerColor, Theme.ColorValue.timerPalette[0])
+    }
+
+    @MainActor
+    func testTimerViewModelVisualProgressStartsAtZeroWhenTimerStarts() {
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+        let viewModel = TimerViewModel()
+        viewModel.setDuration(25)
+        let startDate = Date(timeIntervalSince1970: 100)
+
+        viewModel.play(at: startDate)
+
+        XCTAssertEqual(viewModel.visualProgress.elapsedFraction(at: startDate), 0, accuracy: 0.0001)
+        XCTAssertEqual(
+            viewModel.visualProgress.elapsedFraction(at: startDate.addingTimeInterval(0.5)),
+            0.02,
+            accuracy: 0.0001
+        )
+        UserDefaults.standard.removeObject(forKey: "savedTimerDuration")
+    }
+
+    func testTimerWedgeDepletesClockwiseAndEndsEmpty() {
+        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let quadrants = [
+            CGPoint(x: 70, y: 30), CGPoint(x: 70, y: 70),
+            CGPoint(x: 30, y: 70), CGPoint(x: 30, y: 30)
+        ]
+        for elapsedQuarter in 0...4 {
+            let path = RemainingTimerWedge(elapsedFraction: Double(elapsedQuarter) / 4).path(in: rect)
+            for (quadrant, point) in quadrants.enumerated() {
+                XCTAssertEqual(path.contains(point), quadrant >= elapsedQuarter,
+                               "Unexpected fill in quadrant \(quadrant) at quarter \(elapsedQuarter)")
+            }
+        }
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: 2).path(in: rect).isEmpty)
+        XCTAssertTrue(RemainingTimerWedge(elapsedFraction: -1).path(in: rect).contains(quadrants[0]))
+    }
+
+    func testTimerVisualProgressFreezesAndResumesFromFractionalElapsedTime() {
+        let startDate = Date(timeIntervalSince1970: 200)
+        let pauseDate = startDate.addingTimeInterval(0.75)
+        let resumeDate = pauseDate.addingTimeInterval(10)
+        let progress = TimerVisualProgress(totalDuration: 25)
+            .running(from: startDate)
+            .paused(at: pauseDate)
+
+        XCTAssertEqual(progress.elapsedFraction(at: resumeDate), 0.03, accuracy: 0.0001)
+
+        let resumed = progress.running(from: resumeDate)
+
+        XCTAssertEqual(
+            resumed.elapsedFraction(at: resumeDate.addingTimeInterval(0.25)),
+            0.04,
+            accuracy: 0.0001
+        )
+    }
+
+    @MainActor
+    func testProAccessRefreshResetsPurchaseStateWhenEntitlementIsRevoked() {
+        let proAccess = ProAccessViewModel(automaticallyStartsStoreKitTasks: false)
+
+        proAccess.applyEntitlementRefreshResult(isUnlocked: true)
+        proAccess.applyEntitlementRefreshResult(isUnlocked: false)
+
+        XCTAssertFalse(proAccess.isProUnlocked)
+        XCTAssertEqual(proAccess.purchaseState, .idle)
+    }
+
+    func testTurnTimerCountTextUsesSingularForOne() {
+        XCTAssertEqual(TurnTimerCountText.label(for: 1, singular: "round"), "1 round")
+        XCTAssertEqual(TurnTimerCountText.label(for: 2, singular: "round"), "2 rounds")
+        XCTAssertEqual(TurnTimerCountText.label(for: 1, singular: "do-over"), "1 do-over")
+        XCTAssertEqual(TurnTimerCountText.label(for: 2, singular: "do-over"), "2 do-overs")
+    }
+
+    func testGameViewModelSavesNaturalCompletionImmediately() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Natural Finish"))
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+
+        let records = store.loadAll()
+        assertGamePhase(gameViewModel, is: .gameOver)
+        XCTAssertEqual(records.count, 1)
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertEqual(records.first?.gameTitle, "Natural Finish")
+        XCTAssertTrue(records.first?.session.events.contains {
+            if case .gameEnded = $0 { return true }
+            return false
+        } ?? false)
+    }
+
+    func testGameViewModelEndAfterNaturalCompletionDoesNotDuplicateHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "One Save"))
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.endGame()
+
+        XCTAssertEqual(store.loadAll().count, 1)
+    }
+
+    func testGameViewModelLoadGameAbandonsActiveSessionWithoutSavingHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        var savedIDs: [UUID] = []
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store,
+            onHistoryRecordSaved: { savedIDs.append($0.id) }
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Abandoned"))
+        gameViewModel.startGame()
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Replacement"))
+
+        XCTAssertTrue(store.loadAll().isEmpty)
+        XCTAssertTrue(savedIDs.isEmpty)
+        assertGamePhase(gameViewModel, is: .ready)
+        XCTAssertEqual(gameViewModel.gameSequence?.title, "Replacement")
+    }
+
+    func testGameViewModelRejectsGameWithNoActiveRounds() {
+        let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
+        var emptyGame = GameSequence(title: "Inactive")
+        emptyGame.rounds = [
+            Round(name: "Muted", durationSeconds: 30, isActive: false, orderIndex: 0),
+        ]
+
+        gameViewModel.loadGame(emptyGame)
+        gameViewModel.startGame()
+
+        assertGamePhase(gameViewModel, is: .idle)
+        XCTAssertNil(gameViewModel.gameSequence)
+        XCTAssertNil(gameViewModel.currentRound)
+    }
+
+    func testGameViewModelSkipFinalRoundStopsTimerAndSavesHistory() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let timerViewModel = TimerViewModel()
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: timerViewModel,
+            historyStore: store
+        )
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Skipped Finish"))
+        gameViewModel.startGame()
+        gameViewModel.skipCurrentRound()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+        assertTimerState(timerViewModel, is: .notStarted)
+        XCTAssertEqual(store.loadAll().count, 1)
+    }
+
+    func testGameViewModelAddRoundReplaysTheFullSequenceFromTheBeginning() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let timerViewModel = TimerViewModel()
+        let gameViewModel = GameViewModel(
+            timerViewModel: timerViewModel,
+            historyStore: HistoryStore(documentsDirectory: directory)
+        )
+        var game = GameSequence(title: "Two Timers", roundCount: 1)
+        game.rounds = [
+            Round(name: "First", durationSeconds: 10, orderIndex: 0),
+            Round(name: "Second", durationSeconds: 20, orderIndex: 1),
+        ]
+
+        gameViewModel.loadGame(game)
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+
+        gameViewModel.addRoundDuringGameOver()
+
+        assertGamePhase(gameViewModel, is: .playing)
+        XCTAssertEqual(gameViewModel.currentOverallRound, 2)
+        XCTAssertEqual(gameViewModel.totalRoundCount, 2)
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 0)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "First")
+        XCTAssertEqual(gameViewModel.activeRounds.map(\.name), ["First", "Second"])
+        XCTAssertEqual(timerViewModel.totalDuration, 10)
+        assertTimerState(timerViewModel, is: .running)
+
+        gameViewModel.handleTimerFinished()
+
+        XCTAssertEqual(gameViewModel.currentRoundIndex, 1)
+        XCTAssertEqual(gameViewModel.currentRound?.name, "Second")
+        XCTAssertEqual(timerViewModel.totalDuration, 20)
+        assertGamePhase(gameViewModel, is: .playing)
+
+        gameViewModel.handleTimerFinished()
+
+        assertGamePhase(gameViewModel, is: .gameOver)
+    }
+
+    func testGameViewModelUsesRoundProgressForNonTurnRoutines() {
+        let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
+        var routine = GameSequence(title: "Recipe", roundCount: 1)
+        routine.rounds = [
+            Round(name: "Prep", durationSeconds: 60, orderIndex: 0, countsAsPlayer: false),
+            Round(name: "Bake", durationSeconds: 300, orderIndex: 1, countsAsPlayer: false),
+        ]
+
+        gameViewModel.loadGame(routine)
+        gameViewModel.startGame()
+
+        XCTAssertEqual(gameViewModel.roundProgressText, "Round 1 of 2")
+        XCTAssertEqual(gameViewModel.countingPlayerCount, 0)
     }
 
     // MARK: - GameSequence
@@ -364,6 +1395,42 @@ final class Visual_TimerTests: XCTestCase {
         return game
     }
 
+    private func makeSingleRoundGame(title: String) -> GameSequence {
+        var game = GameSequence(title: title, roundCount: 1)
+        game.rounds = [
+            Round(name: "Solo", durationSeconds: 60, orderIndex: 0),
+        ]
+        return game
+    }
+
+    private func assertGamePhase(
+        _ gameViewModel: GameViewModel,
+        is expectedPhase: GamePhase,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        switch (gameViewModel.gamePhase, expectedPhase) {
+        case (.idle, .idle), (.ready, .ready), (.playing, .playing), (.gameOver, .gameOver):
+            break
+        default:
+            XCTFail("Expected game phase \(expectedPhase), got \(gameViewModel.gamePhase)", file: file, line: line)
+        }
+    }
+
+    private func assertTimerState(
+        _ timerViewModel: TimerViewModel,
+        is expectedState: TimerState,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        switch (timerViewModel.state, expectedState) {
+        case (.notStarted, .notStarted), (.running, .running), (.paused, .paused), (.finished, .finished):
+            break
+        default:
+            XCTFail("Expected timer state \(expectedState), got \(timerViewModel.state)", file: file, line: line)
+        }
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("VisualTimerTests-\(UUID().uuidString)", isDirectory: true)
@@ -381,5 +1448,116 @@ final class Visual_TimerTests: XCTestCase {
                 playedAt: Date(timeIntervalSince1970: TimeInterval(index))
             )
         }
+    }
+
+    private func assertManualSendLifecycle(
+        sourcePath: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
+        let source = try productionSource(at: sourcePath)
+        let manualSendCallSites = functionNames(containing: "syncEngine.sendChanges(", in: source)
+
+        XCTAssertEqual(
+            manualSendCallSites,
+            ["performManualRefresh"],
+            "Only the serialized explicit-refresh operation may manually send CloudKit changes.",
+            file: file,
+            line: line
+        )
+
+        let manualRefreshReferences = functionNames(containing: "performManualRefresh(", in: source)
+        XCTAssertEqual(
+            manualRefreshReferences,
+            ["performManualRefresh", "refreshNow"],
+            "Queue, startup, delegate-event, retry, and delete paths must not reach the manual refresh worker.",
+            file: file,
+            line: line
+        )
+
+        let refreshBody = try functionBody(named: "refreshNow", in: source)
+        XCTAssertTrue(
+            refreshBody.contains("inFlightRefreshTask"),
+            "Concurrent refresh requests must join a retained in-flight task.",
+            file: file,
+            line: line
+        )
+        XCTAssertTrue(
+            refreshBody.contains("await task.value"),
+            "Explicit refresh must await the retained task before returning.",
+            file: file,
+            line: line
+        )
+    }
+
+    private func productionSource(at relativePath: String) throws -> String {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourceURL = repositoryRoot.appending(path: relativePath)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    private func functionNames(containing needle: String, in source: String) -> Set<String> {
+        var matches = Set<String>()
+        var currentFunction: String?
+        var braceDepth = 0
+
+        for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
+            let line = String(line)
+            if currentFunction == nil,
+               let functionRange = line.range(of: "func "),
+               let openingParenthesis = line[functionRange.upperBound...].firstIndex(of: "(") {
+                currentFunction = String(line[functionRange.upperBound..<openingParenthesis])
+                    .trimmingCharacters(in: .whitespaces)
+            }
+
+            if let currentFunction, line.contains(needle) {
+                matches.insert(currentFunction)
+            }
+
+            braceDepth += line.filter { $0 == "{" }.count
+            braceDepth -= line.filter { $0 == "}" }.count
+            if currentFunction != nil, braceDepth == 1 {
+                currentFunction = nil
+            }
+        }
+
+        return matches
+    }
+
+    private func functionBody(named functionName: String, in source: String) throws -> String {
+        guard let declarationRange = source.range(of: "func \(functionName)("),
+              let openingBrace = source[declarationRange.upperBound...].firstIndex(of: "{")
+        else {
+            throw NSError(
+                domain: "VisualTimerTests",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Missing function \(functionName)"]
+            )
+        }
+
+        var depth = 0
+        var index = openingBrace
+        while index < source.endIndex {
+            switch source[index] {
+            case "{":
+                depth += 1
+            case "}":
+                depth -= 1
+                if depth == 0 {
+                    return String(source[openingBrace...index])
+                }
+            default:
+                break
+            }
+            index = source.index(after: index)
+        }
+
+        throw NSError(
+            domain: "VisualTimerTests",
+            code: 2,
+            userInfo: [NSLocalizedDescriptionKey: "Unterminated function \(functionName)"]
+        )
     }
 }

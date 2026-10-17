@@ -1,10 +1,11 @@
 # Fastlane Release Docs
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC
 
 Fastlane owns Turn Timer's archive, signing-profile sync, TestFlight upload, and
-App Store upload lanes. App Store metadata is not yet fully checked in on
-`main`; marketing metadata drafts are being isolated separately before upload.
+App Store upload lanes. App Store copy is prepared outside automation in
+`docs/app-store/submission-draft/en-CA/`. The app-store lane skips metadata and
+screenshots, so a binary upload does not apply those drafts.
 
 ## Local Tooling
 
@@ -15,9 +16,9 @@ Ruby, use the rbenv shims first:
 PATH="$HOME/.rbenv/shims:$PATH" bundle exec fastlane lanes
 ```
 
-In this worktree, the pinned Ruby was not installed locally during the docs
-audit, so Fastlane commands could not be fully exercised without installing the
-matching Ruby or switching to the known working rbenv version.
+The July local-Ruby availability observation is historical, not a current
+release blocker. Hosted upload receipts and actual lane configuration are
+recorded in [readiness](../docs/app-store/readiness.md).
 
 ## Required Secrets
 
@@ -55,9 +56,10 @@ Builds the `main` release train and uploads to App Store Connect:
 bundle exec fastlane ios app_store
 ```
 
-`APP_STORE_SUBMIT_FOR_REVIEW=false` uploads without submitting. Set
-`APP_STORE_AUTOMATIC_RELEASE=true` only when approved builds should release
-automatically after App Review.
+The lane uploads without submitting by default. Set
+`APP_STORE_SUBMIT_FOR_REVIEW=true` only when the build should enter App Review,
+and set `APP_STORE_AUTOMATIC_RELEASE=true` only when approved builds should
+release automatically after review.
 
 ## Signing
 
@@ -67,22 +69,26 @@ automatically after App Review.
 git@github.com:dfakkeldy/echo-audiobooks-certificates.git
 ```
 
-If entitlements change, dispatch the release workflow with
-`refresh_signing_profiles=true` so App Store profiles are regenerated instead of
-read-only fetched.
+If a separately authorized release needs changed entitlements, the workflow
+accepts `refresh_signing_profiles=true`. This regenerates profiles and is not a
+read-only preparation step; obtain exact authorization before using it.
 
 Known app identifiers (match fetches the subset present on the train project):
 
 - `Dan.Visual-Timer`
+- `Dan.Visual-Timer.watchkitapp` (embedded paired Watch companion)
+- `Dan.Visual-Timer-Watch` and `Dan.Visual-Timer-Watch.watchkitapp` (older
+  watch-only identities, kept for existing records)
 - `Dan.Visual-Timer.TurnTimerWidgets`
-- `Dan.Visual-Timer-Watch`
-- `Dan.Visual-Timer-Watch.watchkitapp` (legacy Watch product on `weekly`/`main`)
-- `Dan.Visual-Timer.watchkitapp` (embedded companion on `nightly`)
 
-Release trains read those identifiers from the checked-out Xcode project rather
-than stamping `main`'s hardcoded Watch ID onto every train. If a new identifier
-has no App Store profile in the match repo yet, dispatch Release Trains with
-`refresh_signing_profiles=true` once to create it.
+Release trains read identifiers from the checked-out Xcode project rather than
+stamping the controller branch's Watch ID onto every train. A missing App Store
+profile requires the authorized signing-resource step described above.
+
+Automation comes from the default-branch workflow ref for every channel. Keep
+source/automation SHAs distinct and follow internal nightly → external weekly →
+main acceptance before an authorized promotion. Do not backport feature work
+directly to weekly/main to obtain a green check.
 
 ## Validation
 
@@ -108,3 +114,10 @@ three Fastlane outcomes:
 - build distributed to the intended tester group
 
 Green resolver or build steps alone do not prove TestFlight visibility.
+
+## Change-aware workflow delivery
+
+The release workflows compare effective build inputs before allocating the
+macOS delivery job. Unchanged platform/channel receipts skip duplicate binaries;
+`force=true` deliberately rebuilds through the existing gates. See
+[delivery behavior and baseline recovery](../.github/RELEASE_DELIVERY.md).

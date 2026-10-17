@@ -1,0 +1,13 @@
+External beta candidate for Turn Timer 1.0.
+
+Please test:
+- Quick visual timer start, pause, resume, reset, and finish sound behavior.
+- Starter templates and custom saved template creation/editing.
+- Sequence playback, repeat, skip, restart, and do-over behavior.
+- Template import/export without overwriting existing templates.
+- Recent history and Pro-gated history/export behavior.
+- Pro unlock and Restore Purchases in TestFlight sandbox if available.
+- iCloud template/history sync after the production CloudKit schema is deployed.
+- Home Screen/Lock Screen widgets and watch playback where installed.
+
+Report install, launch, sync, purchase, widget, and watch issues with screenshots when possible.

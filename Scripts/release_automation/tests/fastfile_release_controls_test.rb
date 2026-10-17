@@ -68,12 +68,22 @@ Object.class_eval do
     "/tmp/TurnTimer.ipa"
   end
 
+  def validate_testflight_metadata
+  end
+
+  def ensure_beta_group(**)
+  end
+
+  def testflight_metadata_options(*)
+    { changelog: "Test build", uses_non_exempt_encryption: false }
+  end
+
   def upload_to_app_store(**options)
     RELEASE_UPLOADS << options
   end
 
-  def upload_to_testflight(**options)
-    TESTFLIGHT_UPLOADS << options
+  def upload_to_testflight(options = nil, **keyword_options)
+    TESTFLIGHT_UPLOADS << (options || keyword_options)
   end
 end
 
@@ -151,16 +161,18 @@ class FastfileReleaseControlsTest < Minitest::Test
     refute_includes identifiers, "Dan.Visual-Timer.watchkitapp"
   end
 
-  def test_beta_channels_only_target_a_group_for_external_distribution
+  def test_beta_channels_only_submit_external_distribution_for_review
     RELEASE_LANES.fetch(:beta).call(channel: "nightly")
     RELEASE_LANES.fetch(:beta).call(channel: "weekly")
 
     nightly_options, weekly_options = TESTFLIGHT_UPLOADS
     assert_equal false, nightly_options.fetch(:distribute_external)
-    refute nightly_options.key?(:groups)
-    refute nightly_options.key?(:notify_external_testers)
+    assert_equal ["nightly"], nightly_options.fetch(:groups)
+    assert_equal false, nightly_options.fetch(:submit_beta_review)
+    assert_equal false, nightly_options.fetch(:notify_external_testers)
     assert_equal true, weekly_options.fetch(:distribute_external)
     assert_equal ["weekly"], weekly_options.fetch(:groups)
+    assert_equal true, weekly_options.fetch(:submit_beta_review)
     assert_equal true, weekly_options.fetch(:notify_external_testers)
   end
 end

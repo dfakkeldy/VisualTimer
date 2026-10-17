@@ -11,9 +11,21 @@ enum RoundColor: Equatable, Codable {
         case .palette(let index):
             let palette = Theme.ColorValue.timerPalette
             guard !palette.isEmpty else { return .red }
-            return palette[index % palette.count]
+            guard palette.indices.contains(index) else { return palette[0] }
+            return palette[index]
         case .custom(let hex):
             return Color(hex: hex) ?? .red
+        }
+    }
+
+    var normalized: RoundColor {
+        switch self {
+        case .palette(let index):
+            guard Theme.ColorValue.timerPalette.indices.contains(index),
+                  Self.paletteNames.indices.contains(index) else { return .default }
+            return .palette(index: index)
+        case .custom:
+            return self
         }
     }
 
@@ -83,6 +95,17 @@ struct GameSequence: Identifiable, Equatable, Codable {
             rounds[i].orderIndex = i
         }
         modifiedAt = Date()
+    }
+
+    mutating func normalizeTemplateFields() {
+        let originalModifiedAt = modifiedAt
+        roundCount = max(1, roundCount)
+        for index in rounds.indices {
+            rounds[index].durationSeconds = max(Theme.TimerMechanic.minimumDuration, rounds[index].durationSeconds)
+            rounds[index].color = rounds[index].color.normalized
+        }
+        reindexRounds()
+        modifiedAt = originalModifiedAt
     }
 }
 

@@ -5,6 +5,7 @@ struct SessionDetailView: View {
     let record: GameRecord
     @ObservedObject var history: HistoryViewModel
     @ObservedObject var proAccess: ProAccessViewModel
+    @Environment(\.dismiss) private var dismiss
 
     init(record: GameRecord, history: HistoryViewModel, proAccess: ProAccessViewModel) {
         self.record = record
@@ -78,6 +79,7 @@ struct SessionDetailView: View {
         .alert("Delete Session", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 history.deleteRecord(id: record.id)
+                dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -166,7 +168,12 @@ struct SessionDetailView: View {
             Text("Total time: \(formatElapsed(session.totalElapsedSeconds))")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("\(session.roundCount) rounds · \(session.skipCount) skips · \(session.doOverCount) do-overs · \(session.pauseCount) pauses")
+            Text([
+                TurnTimerCountText.label(for: session.roundCount, singular: "round"),
+                TurnTimerCountText.label(for: session.skipCount, singular: "skip"),
+                TurnTimerCountText.label(for: session.doOverCount, singular: "do-over"),
+                TurnTimerCountText.label(for: session.pauseCount, singular: "pause"),
+            ].joined(separator: " · "))
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
         }

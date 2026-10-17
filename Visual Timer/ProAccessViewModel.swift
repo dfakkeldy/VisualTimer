@@ -21,10 +21,19 @@ final class ProAccessViewModel: ObservableObject {
     private var transactionTask: Task<Void, Never>?
 
     var displayPrice: String {
-        product?.displayPrice ?? ProProduct.fallbackDisplayPrice
+        product?.displayPrice ?? ""
     }
 
-    init() {
+    var purchaseButtonTitle: String {
+        product.map { "Unlock Pro \($0.displayPrice)" } ?? "Unlock Pro"
+    }
+
+    var canPurchase: Bool {
+        product != nil && purchaseState != .loading && purchaseState != .purchasing
+    }
+
+    init(automaticallyStartsStoreKitTasks: Bool = true) {
+        guard automaticallyStartsStoreKitTasks else { return }
         transactionTask = observeTransactions()
         Task {
             await loadProducts()
@@ -41,8 +50,9 @@ final class ProAccessViewModel: ObservableObject {
         do {
             let products = try await Product.products(for: Array(ProProduct.unlockIDs))
             product = products.first { $0.id == ProProduct.unlockID }
-            purchaseState = isProUnlocked ? .purchased : .idle
+            purchaseState = product == nil ? .failed("Pro is currently unavailable. Please try again.") : (isProUnlocked ? .purchased : .idle)
         } catch {
+            product = nil
             purchaseState = .failed("Unable to load Pro purchase.")
         }
     }
@@ -101,10 +111,12 @@ final class ProAccessViewModel: ObservableObject {
             else { continue }
             unlocked = true
         }
+        applyEntitlementRefreshResult(isUnlocked: unlocked)
+    }
+
+    func applyEntitlementRefreshResult(isUnlocked unlocked: Bool) {
         isProUnlocked = unlocked
-        if unlocked {
-            purchaseState = .purchased
-        }
+        purchaseState = unlocked ? .purchased : .idle
     }
 
     private func observeTransactions() -> Task<Void, Never> {

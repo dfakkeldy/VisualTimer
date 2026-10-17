@@ -27,12 +27,49 @@ env:
   DERIVED_DATA_PATH: ".build/DerivedData"
 
 jobs:
+  web-build-tests:
+    name: Web build + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run domain tests
+        run: npm test
+
+      - name: Check TypeScript
+        run: npm run check
+
+      - name: Build production app
+        run: npm run build
+
+      - name: Verify committed GitHub Pages app
+        run: |
+          npm run build:pages
+          git diff --exit-code -- ../docs/app
+
   build-gate-tests:
     name: Build gate + tests
     runs-on: macos-26
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test change-aware delivery guard
+        run: python3 -m unittest discover -s .github/scripts/tests -p test_release_delivery.py -v
 
       - name: Validate release controls
         run: ruby Scripts/release_automation/tests/fastfile_release_controls_test.rb
@@ -72,6 +109,8 @@ jobs:
           xcrun simctl list devices available --json > "$devices_json"
 
           ios_udid="$(jq -r '[.devices | to_entries[] | select(.key | contains("iOS")) | .value[] | select(.isAvailable == true and (.name | startswith("iPhone")))][0].udid // ""' "$devices_json")"
+          watch_udid="$(jq -r '[.devices | to_entries[] | select(.key | contains("watchOS")) | .value[] | select(.isAvailable == true)][0].udid // ""' "$devices_json")"
+          echo "watch_simulator_udid=$watch_udid" >> "$GITHUB_OUTPUT"
 
           if [ -n "$ios_udid" ]; then
             {
@@ -83,7 +122,7 @@ jobs:
               echo "ios_destination=generic/platform=iOS Simulator"
               echo "ios_simulator_udid="
             } >> "$GITHUB_OUTPUT"
-            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and unit tests will be skipped."
+            echo "::warning title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination. The 'Run iOS tests' step will then fail the gate, because a runnable simulator is required."
           fi
 
       - name: Prepare result bundles
@@ -119,22 +158,22 @@ jobs:
             -resultBundlePath ".build/results/VisualTimer-watchOS-Build.xcresult" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run iOS unit tests
+      - name: Run iOS tests
         shell: bash
         run: |
           set -euo pipefail
 
           simulator_id="${{ steps.destinations.outputs.ios_simulator_udid }}"
           if [ -z "$simulator_id" ]; then
-            echo "::notice title=Unit tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
-            exit 0
+            echo "::error title=iOS tests not run::No concrete iOS simulator was available on this runner, so the test gate cannot run. Provision a runnable iPhone simulator (macOS runner image) or pin one explicitly."
+            exit 1
           fi
 
           xcrun simctl boot "$simulator_id" >/tmp/visualtimer-simctl-boot.log 2>&1 || true
           if ! xcrun simctl bootstatus "$simulator_id" -b; then
             cat /tmp/visualtimer-simctl-boot.log
-            echo "::notice title=Unit tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
-            exit 0
+            echo "::error title=iOS tests not run::The runner's iOS simulator runtime did not boot, so the test gate cannot run. Check the runner image / simulator runtime availability."
+            exit 1
           fi
 
           xcodebuild test-without-building \
@@ -144,5 +183,44 @@ jobs:
             -destination "${{ steps.destinations.outputs.ios_destination }}" \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -resultBundlePath ".build/results/VisualTimer-iOS-Tests.xcresult" \
-            -only-testing:"Visual TimerTests" \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
             CODE_SIGNING_ALLOWED=NO
+
+      - name: Run focused Watch control test
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          watch_id="${{ steps.destinations.outputs.watch_simulator_udid }}"
+          if [ -z "$watch_id" ]; then
+            echo "::error title=Watch UI test not run::No runnable Watch simulator is available."
+            exit 1
+          fi
+
+          # Release the iOS test simulator before Xcode boots the Watch pair.
+          ios_id="${{ steps.destinations.outputs.ios_simulator_udid }}"
+          if [ -n "$ios_id" ]; then
+            xcrun simctl shutdown "$ios_id" >/tmp/visualtimer-ios-shutdown.log 2>&1 || true
+          fi
+
+          xcodebuild test \
+            -project "$PROJECT_PATH" \
+            -scheme "$WATCH_SCHEME" \
+            -configuration Debug \
+            -destination "platform=watchOS Simulator,id=$watch_id" \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            -resultBundlePath ".build/results/VisualTimer-watchOS-UI-Tests.xcresult" \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
+            -only-testing:"Visual Timer Watch Watch AppUITests/Visual_Timer_Watch_Watch_AppUITests/testQuickTimerControlsAreLabelledThroughStartPauseResumeReset" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Preserve Apple test results and UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-test-results
+          path: .build/results
+          retention-days: 3
+          if-no-files-found: ignore

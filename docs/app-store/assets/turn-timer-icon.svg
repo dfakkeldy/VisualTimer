@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024px" height="1024px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>turn-timer-icon</title>
+    <defs>
+        <linearGradient x1="12.5%" y1="9.375%" x2="87.5%" y2="90.625%" id="linearGradient-1">
+            <stop stop-color="#10151B" offset="0%"></stop>
+            <stop stop-color="#1C2728" offset="100%"></stop>
+        </linearGradient>
+        <radialGradient cx="64.453125%" cy="65.4296875%" fx="64.453125%" fy="65.4296875%" r="54.6875%" id="radialGradient-2">
+            <stop stop-color="#1DB7A6" stop-opacity="0.22" offset="0%"></stop>
+            <stop stop-color="#1DB7A6" stop-opacity="0" offset="100%"></stop>
+        </radialGradient>
+        <linearGradient x1="14.4970414%" y1="4.43786982%" x2="85.5029586%" y2="101.47929%" id="linearGradient-3">
+            <stop stop-color="#111820" offset="0%"></stop>
+            <stop stop-color="#182026" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Turn-Timer-Icon-SVG" stroke="none" fill="none" fill-rule="evenodd" stroke-width="1">
+        <g id="Group">
+            <rect id="Rectangle" fill="url(#linearGradient-1)" x="0" y="0" width="1024" height="1024"></rect>
+            <rect id="Rectangle" fill="url(#radialGradient-2)" x="0" y="0" width="1024" height="1024"></rect>
+            <circle id="Oval" fill="#0B0F14" opacity="0.18" cx="512" cy="512" r="372"></circle>
+            <path d="M803.02,417.44 C847.658156,554.845733 790.110595,704.75096 664.991958,776.988257 C539.873321,849.225553 381.277801,824.110623 284.6,716.75" id="Path" stroke="#E9A23A" stroke-width="118" stroke-linecap="round"></path>
+            <path d="M236.97,646.14 C170.097373,509.03227 214.422222,343.611694 340.89,258.31" id="Path" stroke="#21B6A6" stroke-width="118" stroke-linecap="round"></path>
+            <path d="M417.44,220.98 C532.379716,183.634539 658.532578,217.437519 739.4,307.25" id="Path" stroke="#CF6F61" stroke-width="118" stroke-linecap="round"></path>
+            <path d="M782.18,368.34 C857.631918,510.241422 810.451467,686.331688 674.16,771.5" id="Path" stroke="#81909A" stroke-width="118" stroke-linecap="round"></path>
+            <circle id="Oval" fill="#0E151C" opacity="0.72" cx="512" cy="512" r="226"></circle>
+            <circle id="Oval" stroke="#29333C" stroke-width="5" fill="url(#linearGradient-3)" cx="512" cy="512" r="169"></circle>
+            <circle id="Oval" fill="#101720" cx="512" cy="512" r="162"></circle>
+            <g opacity="0.96" transform="translate(208, 228)" id="Oval">
+                <circle fill="#E9A23A" cx="500" cy="49" r="49"></circle>
+                <circle fill="#F7BD5A" opacity="0.72" cx="500" cy="49" r="39"></circle>
+                <circle fill="#FFF3D7" opacity="0.48" cx="482" cy="18" r="4"></circle>
+                <circle fill="#21B6A6" cx="71" cy="476" r="43"></circle>
+                <circle fill="#6FE0D3" opacity="0.58" cx="71" cy="476" r="34"></circle>
+                <circle fill="#DBFFF9" opacity="0.48" cx="56" cy="448" r="4"></circle>
+                <circle fill="#CF6F61" cx="545" cy="464" r="42"></circle>
+                <circle fill="#E99489" opacity="0.58" cx="545" cy="464" r="33"></circle>
+                <circle fill="#FFE6E1" opacity="0.5" cx="531" cy="438" r="4"></circle>
+                <circle fill="#81909A" cx="42" cy="105" r="42"></circle>
+                <circle fill="#AAB5BD" opacity="0.55" cx="42" cy="105" r="33"></circle>
+                <circle fill="#F4F7F8" opacity="0.5" cx="30" cy="80" r="4"></circle>
+            </g>
+            <line x1="512" y1="512" x2="512" y2="386" id="Path" stroke="#FFF8EC" stroke-width="32" stroke-linecap="round"></line>
+            <line x1="512" y1="512" x2="626" y2="475" id="Path" stroke="#9BD7CE" stroke-width="22" stroke-linecap="round"></line>
+            <circle id="Oval" fill="#FFF8EC" cx="512" cy="512" r="43"></circle>
+            <circle id="Oval" fill="#333B43" cx="512" cy="512" r="20"></circle>
+            <circle id="Oval" fill="#27313A" cx="464" cy="440" r="6"></circle>
+        </g>
+    </g>
+</svg>

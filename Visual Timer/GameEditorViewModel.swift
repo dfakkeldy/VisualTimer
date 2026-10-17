@@ -1,5 +1,8 @@
 import SwiftUI
 import Combine
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 final class GameEditorViewModel: ObservableObject {
 
@@ -15,6 +18,10 @@ final class GameEditorViewModel: ObservableObject {
 
     private let parser = GameFileParser()
     private let templateLibrary: TemplateLibraryStore
+    private let widgetSnapshotStore: WidgetSnapshotStore
+    private let watchTemplateStore: WatchTemplateStore
+    private let watchTemplatePublisher: @MainActor ([WatchTemplate]) -> Void
+    private var isWidgetPublishingEnabled = false
 
     enum TemplateSaveResult {
         case saved
@@ -28,14 +35,28 @@ final class GameEditorViewModel: ObservableObject {
         case failed([ParseError])
     }
 
-    init(templateLibrary: TemplateLibraryStore = TemplateLibraryStore()) {
+    init(
+        templateLibrary: TemplateLibraryStore = TemplateLibraryStore(),
+        widgetSnapshotStore: WidgetSnapshotStore = WidgetSnapshotStore(),
+        watchTemplateStore: WatchTemplateStore = WatchTemplateStore(),
+        watchTemplatePublisher: @escaping @MainActor ([WatchTemplate]) -> Void = {
+            WatchTemplateConnectivity.shared.publish(templates: $0)
+        }
+    ) {
         self.templateLibrary = templateLibrary
+        self.widgetSnapshotStore = widgetSnapshotStore
+        self.watchTemplateStore = watchTemplateStore
+        self.watchTemplatePublisher = watchTemplatePublisher
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
 
     var currentSavedTemplateID: UUID? {
         UUID(uuidString: lastTemplateID)
+    }
+
+    var canSaveOrStartTemplate: Bool {
+        rounds.contains { $0.isActive }
     }
 
     // MARK: - Round CRUD
@@ -117,7 +138,7 @@ final class GameEditorViewModel: ObservableObject {
 
     func applyStarterTemplate(_ template: StarterTemplate) {
         var game = template.game
-        game.reindexRounds()
+        game.normalizeTemplateFields()
         gameTitle = game.title
         rounds = game.rounds
         roundCount = game.roundCount
@@ -148,7 +169,7 @@ final class GameEditorViewModel: ObservableObject {
 
     func buildGameSequence() -> GameSequence {
         var game = GameSequence(title: gameTitle, rounds: rounds, roundCount: roundCount)
-        game.reindexRounds()
+        game.normalizeTemplateFields()
         return game
     }
 
@@ -156,6 +177,9 @@ final class GameEditorViewModel: ObservableObject {
 
     func save(to url: URL) -> (Bool, [ParseError]) {
         let game = buildGameSequence()
+        let errors = validationErrors(for: game)
+        guard errors.isEmpty else { return (false, errors) }
+
         do {
             if url.pathExtension.lowercased() == TemplateImportExport.fileExtension {
                 let document = templateLibrary.exportDocument(for: game, templateID: currentSavedTemplateID)
@@ -172,6 +196,10 @@ final class GameEditorViewModel: ObservableObject {
 
     func saveToDocuments(isProUnlocked: Bool) -> TemplateSaveResult {
         refreshSavedTemplates()
+        let game = buildGameSequence()
+        let errors = validationErrors(for: game)
+        guard errors.isEmpty else { return .failed(errors) }
+
         let existingTemplateID = currentSavedTemplateID
         let isUpdatingExistingTemplate = existingTemplateID.map { id in
             savedTemplates.contains { $0.id == id }
@@ -186,7 +214,7 @@ final class GameEditorViewModel: ObservableObject {
         }
 
         do {
-            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
             refreshSavedTemplates()
@@ -199,12 +227,15 @@ final class GameEditorViewModel: ObservableObject {
     /// Saves silently — no alert. Called automatically when tapping Play.
     func autoSave() {
         refreshSavedTemplates()
+        let game = buildGameSequence()
+        guard validationErrors(for: game).isEmpty else { return }
+
         let existingTemplateID = currentSavedTemplateID
         let shouldCreateFirstTemplate = existingTemplateID == nil && savedTemplates.isEmpty
         guard existingTemplateID != nil || shouldCreateFirstTemplate else { return }
 
         do {
-            let savedTemplate = try templateLibrary.save(game: buildGameSequence(), templateID: existingTemplateID)
+            let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
             refreshSavedTemplates()
@@ -249,9 +280,9 @@ final class GameEditorViewModel: ObservableObject {
 
             let content = try String(contentsOf: url, encoding: .utf8)
             let (game, errors) = parser.parse(content)
-            self.gameTitle = game.title
-            self.rounds = game.rounds
-            self.roundCount = game.roundCount
+            guard errors.isEmpty else { return (false, errors) }
+
+            applyGame(game, title: game.title)
             return (errors.isEmpty, errors)
         } catch {
             return (false, [ParseError("Failed to load: \(error.localizedDescription)")])
@@ -279,15 +310,56 @@ final class GameEditorViewModel: ObservableObject {
     }
 
     func exportCurrentTemplateURL() -> URL? {
-        let document = templateLibrary.exportDocument(for: buildGameSequence(), templateID: currentSavedTemplateID)
+        let game = buildGameSequence()
+        guard validationErrors(for: game).isEmpty else { return nil }
+
+        let document = templateLibrary.exportDocument(for: game, templateID: currentSavedTemplateID)
         return try? TemplateImportExport.exportURL(for: document)
     }
 
     func refreshSavedTemplates() {
-        savedTemplates = templateLibrary.listTemplates()
+        let templates = templateLibrary.listTemplates()
+        savedTemplates = templates
+        publishWidgetSnapshots(for: templates)
+        publishWatchTemplates(for: templates)
+    }
+
+    func setWidgetPublishingEnabled(_ isEnabled: Bool) {
+        guard isWidgetPublishingEnabled != isEnabled else { return }
+        isWidgetPublishingEnabled = isEnabled
+        publishWidgetSnapshots(for: savedTemplates)
+        publishWatchTemplates(for: savedTemplates)
     }
 
     // MARK: - Private
+
+    private func publishWidgetSnapshots(for templates: [SavedTemplate]) {
+        let templatesToPublish = isWidgetPublishingEnabled ? templates : []
+        guard (try? widgetSnapshotStore.writeSnapshots(
+            savedTemplates: templatesToPublish,
+            isProUnlocked: isWidgetPublishingEnabled
+        )) != nil else { return }
+#if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: "TemplateStartWidget")
+#endif
+    }
+
+    /// Publishes full games locally and to the paired Watch. The existing Pro
+    /// flag also sends an empty snapshot when access is revoked.
+    private func publishWatchTemplates(for templates: [SavedTemplate]) {
+        let templatesToPublish = isWidgetPublishingEnabled ? templates : []
+        let watchTemplates = templatesToPublish.compactMap { saved -> WatchTemplate? in
+            guard let document = try? templateLibrary.loadDocument(id: saved.id) else { return nil }
+            return WatchTemplate(
+                templateID: saved.id,
+                title: saved.title,
+                game: document.game,
+                modifiedAt: saved.modifiedAt
+            )
+        }
+        _ = try? watchTemplateStore.write(templates: watchTemplates)
+        watchTemplatePublisher(watchTemplates)
+    }
 
     private func reindex() {
         for i in rounds.indices {
@@ -295,10 +367,18 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    private func validationErrors(for game: GameSequence) -> [ParseError] {
+        game.activeRounds.isEmpty ? [ParseError("Add at least one active round before saving.")] : []
+    }
+
     private func applyDocument(_ document: TurnTimerTemplateDocument) {
-        var game = document.game
-        game.reindexRounds()
-        gameTitle = document.title
+        applyGame(document.game, title: document.title)
+    }
+
+    private func applyGame(_ game: GameSequence, title: String) {
+        var game = game
+        game.normalizeTemplateFields()
+        gameTitle = title
         rounds = game.rounds
         roundCount = game.roundCount
         expandedRoundId = nil

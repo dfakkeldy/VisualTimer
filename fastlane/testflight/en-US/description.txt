@@ -1,0 +1,1 @@
+Turn Timer is a visual sequence timer for turns, routines, and real-world countdowns. Please test quick timers, starter templates, custom saved templates, history, Pro-gated flows, iCloud sync, widgets, and watch playback where available.
