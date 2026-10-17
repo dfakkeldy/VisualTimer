@@ -1,0 +1,47 @@
+{
+  "platform_excludes": {
+    "ios": []
+  },
+  "controller_overlays": [
+    ".ruby-version",
+    "Gemfile",
+    "Gemfile.lock",
+    "fastlane"
+  ],
+  "build_env": [
+    "XCODE_VERSION",
+    "PROJECT_PATH",
+    "IOS_SCHEME",
+    "WATCH_SCHEME",
+    "DERIVED_DATA_PATH"
+  ],
+  "test_inputs": [
+    "Visual Timer/Timer.swift",
+    "TurnTimerWidgets/Assets.xcassets/icon.json",
+    "Visual Timer.xcodeproj/project.pbxproj",
+    "Visual Timer.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+    "fastlane/Gymfile",
+    "Visual Timer Watch Watch App/Timer.swift"
+  ],
+  "schema": 1,
+  "exclude_roots": [
+    ".github",
+    ".agents",
+    ".codex",
+    ".claude",
+    ".clinerules",
+    ".superpowers",
+    "docs",
+    "web",
+    "marketing",
+    "output",
+    "reports",
+    "scratch",
+    "iTerm2"
+  ],
+  "exclude_files": [
+    "Makefile",
+    ".swift-format",
+    "skills-lock.json"
+  ]
+}
