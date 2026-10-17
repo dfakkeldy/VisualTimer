@@ -47,6 +47,34 @@ enum Theme {
         static let landscapeControlColumnWidth: CGFloat = 240
     }
 
+    // MARK: - Timer finish and glass styling
+
+    enum TimerStyle {
+        static let ink = Color(red: 0.025, green: 0.035, blue: 0.065)
+        static let well = Color(red: 0.055, green: 0.065, blue: 0.085)
+        static let controlSize: CGFloat = 44
+        static let controlSpacing: CGFloat = 8
+        static let surfaceBorder: CGFloat = 1
+        static let rimWidth: CGFloat = 1.5
+        static let glowRadius: CGFloat = 24
+        static let glowOpacity = 0.2
+        static let backdropOpacity = 0.12
+        static let highlightOpacity = 0.32
+        static let shadeOpacity = 0.24
+        static let restingIconSize: CGFloat = 52
+        static let runningIconSize: CGFloat = 36
+        static let iconOpacity = 0.92
+        static let iconShadowRadius: CGFloat = 6
+        static let pressedScale: CGFloat = 0.975
+        static let disabledOpacity = 0.45
+        static let pressDuration = 0.18
+        static let colourDuration = 0.45
+        static let rippleScale: CGFloat = 1.12
+        static let rippleOpacity = 0.35
+        static let rippleDuration = 0.7
+        static let rippleAttack = 0.08
+    }
+
     // MARK: - Animation
 
     enum AnimationValue {
@@ -77,6 +105,8 @@ enum Theme {
         static let play = "play.fill"
         static let pause = "pause.fill"
         static let reset = "arrow.counterclockwise"
+        static let increase = "plus"
+        static let decrease = "minus"
         static let increment = "plus.circle.fill"
         static let decrement = "minus.circle.fill"
         static let checkmark = "checkmark"
@@ -120,8 +150,10 @@ enum Theme {
 
     enum Label {
         static let play = "Play"
+        static let start = "Start"
         static let pause = "Pause"
         static let unpause = "Unpause"
+        static let resume = "Resume"
         static let reset = "Reset"
         static let settings = "Settings"
         static let decrementDuration = "Decrease duration"
@@ -172,5 +204,91 @@ enum Theme {
         static let gameOverFontSize: CGFloat = 28
         static let playbackSpacing: CGFloat = 12
         static let nextPlayerMaxWidth: CGFloat = 140
+    }
+
+    // MARK: - Watch
+
+    enum Watch {
+
+        enum Dimension {
+            static let contentSpacing: CGFloat = 6
+            static let controlSpacing: CGFloat = 6
+            /// watchOS asks for touch targets of at least 38 pt.
+            static let controlMinHeight: CGFloat = 44
+            static let digitMinTarget: CGFloat = 38
+            static let controlIconSpacing: CGFloat = 2
+            static let quickDialMaxSize: CGFloat = 120
+            static let sessionDialSize: CGFloat = 92
+            static let dialLineWidth: CGFloat = 8
+            static let selectionCornerRadius: CGFloat = 6
+            static let digitMinimumScale: CGFloat = 0.5
+            static let captionMinimumScale: CGFloat = 0.7
+        }
+
+        enum ColorValue {
+            static let ringTrack = Color.white.opacity(0.15)
+            static let selection = Color.white.opacity(0.25)
+            static let sessionComplete = Color.green
+        }
+
+        enum Symbol {
+            static let quickTimer = "timer"
+            static let resumeSession = "play.circle"
+            static let allowAlerts = "bell.badge"
+            static let alertsOff = "bell.slash"
+            static let sessionComplete = "checkmark.circle.fill"
+            static let previous = "backward.end.fill"
+        }
+
+        enum Label {
+            static let quickTimer = "Quick Timer"
+            static let starterTemplates = "Starter Templates"
+            static let savedTemplates = "Saved Templates"
+            static let resumeSession = "Resume Session"
+            static let sessionComplete = "Session Complete"
+            static let done = "Done"
+            static let running = "Running"
+            static let paused = "Paused"
+            static let minutes = "Minutes"
+            static let seconds = "Seconds"
+            static let timeRemaining = "Time remaining"
+            static let timeSeparator = ":"
+            static let crownHint = "Select, then turn the Digital Crown to change."
+            static let previous = "Previous"
+            static let allowAlerts = "Allow Alerts"
+            static let allowAlertsDetail = "Get a notification when a timer ends while Turn Timer is not on screen."
+            static let alertsOff = "Alerts Off"
+            static let alertsOffDetail = "Turn Timer can alert you only while it is on screen. You can allow notifications for Turn Timer in Settings."
+        }
+
+        enum Notification {
+            static let quickTitle = "Quick Timer done"
+            static let quickBody = "Your countdown has finished."
+            static let roundFallbackTitle = "Round finished"
+
+            static func roundFinishedTitle(_ roundName: String) -> String {
+                "\(roundName) finished"
+            }
+        }
+
+        /// Stable accessibility identifiers for UI tests and assistive tools.
+        enum Identifier {
+            static let rootQuickTimer = "watch.root.quickTimer"
+            static let rootResumeSession = "watch.root.resumeSession"
+            static let rootAllowAlerts = "watch.root.allowAlerts"
+            static let rootAlertsOff = "watch.root.alertsOff"
+            static let quickPrimary = "watch.quick.primary"
+            static let quickReset = "watch.quick.reset"
+            static let quickTime = "watch.quick.time"
+            static let quickMinutes = "watch.quick.minutes"
+            static let quickSeconds = "watch.quick.seconds"
+            static let sessionPrimary = "watch.session.primary"
+            static let sessionRestart = "watch.session.restart"
+            static let sessionPrevious = "watch.session.previous"
+            static let sessionSkip = "watch.session.skip"
+            static let sessionEnd = "watch.session.end"
+            static let sessionTime = "watch.session.time"
+            static let sessionDone = "watch.session.done"
+        }
     }
 }

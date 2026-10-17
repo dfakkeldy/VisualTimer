@@ -1,8 +1,10 @@
 # App Store Featuring Nomination Draft
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC
 
-Status: draft. Submit only after the app has final screenshots, support/privacy
+Status: optional draft; no featuring nomination authorized. Not a launch blocker.
+Current release risks are recorded in `../app-store/readiness.md`. Submit only
+after exact authorization and after the app has final screenshots, support/privacy
 URLs, and a TestFlight or App Store link.
 
 ## App Information

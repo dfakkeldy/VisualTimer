@@ -126,10 +126,18 @@ policy stay centralized.
 
 Distribution policy:
 
-- `nightly`: internal TestFlight group named `nightly`.
-- `weekly`: external TestFlight group named `weekly`.
-- `main`: App Store Connect upload and review submission unless disabled by
-  repository variables.
+- `nightly`: daily scheduled check; internal TestFlight group named `nightly`
+  only when app inputs changed since the last successful delivery.
+- `weekly`: Monday scheduled check; external TestFlight group named `weekly`
+  only when app inputs changed since the last successful delivery.
+- `main`: App Store Connect upload on app-affecting pushes; review submission
+  is opt-in and off by default (`APP_STORE_SUBMIT_FOR_REVIEW`).
+
+Scheduled trains skip the macOS build and upload when inputs match the last
+successful platform/channel receipt. Documentation-only edits do not create a
+new binary. `force=true` requests an intentional rebuild through the same
+gates. The scheduler runs the controller from the default branch, so this
+takes effect only after promotion to `main`. See `.github/RELEASE_DELIVERY.md`.
 
 ## Validation
 
