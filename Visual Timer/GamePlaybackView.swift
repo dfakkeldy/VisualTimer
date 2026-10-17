@@ -7,12 +7,17 @@ struct GamePlaybackView: View {
     @ObservedObject var soundManager: SoundManager
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
+    @ObservedObject var historySync: HistoryCloudSyncEngine
+
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showSettings = false
 
     var body: some View {
         ZStack {
-            Theme.ColorValue.appBackground.ignoresSafeArea()
+            TimerBackdrop(color: timerViewModel.timerColor)
 
             if gameViewModel.hasActiveGame {
                 gamePlaybackContent
@@ -26,18 +31,19 @@ struct GamePlaybackView: View {
             }
         }
         .animation(
-            .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
+            reduceMotion ? nil : .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
             value: timerViewModel.state
         )
         .animation(
-            .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
+            reduceMotion ? nil : .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
             value: gameViewModel.gamePhase
         )
         .sheet(isPresented: $showSettings) {
             SettingsView(
                 soundManager: soundManager,
                 proAccess: proAccess,
-                templateSync: templateSync
+                templateSync: templateSync,
+                historySync: historySync
             )
         }
         .onAppear {
@@ -51,6 +57,24 @@ struct GamePlaybackView: View {
     // MARK: - Quick Timer (existing behavior)
 
     private var quickTimerContent: some View {
+        Group {
+            if verticalSizeClass == .compact {
+                quickTimerLandscapeContent
+            } else {
+                quickTimerPortraitContent
+            }
+        }
+        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
+    }
+
+    private var quickTimerPortraitContent: some View {
+        ViewThatFits(in: .vertical) {
+            quickTimerRegularContent
+            quickTimerCompactContent
+        }
+    }
+
+    private var quickTimerRegularContent: some View {
         VStack(spacing: 0) {
             durationStepper
 
@@ -66,7 +90,42 @@ struct GamePlaybackView: View {
             resetButton
                 .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
         }
-        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
+    }
+
+    private var quickTimerCompactContent: some View {
+        ScrollView {
+            VStack(spacing: Theme.Dimension.sectionSpacingSmall) {
+                durationStepper
+
+                timerCircleButton
+                    .frame(maxWidth: Theme.Dimension.compactTimerCircleMaxSize)
+
+                TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
+
+                resetButton
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Theme.Dimension.compactContentVerticalPadding)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var quickTimerLandscapeContent: some View {
+        HStack(spacing: Theme.Dimension.sectionSpacingLarge) {
+            VStack(spacing: Theme.Dimension.sectionSpacingSmall) {
+                durationStepper
+
+                TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
+
+                resetButton
+            }
+            .frame(maxWidth: Theme.Dimension.landscapeControlColumnWidth)
+
+            timerCircleButton
+                .frame(maxWidth: Theme.Dimension.landscapeTimerCircleMaxSize)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, Theme.Dimension.compactContentVerticalPadding)
     }
 
     // MARK: - Game Playback
@@ -155,52 +214,69 @@ struct GamePlaybackView: View {
     // MARK: - Round Info Header
 
     private var roundInfoHeader: some View {
-        HStack {
-            // Current player (left)
-            if let round = gameViewModel.currentRound {
-                HStack(spacing: 4) {
-                    if !round.emoji.isEmpty {
-                        Text(round.emoji)
-                            .font(.system(size: 56))
-                    }
-                    Text(round.name)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(round.color.swiftUIColor)
-                }
-            }
+        HStack(alignment: .top, spacing: Theme.Dimension.durationStepperSpacing) {
+            currentRoundHeader
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer()
-
-            // Next player indicator (right)
-            if let next = gameViewModel.nextPlayer {
-                HStack(spacing: 4) {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(Theme.Label.nextPlayer)
-                            .font(.caption2)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                        HStack(spacing: 4) {
-                            if !next.emoji.isEmpty {
-                                Text(next.emoji)
-                            }
-                            Text(next.name)
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
-                        }
-                    }
-                    Image(systemName: Theme.Symbol.nextPlayer)
-                        .font(.caption)
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                }
-            }
+            nextPlayerHeader
         }
         .padding(.top, 16)
+    }
+
+    @ViewBuilder
+    private var currentRoundHeader: some View {
+        if let round = gameViewModel.currentRound {
+            HStack(spacing: 4) {
+                if !round.emoji.isEmpty {
+                    Text(round.emoji)
+                        .font(.system(size: 56))
+                        .lineLimit(1)
+                }
+                Text(round.name)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(round.color.swiftUIColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .truncationMode(.tail)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var nextPlayerHeader: some View {
+        if let next = gameViewModel.nextPlayer {
+            HStack(spacing: 4) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(Theme.Label.nextPlayer)
+                        .font(.caption2)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                    HStack(spacing: 4) {
+                        if !next.emoji.isEmpty {
+                            Text(next.emoji)
+                                .lineLimit(1)
+                        }
+                        Text(next.name)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .truncationMode(.tail)
+                    }
+                }
+                .frame(maxWidth: Theme.GamePlayback.nextPlayerMaxWidth, alignment: .trailing)
+
+                Image(systemName: Theme.Symbol.nextPlayer)
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+        }
     }
 
     // MARK: - Round Progress Footer
 
     private var roundProgressFooter: some View {
         VStack(spacing: 4) {
-            Text("Turn \(gameViewModel.countingPlayerIndex) of \(gameViewModel.countingPlayerCount)")
+            Text(gameViewModel.roundProgressText)
                 .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
@@ -229,12 +305,7 @@ struct GamePlaybackView: View {
     private var gameOverActions: some View {
         HStack(spacing: Theme.Dimension.controlButtonSpacing) {
             Button {
-                let timeout = Round(
-                    name: "Extra Round",
-                    durationSeconds: Theme.TimerMechanic.defaultDuration,
-                    orderIndex: gameViewModel.activeRounds.count
-                )
-                gameViewModel.addRoundDuringGameOver(timeout)
+                gameViewModel.addRoundDuringGameOver()
             } label: {
                 Label("Add Round", systemImage: Theme.Symbol.increment)
                     .font(.body.weight(.medium))
@@ -252,23 +323,37 @@ struct GamePlaybackView: View {
     // MARK: - Shared Sub-Views
 
     private var timerCircleButton: some View {
-        ZStack {
-            TimerVisualView(
-                elapsedFraction: elapsedFraction,
-                fillColor: timerViewModel.timerColor
-            )
+        Button {
+            handleCircleTap()
+        } label: {
+            ZStack {
+                TimerVisualView(
+                    visualProgress: timerViewModel.visualProgress,
+                    fillColor: timerViewModel.timerColor,
+                    completionCount: timerViewModel.timerColorIndex
+                )
 
-            if let icon = centerIcon {
-                Image(systemName: icon)
-                    .font(.system(size: 64, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
+                if let icon = centerIcon {
+                    Image(systemName: icon)
+                        .font(.system(
+                            size: timerViewModel.state == .running ? Theme.TimerStyle.runningIconSize : Theme.TimerStyle.restingIconSize,
+                            weight: .medium
+                        ))
+                        .foregroundStyle(.white.opacity(Theme.TimerStyle.iconOpacity))
+                        .shadow(color: .black.opacity(Theme.TimerStyle.shadeOpacity), radius: Theme.TimerStyle.iconShadowRadius)
+                        .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                        .accessibilityHidden(true)
+                }
             }
         }
+        .buttonStyle(TimerPressStyle())
         .contentShape(Circle())
-        .onTapGesture { handleCircleTap() }
+        .disabled(!isTimerCircleEnabled)
+        .accessibilityLabel(timerCircleAccessibilityLabel)
     }
 
     private var centerIcon: String? {
+        guard isTimerCircleEnabled else { return nil }
         switch timerViewModel.state {
         case .notStarted, .paused, .finished:
             return Theme.Symbol.play
@@ -277,7 +362,28 @@ struct GamePlaybackView: View {
         }
     }
 
+    private var isTimerCircleEnabled: Bool {
+        if gameViewModel.gamePhase == .ready || gameViewModel.gamePhase == .gameOver {
+            return false
+        }
+        return timerViewModel.state != .finished
+    }
+
+    private var timerCircleAccessibilityLabel: String {
+        switch timerViewModel.state {
+        case .running:
+            return Theme.Label.pause
+        case .paused:
+            return Theme.Label.unpause
+        case .notStarted:
+            return Theme.Label.play
+        case .finished:
+            return Theme.Label.gameOver
+        }
+    }
+
     private func handleCircleTap() {
+        guard isTimerCircleEnabled else { return }
         let wasPaused = timerViewModel.state == .paused
 
         switch timerViewModel.state {
@@ -292,7 +398,7 @@ struct GamePlaybackView: View {
             }
         case .running:
             timerViewModel.pause()
-            if gameViewModel.hasActiveGame {
+            if gameViewModel.hasActiveGame && timerViewModel.state == .paused {
                 gameViewModel.recordPause()
             }
         case .finished:
@@ -300,71 +406,68 @@ struct GamePlaybackView: View {
         }
     }
 
-    private var elapsedFraction: Double {
-        guard timerViewModel.totalDuration > 0 else { return 0 }
-        let notch = timerViewModel.state == .notStarted ? 0 : 1
-        let raw = Double(timerViewModel.totalDuration - timerViewModel.timeRemaining + notch)
-            / Double(timerViewModel.totalDuration)
-        return min(raw, 1.0)
-    }
-
     // MARK: - Quick Timer Sub-Views
 
     private var durationStepper: some View {
-        HStack(spacing: Theme.Dimension.durationStepperSpacing) {
-            Button {
-                timerViewModel.setDuration(
-                    max(Theme.TimerMechanic.minimumDuration,
-                        timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
-                )
-            } label: {
-                Image(systemName: Theme.Symbol.decrement)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-            .disabled(timerViewModel.state != .notStarted)
-            .accessibilityLabel(Theme.Label.decrementDuration)
+        TimerGlassGroup {
+            HStack(spacing: Theme.TimerStyle.controlSpacing) {
+                Button {
+                    timerViewModel.setDuration(
+                        max(Theme.TimerMechanic.minimumDuration,
+                            timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
+                    )
+                } label: {
+                    Image(systemName: Theme.Symbol.decrease)
+                        .font(.title3)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .disabled(timerViewModel.state != .notStarted)
+                .accessibilityLabel(Theme.Label.decrementDuration)
 
-            Text("\(timerViewModel.totalDuration / 60)m \(timerViewModel.totalDuration % 60)s")
-                .font(.title3.weight(.medium))
-                .monospacedDigit()
-                .foregroundStyle(Theme.ColorValue.textPrimary)
+                Text("\(timerViewModel.totalDuration / 60)m \(timerViewModel.totalDuration % 60)s")
+                    .font(.title3.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
 
-            Button {
-                timerViewModel.setDuration(
-                    timerViewModel.totalDuration + Theme.TimerMechanic.durationStep
-                )
-            } label: {
-                Image(systemName: Theme.Symbol.increment)
-                    .font(.title3)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                Button {
+                    timerViewModel.setDuration(
+                        timerViewModel.totalDuration + Theme.TimerMechanic.durationStep
+                    )
+                } label: {
+                    Image(systemName: Theme.Symbol.increase)
+                        .font(.title3)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .disabled(timerViewModel.state != .notStarted)
+                .accessibilityLabel(Theme.Label.incrementDuration)
             }
-            .disabled(timerViewModel.state != .notStarted)
-            .accessibilityLabel(Theme.Label.incrementDuration)
+            .buttonStyle(TimerPressStyle())
         }
+        .padding(.top, Theme.TimerStyle.controlSize + Theme.Dimension.gearTopPadding)
     }
 
     private var resetButton: some View {
         HStack {
             Spacer()
-            Button {
-                timerViewModel.reset()
-            } label: {
-                Circle()
-                    .fill(Theme.ColorValue.buttonFill)
-                    .frame(
-                        width: Theme.Dimension.controlButtonSize,
-                        height: Theme.Dimension.controlButtonSize
-                    )
-                    .overlay {
-                        Image(systemName: Theme.Symbol.reset)
-                            .font(.title2.weight(.medium))
-                            .foregroundStyle(Theme.ColorValue.textPrimary)
-                    }
+            if timerViewModel.state == .paused {
+                Button {
+                    timerViewModel.reset()
+                } label: {
+                    Image(systemName: Theme.Symbol.reset)
+                        .font(.title2.weight(.medium))
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.Dimension.controlButtonSize, height: Theme.Dimension.controlButtonSize)
+                        .timerControlSurface(in: Circle())
+                }
+                .buttonStyle(TimerPressStyle())
+                .accessibilityLabel(Theme.Label.reset)
             }
-            .disabled(timerViewModel.state != .paused)
-            .accessibilityLabel(Theme.Label.reset)
         }
+        .frame(height: Theme.Dimension.controlButtonSize)
     }
 
     // MARK: - Helpers
@@ -385,8 +488,11 @@ struct GamePlaybackView: View {
                 } label: {
                     Image(systemName: Theme.Symbol.settings)
                         .font(.title3)
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                        .foregroundStyle(Theme.ColorValue.textPrimary)
+                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
+                        .timerControlSurface(in: Circle())
                 }
+                .buttonStyle(TimerPressStyle())
                 .accessibilityLabel(Theme.Label.settings)
             }
             .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)

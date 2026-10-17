@@ -30,6 +30,11 @@ on:
         required: false
         type: boolean
         default: false
+      force:
+        description: Rebuild unchanged inputs intentionally, with all existing gates
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -40,6 +45,11 @@ env:
   IOS_SCHEME: "Visual Timer"
   WATCH_SCHEME: "Visual Timer Watch Watch App"
   DERIVED_DATA_PATH: ".build/DerivedData"
+
+concurrency:
+  group: release-trains
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   resolve:
@@ -134,15 +144,53 @@ jobs:
           set -euo pipefail
           echo "::notice title=Inactive cron skipped::This schedule is not the active America/Halifax slot. No release train was built or uploaded."
 
-  ship:
+  changes:
+    name: Compare delivered build inputs
     needs: resolve
     if: needs.resolve.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      should_run: ${{ steps.changes.outputs.should_run }}
+      source_sha: ${{ steps.changes.outputs.source_sha }}
+      plan: ${{ steps.changes.outputs.plan }}
+      ios: ${{ steps.changes.outputs.ios }}
+      fingerprint_ios: ${{ steps.changes.outputs.fingerprint_ios }}
+    steps:
+      - name: Inspect train source tree
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.branch }}
+          sparse-checkout: .github
+
+      - name: Check out delivery guard from controller
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .release-control
+          sparse-checkout: .github
+
+      - name: Compare successful deliveries
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE_RELEASE: ${{ inputs.force || inputs.refresh_signing_profiles || false }}
+        run: >-
+          python3 .release-control/.github/scripts/release_delivery.py plan
+          --controller .release-control
+          --channel "${{ needs.resolve.outputs.channel }}"
+          --force "$FORCE_RELEASE"
+
+  ship:
+    needs: [resolve, changes]
+    if: needs.changes.outputs.should_run == 'true'
     name: Ship ${{ needs.resolve.outputs.channel }}
     runs-on: macos-26
-    concurrency:
-      group: release-trains-${{ needs.resolve.outputs.channel }}
-      cancel-in-progress: false
     env:
+      RELEASE_PLAN: ${{ needs.changes.outputs.plan }}
+      RELEASE_CONTROL_SCRIPT: ${{ github.workspace }}/.release-control/.github/scripts/release_delivery.py
       CHANNEL: ${{ needs.resolve.outputs.channel }}
       TRAIN_BRANCH: ${{ needs.resolve.outputs.branch }}
       APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
@@ -155,8 +203,15 @@ jobs:
       - name: Checkout train branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.TRAIN_BRANCH }}
+          ref: ${{ needs.changes.outputs.source_sha }}
           fetch-depth: 0
+
+      - name: Check out delivery recorder from controller
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .release-control
+          sparse-checkout: .github
 
       - name: Use release automation from workflow ref
         shell: bash
@@ -213,7 +268,7 @@ jobs:
               echo "ios_destination=generic/platform=iOS Simulator"
               echo "ios_simulator_udid="
             } >> "$GITHUB_OUTPUT"
-            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and unit tests will be skipped."
+            echo "::notice title=No concrete iOS simulator::Build-for-testing will use a generic iOS Simulator destination and iOS tests will be skipped."
           fi
 
       - name: Prepare result bundles
@@ -249,21 +304,21 @@ jobs:
             -resultBundlePath ".build/results/VisualTimer-watchOS-Build.xcresult" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Run iOS unit tests
+      - name: Run iOS tests
         shell: bash
         run: |
           set -euo pipefail
 
           simulator_id="${{ steps.destinations.outputs.ios_simulator_udid }}"
           if [ -z "$simulator_id" ]; then
-            echo "::notice title=Unit tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
+            echo "::notice title=iOS tests skipped::No concrete iOS simulator was available on this runner; build-for-testing remains the gate."
             exit 0
           fi
 
           xcrun simctl boot "$simulator_id" >/tmp/visualtimer-simctl-boot.log 2>&1 || true
           if ! xcrun simctl bootstatus "$simulator_id" -b; then
             cat /tmp/visualtimer-simctl-boot.log
-            echo "::notice title=Unit tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
+            echo "::notice title=iOS tests skipped::The runner's iOS simulator runtime did not boot; build-for-testing remains the gate."
             exit 0
           fi
 
@@ -274,7 +329,8 @@ jobs:
             -destination "${{ steps.destinations.outputs.ios_destination }}" \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -resultBundlePath ".build/results/VisualTimer-iOS-Tests.xcresult" \
-            -only-testing:"Visual TimerTests" \
+            -parallel-testing-enabled NO \
+            -maximum-concurrent-test-simulator-destinations 1 \
             CODE_SIGNING_ALLOWED=NO
 
       - name: Configure match SSH key
@@ -290,20 +346,27 @@ jobs:
           echo "GIT_SSH_COMMAND=ssh -i ~/.ssh/match_git_ssh_key -o IdentitiesOnly=yes" >> "$GITHUB_ENV"
 
       - name: Set up Ruby
-        if: env.APP_STORE_CONNECT_API_KEY_JSON != '' && env.MATCH_PASSWORD != '' && env.MATCH_GIT_SSH_KEY != ''
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
 
+      - name: Validate TestFlight metadata
+        if: env.CHANNEL == 'nightly' || env.CHANNEL == 'weekly'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle exec fastlane validate_testflight_metadata
+
       - name: Ship release channel
+        id: delivery
         if: env.APP_STORE_CONNECT_API_KEY_JSON != '' && env.MATCH_PASSWORD != '' && env.MATCH_GIT_SSH_KEY != ''
         shell: bash
         run: |
           set -euo pipefail
           api_key_path="$RUNNER_TEMP/app-store-connect-api-key.json"
           printf '%s' "$APP_STORE_CONNECT_API_KEY_JSON" > "$api_key_path"
-          export VISUAL_TIMER_APP_STORE_CONNECT_API_KEY_PATH="$api_key_path"
+          export APP_STORE_CONNECT_API_KEY_PATH="$api_key_path"
           case "$CHANNEL" in
             nightly|weekly)
               bundle exec fastlane beta channel:"$CHANNEL"
@@ -316,6 +379,7 @@ jobs:
               exit 1
               ;;
           esac
+          python3 "$RELEASE_CONTROL_SCRIPT" record --platform ios
 
       - name: Skip distribution without secrets
         if: env.APP_STORE_CONNECT_API_KEY_JSON == '' || env.MATCH_PASSWORD == '' || env.MATCH_GIT_SSH_KEY == ''
@@ -329,3 +393,12 @@ jobs:
           printf -v missing_csv '%s, ' "${missing[@]}"
           missing_csv="${missing_csv%, }"
           echo "::notice title=Compile-only release train::Skipping distribution for $CHANNEL; missing secrets: $missing_csv."
+
+      - name: Retain successful ${{ needs.resolve.outputs.channel }} ios delivery receipt
+        if: success() && steps.delivery.outputs.ios_delivered == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-delivery-v1-${{ needs.resolve.outputs.channel }}-ios-${{ github.run_attempt }}-${{ needs.changes.outputs.fingerprint_ios }}
+          path: ${{ runner.temp }}/release-receipts/ios.json
+          retention-days: 90
+          if-no-files-found: error

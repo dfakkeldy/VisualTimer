@@ -1,0 +1,24 @@
+{
+  "name": "Turn Timer",
+  "short_name": "Turn Timer",
+  "description": "A visual sequence timer for turns, routines, and real-world countdowns.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071421",
+  "theme_color": "#071421",
+  "icons": [
+    {
+      "src": "./turn-timer-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./turn-timer-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

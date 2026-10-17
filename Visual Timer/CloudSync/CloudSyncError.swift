@@ -9,6 +9,7 @@ enum CloudSyncError: LocalizedError {
     case quotaExceeded
     case zoneNotFound
     case unknownRecordType(String)
+    case recordIDMismatch(recordName: String, payloadID: String)
     case syncFailed(String)
 
     var errorDescription: String? {
@@ -24,9 +25,11 @@ enum CloudSyncError: LocalizedError {
         case .quotaExceeded:
             return "iCloud storage is full."
         case .zoneNotFound:
-            return "Template sync zone was not found."
+            return "Cloud sync zone was not found."
         case .unknownRecordType(let recordType):
             return "Unknown CloudKit record type: \(recordType)."
+        case .recordIDMismatch(let recordName, let payloadID):
+            return "CloudKit record ID \(recordName) does not match payload ID \(payloadID)."
         case .syncFailed(let message):
             return message
         }

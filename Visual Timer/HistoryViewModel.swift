@@ -5,9 +5,12 @@ final class HistoryViewModel: ObservableObject {
 
     @Published var records: [GameRecord] = []
 
-    private let store = HistoryStore()
+    var onRecordDeleted: ((UUID) -> Void)?
 
-    init() {
+    private let store: HistoryStore
+
+    init(store: HistoryStore = HistoryStore()) {
+        self.store = store
         loadRecords()
     }
 
@@ -18,6 +21,13 @@ final class HistoryViewModel: ObservableObject {
     func deleteRecord(id: UUID) {
         store.delete(id: id)
         records.removeAll { $0.id == id }
+        onRecordDeleted?(id)
+    }
+
+    func recordSaved(_ record: GameRecord) {
+        records.removeAll { $0.id == record.id }
+        records.append(record)
+        records.sort { $0.playedAt > $1.playedAt }
     }
 
     func exportURL(for record: GameRecord) -> URL? {

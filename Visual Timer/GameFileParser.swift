@@ -91,6 +91,7 @@ struct GameFileParser {
             output += "time: \(round.durationSeconds)\n"
             output += "paused: \(round.startPaused)\n"
             output += "active: \(round.isActive)\n"
+            output += "countsAsPlayer: \(round.countsAsPlayer)\n"
             output += "\n"
         }
 
@@ -107,6 +108,7 @@ struct GameFileParser {
         var durationSeconds: Int?
         var startPaused = false
         var isActive = true
+        var countsAsPlayer = true
 
         func build(errors: inout [ParseError]) -> Round? {
             guard let name else {
@@ -124,7 +126,8 @@ struct GameFileParser {
                 emoji: emoji,
                 durationSeconds: durationSeconds,
                 startPaused: startPaused,
-                isActive: isActive
+                isActive: isActive,
+                countsAsPlayer: countsAsPlayer
             )
         }
     }
@@ -156,6 +159,8 @@ struct GameFileParser {
             builder.startPaused = value.lowercased() == "true"
         case "active":
             builder.isActive = value.lowercased() != "false"
+        case "countsasplayer", "counts_as_player", "counts as player":
+            builder.countsAsPlayer = value.lowercased() != "false"
         default:
             break
         }

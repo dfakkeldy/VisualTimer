@@ -1,118 +1,170 @@
 # App Store Readiness
 
-Last updated: 2026-07-01
+Re-checked: 2026-10-06 UTC. Status: **preparation in progress; submission on hold**.
+Account details and tester identities belong in the private release ledger, not
+this public repository.
 
-This document turns the App Store pre-flight checklist into Turn Timer-specific
-work. It is not proof that the app is ready; it is the current checklist for
-getting there.
+## Current evidence
 
-## Current Evidence
+| Surface | Verified state |
+|---|---|
+| `nightly` | `a637dbbccf8f4fcca9029273b2ae2e31a58beaf9` (6 Oct, PR #103 merge). Exact head `8a04cca2` passed [CI 37457703798](https://github.com/dfakkeldy/VisualTimer/actions/runs/37457703798). TestFlight upload for this SHA is not recorded here. |
+| `weekly` | `d1896f2f4a29fb8c75a986837b7d7c65dc1eb59a` (13 Aug) |
+| `main` | `0956da6e5b9b8e7c2a1b19ed0b29c694029cf866` (7 Aug) |
+| Native branch CI | [36335355019](https://github.com/dfakkeldy/VisualTimer/actions/runs/36335355019): exact nightly SHA; iOS build, watchOS build and iOS tests ran successfully. Web job also passed. |
+| Internal delivery | [37313869043](https://github.com/dfakkeldy/VisualTimer/actions/runs/37313869043), 5 Oct: exact nightly SHA, 75 unit tests passed; receipts confirm **1.0 (73)** uploaded, processed and distributed internally. |
+| External delivery | [36469910199](https://github.com/dfakkeldy/VisualTimer/actions/runs/36469910199), 28 Sep: exact weekly SHA, 73 unit tests passed; receipts confirm **1.0 (66)** uploaded, processed and distributed externally. This is an older source payload. |
+| Later runs | [37333265437](https://github.com/dfakkeldy/VisualTimer/actions/runs/37333265437) was green with ship skipped. [37367467449](https://github.com/dfakkeldy/VisualTimer/actions/runs/37367467449) and [37373007733](https://github.com/dfakkeldy/VisualTimer/actions/runs/37373007733) failed with resolver cancelled and ship skipped. These are not new uploads. |
+| App Store review / live | Current App Store version, selected build, review approval, release setting and territory availability remain unverified. Beta distribution does not establish store approval. |
+| Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 6 Oct. |
+| Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
 
-- Project targets: iOS 18.0 and watchOS 11.0.
-- Local Xcode: 26.6.
-- Xcode project Swift setting: `SWIFT_VERSION = 5.0`.
-- Bundle ID: `Dan.Visual-Timer`.
-- StoreKit product ID: `turntimer.pro.unlock`.
-- Release policy: `nightly` internal TestFlight, `weekly` external TestFlight,
-  `main` App Store Connect upload/submission.
-- GitHub Pages source: `main` `/docs`.
-- Latest live audit found no open PRs, but `nightly` is ahead of `main`.
+The project supports iPhone/iPad (iOS 18+) and embeds its widget extension.
+Since PR #103 it also embeds the watchOS 11+ companion: iOS depends on the
+Watch target, the Embed Watch Content phase copies it, and the Watch app uses
+`Dan.Visual-Timer.watchkitapp` with `WKWatchOnly=NO` and
+`WKCompanionAppBundleIdentifier=Dan.Visual-Timer`. Signed delivery still needs a
+matching provisioning profile for `Dan.Visual-Timer.watchkitapp` and paired
+hardware acceptance. Earlier uploads (1.0 (73) and older) predate the embedded
+companion. Marketing version is `1.0`; source build `1` is replaced by
+Fastlane's next TestFlight number. CI pins Xcode 26.6. The project build setting
+is not the uploaded build number.
 
-## Next Ten Steps
+Documentation head `54a806bc1c24bc6d2f63357d303a035f4db173e7` passed
+[CI 37398433584](https://github.com/dfakkeldy/VisualTimer/actions/runs/37398433584)
+on 6 Oct: web job and native gate passed; native logs show 75 unit tests plus
+6 UI tests, zero failures. This is documentation CI, not a new upload.
 
-1. Promote or backport the desired `nightly` app work so `main` represents the
-   actual submission candidate.
-2. Run hosted CI on the candidate branch and confirm the `Build gate + tests`
-   check is green.
-3. Refresh signing profiles from the release workflow if iCloud, widget, watch,
-   or App Group entitlements changed.
-4. Produce a processed internal TestFlight build for the `nightly` group.
-5. Run signed-device smoke tests for timer playback, templates, Pro purchase,
-   restore, import/export, CloudKit, widgets, watch, and failure states.
-6. Deploy required CloudKit schemas to production after signed validation.
-7. Publish public support and privacy-policy URLs and add the privacy policy
-   link in-app.
-8. Complete App Store Connect metadata, IAP metadata, age rating, export
-   compliance, and privacy labels.
-9. Capture final screenshots from the promoted build, validate dimensions, and
-   upload assets.
-10. Promote through `weekly` to `main`, run the `appstore` lane, verify build
-    processing, attach the build and IAP to review, then submit.
+## Release gates and permissions
 
-## Pre-Flight Checklist
+Keep `nightly` internal testers → `weekly` external testers → `main` App Store.
+All three branches currently require strict/up-to-date **Build gate + tests**,
+with admin enforcement and zero required review approvals; no rulesets were
+listed. Current nightly branch CI includes unit and UI test targets and fails
+without a runnable iOS simulator. The default-main release workflow limits
+testing to `Visual TimerTests` and can skip those tests without a simulator;
+nightly workflow files differ. Inspect the actually executed workflow ref and
+steps rather than assuming identical gate strength.
 
-### Build and Signing
+Release workflows execute from `main`, check out the channel's source, and
+replace `.ruby-version`, `Gemfile` and `fastlane/` from the workflow-ref copy.
+Record both source and automation SHA. A `main` app-path push can trigger an
+upload. The `app_store` lane skips metadata/screenshots. Review submission and
+automatic release are separate controls, default false; both repository
+variables were false on 6 Oct. See [Fastlane](../../fastlane/README.md).
 
-- [ ] Built with Xcode 26 / iOS 26 SDK or newer required by App Store policy.
-- [ ] Release build tested, not only Debug simulator builds.
-- [ ] `ITSAppUsesNonExemptEncryption` set in the shipping Info.plist.
-- [ ] App Store provisioning profiles include iCloud and App Group entitlements
-  for every shipped target.
-- [ ] IPv6-only network behavior is acceptable.
-- [ ] No private or undocumented API usage.
+This preparation includes scoped source repairs, documentation and draft assets. Do not backport
+features directly to weekly/main, promote, dispatch a release, upload, submit,
+refresh signing, change protections/pipelines, set prices, or accept legal
+answers/agreements without exact authorization. Documentation PRs stay drafts.
 
-### Privacy
+## Blockers before choosing a candidate
 
-- [ ] `PrivacyInfo.xcprivacy` is in the app target.
-- [ ] Required Reason APIs are declared with approved reason codes.
-- [ ] Privacy policy URL is public and set in App Store Connect.
-- [ ] Privacy policy is reachable inside the app.
-- [ ] App Privacy labels match the final binary and CloudKit behavior.
-- [ ] No tracking, ads, or analytics SDKs are introduced without updating docs,
-  consent, and labels.
+1. **In-app privacy link:** Settings now exposes the existing HTTPS policy URL
+   (`settings.privacy-policy`). The URL returned HTTP 200 on 6 Oct. Verify the
+   visible route on the selected candidate; archive/ASC privacy answers remain
+   separate from link availability.
+2. **Core timer reliability:** A bounded forced-suspension simulator probe
+   reproduced callback-count/countdown versus Date/pie divergence. The narrow
+   repair uses existing elapsed Date state for both, reconciles on pause and
+   iOS activation, and completes once. It preserves one next round starting on
+   return, with no catch-up loop or new background alarm behavior. A new
+   deterministic pause regression failed before the repair (60 vs 20); all 80
+   unit tests passed afterward. Physical manual lock/background/audio and
+   current candidate UI remain acceptance checks. The separate displayed session
+   elapsed counter still counts callbacks; no session-time correction is claimed.
+3. **Watch packaging and saved templates:** PR #103 embeds the companion and
+   adds `WatchTemplateConnectivity`, which sends full template snapshots over
+   WatchConnectivity (application context plus file transfer) with atomic
+   writes, revision ordering, latest-state retry and legacy reads. Revoking Pro
+   clears Watch templates without deleting the iPhone library. Unit tests cover
+   the transfer payloads; signed paired-device delivery is unverified. Verify
+   it on hardware before promising saved-template sync.
+   Quick timer/starter templates are separate paths. The Watch timer source
+   repairs the fixed Quick Timer digits and its silent completion. On screen,
+   completion now plays the selected sound with a haptic. Off-screen completion
+   uses a permission-gated local notification that is cancelled or rescheduled
+   on pause, resume, reset and end. There is no extended runtime and no
+   guaranteed background execution ([plan](../watch-quality-plan.md)). Physical
+   Watch acceptance of notifications, sound, haptics and Always On is pending.
+   [Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity)
+   describes cross-device transfers.
+4. **Paid/production sync:** source implements purchase, cancellation, pending
+   purchase, transaction verification and restore. The StoreKit config is
+   connected to the launch scheme. ASC IAP status, Paid Apps Agreement,
+   TestFlight sandbox purchase/restore, signed entitlements and production
+   CloudKit schema are not proved by source or unit tests.
+5. **Candidate/screenshots:** nightly has newer timer UI/tests than weekly;
+   weekly has substantial app changes absent from main. Select one payload,
+   clear blockers, pass native CI and internal/external acceptance, then
+   capture that build. Do not describe nightly features using old main images.
 
-### Metadata
+The roughly 50 open RW issues are an audit backlog, not 50 verified current
+blockers. Current source already normalizes imported durations/repeat counts/
+palette indices; cancels final-round timers; includes timestamp reasons; maps
+widget signing; and configures StoreKit testing. Reproduce critical reports on
+the selected SHA. Prioritize crashes, timing, purchase/restore, data loss and
+unusable layout over cosmetic work.
 
-- [ ] App name is available and within 30 characters.
-- [ ] Subtitle is within 30 characters.
-- [ ] Description is accurate and under 4000 characters.
-- [ ] Keywords fit the 100-byte field and avoid trademark/pricing terms.
-- [ ] Category selection matches the app.
-- [ ] Copyright is current.
-- [ ] Support and privacy URLs work over HTTPS.
-- [ ] Review notes explain Pro, iCloud, widgets, and watch behavior.
+## Privacy and capabilities
 
-### StoreKit
+- iOS, Watch, and widget each have their own `PrivacyInfo.xcprivacy`. All three
+  declare tracking false and an empty collected-data list. iOS and Watch declare
+  UserDefaults `CA92.1` and FileTimestamp `C617.1`. The widget declares
+  UserDefaults `CA92.1`. Verify the archive privacy report and that each shipped
+  bundle contains its manifest. A signed archive or upload has not proven that
+  yet.
+- No third-party app SDK package, ads/tracking/analytics SDK or developer-run
+  account flow was found in Apple source. Local templates/history and purchase
+  entitlement state are stored on-device. Pro uses private CloudKit container
+  `iCloud.Dan.Visual-Timer`, zones `TurnTimerTemplates` / `TurnTimerHistory`,
+  types `Template` / `HistoryRecord`. Paid entitlement enables sync
+  automatically; policy and privacy answers must describe actual behavior.
+- iOS declares CloudKit and `group.Dan.Visual-Timer`; widget/Watch declare the
+  App Group. Sound preferences use `NSUbiquitousKeyValueStore`, but its
+  key-value-store entitlement is absent from the checked-in iOS file. Existing
+  Oct 5 and this PR CI simulator logs explicitly warn about the missing store
+  identifier. That does not establish signed-production failure. Verify
+  archive/profile capability coverage; do not refresh profiles in this pass.
+- No app account is created, so account deletion is not applicable to the
+  current design. Local deletion/private iCloud retention still need truthful
+  policy/support wording.
+- Proposed privacy answers: no tracking and no developer-collected app data.
+  Validate private CloudKit/support-email flows against Apple's definition
+  before the owner confirms **Data Not Collected**. An empty manifest list
+  does not complete the ASC questionnaire.
+  [App privacy details](https://developer.apple.com/app-store/app-privacy-details/)
+- `ITSAppUsesNonExemptEncryption=false` is source configuration, not a legal
+  determination. Apple system CloudKit/StoreKit services are used. Owner
+  confirmation remains for export/territories, content rights, updated
+  age/social-media questionnaire and DSA status. No declaration was submitted.
 
-- [ ] `turntimer.pro.unlock` exists in App Store Connect as a non-consumable.
-- [ ] Price matches the $4.99 one-time strategy.
-- [ ] Purchase, cancel, interrupted purchase, and restore flows are tested in
-  StoreKit local testing and TestFlight/sandbox.
-- [ ] Pro gates only reuse and portability features.
+## Prepared packet and pending ASC read
 
-### Screenshots
+[Submission packet](submission-packet.md) contains copy-ready metadata and
+IAP/review notes. [Screenshot plan](../marketing/screenshot-plan.md) gives
+current sizes and fixtures. [Acceptance](signed-device-smoke.md) keeps focused
+release checks; no result is pre-filled.
 
-- [ ] Screenshots show the actual promoted app UI.
-- [ ] Required iPhone sizes are captured.
-- [ ] iPad screenshots are prepared if the app is submitted as universal.
-- [ ] No login screens, splash-only images, placeholder data, competitor marks,
-  or price claims.
-- [ ] Widget and watch visuals are used only if the promoted build proves them.
+When the owner next signs in, read current app/version/selected build, locales,
+name, screenshots, IAP state/price, review contact, privacy/age/content-rights/
+export answers, agreements/DSA and release settings. Resolve only consequential
+choices with the owner. Helper project dates/prices are planning data, not store
+configuration or authorization.
 
-### CloudKit, Widgets, and Watch
+Apple currently requires Xcode 26+ / corresponding SDK 26+ for these platforms;
+iOS 18 meets the current iOS 13 minimum. Inspect updated age questions and
+September social-media questions in ASC.
+[Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)
 
-- [ ] CloudKit container `iCloud.Dan.Visual-Timer` is enabled for the app ID.
-- [ ] Development schema is deployed to production for shipping record types.
-- [ ] Signed iCloud validation covers create, fetch, delete, and cross-device
-  propagation.
-- [ ] App Group `group.Dan.Visual-Timer` is on all relevant identifiers if
-  widgets ship.
-- [ ] Watch target builds and launches from the release candidate.
+Continuation validation on 6 Oct ran one serial, resource-gated iOS regression
+and the 80-test unit suite. Independent source review found no remaining
+correctness issues after removing a duplicate test annotation. Current-head
+hosted native/Watch CI and UI evidence are tracked separately. No credential,
+store write, upload, promotion, submission or release occurred.
 
-## Review Notes Draft
-
-```text
-Turn Timer is a visual sequence timer for turns, routines, and reusable
-countdowns. The quick timer, starter templates, basic playback, recent history,
-and one custom saved template are free.
-
-Turn Timer Pro is a one-time non-consumable purchase with product ID
-turntimer.pro.unlock. Pro unlocks reuse and portability features such as
-additional saved templates, full history/export, iCloud sync, sharing, and
-widget/watch convenience where enabled in the submitted build.
-
-iCloud sync uses the user's private CloudKit database under container
-iCloud.Dan.Visual-Timer. If widgets are included in the submitted build, they
-use App Group group.Dan.Visual-Timer for compact template snapshots and open
-the app for active timer playback.
-```
+Exact repair-head hosted [CI 37410738760](https://github.com/dfakkeldy/VisualTimer/actions/runs/37410738760)
+completed successfully: 80 unit tests, six UI tests, ten web tests and Watch
+compilation. Local regression failed before the repair and the complete local
+80-test unit suite passed afterward. These results do not establish physical
+background alarm delivery or paired Watch-template transport.

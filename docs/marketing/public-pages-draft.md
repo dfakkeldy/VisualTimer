@@ -1,10 +1,13 @@
 # Public Support and Privacy Pages
 
-Last updated: 2026-07-03
+Re-checked: 2026-10-06 UTC
 
-These are the public support and privacy URLs for App Store Connect. Verify
-before submission that Dan is comfortable using the current Gmail address; a
-Kinnoki-domain address may be preferable later.
+Both URLs below returned HTTPS 200 on 6 Oct. They are existing public contacts;
+a domain/email migration is not a launch prerequisite. In-app privacy-policy
+access is missing in current source and remains a release blocker. The policy
+says sync is chosen by the user, while Pro entitlement enables sync automatically
+in source: reconcile that wording before final privacy confirmation. No public
+policy change or legal attestation is made by this audit.
 
 - Support URL: `https://dfakkeldy.github.io/VisualTimer/support.html`
 - Privacy Policy URL: `https://dfakkeldy.github.io/VisualTimer/privacy.html`

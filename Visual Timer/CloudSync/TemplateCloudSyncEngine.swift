@@ -23,6 +23,7 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
     private let userDefaults: UserDefaults
     private var syncEngine: CKSyncEngine?
     private var needsInitialTemplateSync = false
+    private var inFlightRefreshTask: Task<Void, Never>?
 
     var statusText: String {
         switch syncState {
@@ -94,12 +95,25 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
             CKSyncEngine.PendingRecordZoneChange.saveRecord(mapper.recordID(for: template.id))
         }
         syncEngine.state.add(pendingRecordZoneChanges: pendingChanges)
-        Task {
-            await sendChanges()
-        }
     }
 
     func refreshNow() async {
+        guard syncEngine != nil else { return }
+        if let inFlightRefreshTask {
+            await inFlightRefreshTask.value
+            return
+        }
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await performManualRefresh()
+        }
+        inFlightRefreshTask = task
+        await task.value
+        inFlightRefreshTask = nil
+    }
+
+    private func performManualRefresh() async {
         guard let syncEngine else { return }
         do {
             syncState = .syncing
@@ -115,7 +129,6 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
     private func start() async {
         guard syncEngine == nil else {
             queueLocalTemplates(templateLibrary.listTemplates())
-            await refreshNow()
             return
         }
 
@@ -137,7 +150,6 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         engine.state.add(pendingDatabaseChanges: [
             .saveZone(CKRecordZone(zoneID: configuration.zoneID)),
         ])
-        await sendChanges()
     }
 
     private func stop() {
@@ -262,6 +274,9 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
                             title: localDocument.title,
                             roundCount: localDocument.game.rounds.count,
                             repeatCount: localDocument.game.roundCount,
+                            totalSeconds: localDocument.game.activeRounds.reduce(0) { total, round in
+                                total + round.durationSeconds
+                            } * localDocument.game.roundCount,
                             modifiedAt: localDocument.modifiedAt,
                             url: URL(fileURLWithPath: "")
                         ),
@@ -277,8 +292,7 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
 
         for deletion in changes.deletions where deletion.recordType == TemplateSyncConfiguration.recordType {
             guard let templateID = UUID(uuidString: deletion.recordID.recordName) else { continue }
-            try? templateLibrary.deleteTemplate(id: templateID)
-            appliedChanges = true
+            appliedChanges = applyRemoteTemplateDeletion(id: templateID) || appliedChanges
         }
 
         if appliedChanges {
@@ -286,16 +300,39 @@ final class TemplateCloudSyncEngine: ObservableObject, CKSyncEngineDelegate, @un
         }
     }
 
-    private func sendChanges() async {
-        guard let syncEngine else { return }
-        do {
-            syncState = .syncing
-            try await syncEngine.sendChanges()
-            lastSyncDate = Date()
-            syncState = .idle
-        } catch {
-            syncState = .failed(CloudSyncError.from(error).localizedDescription)
+    @discardableResult
+    func applyRemoteTemplateDeletion(id templateID: UUID, lastSuccessfulSyncDate: Date? = nil) -> Bool {
+        let syncDate = lastSuccessfulSyncDate ?? lastSyncDate
+        if let localDocument = try? templateLibrary.loadDocument(id: templateID),
+           shouldPreserveLocalChange(modifiedAt: localDocument.modifiedAt, lastSuccessfulSyncDate: syncDate) {
+            queueLocalTemplateDocument(localDocument)
+            return false
         }
+
+        try? templateLibrary.deleteTemplate(id: templateID)
+        return true
+    }
+
+    private func shouldPreserveLocalChange(modifiedAt: Date, lastSuccessfulSyncDate: Date?) -> Bool {
+        guard let lastSuccessfulSyncDate else { return true }
+        return modifiedAt > lastSuccessfulSyncDate
+    }
+
+    private func queueLocalTemplateDocument(_ document: TurnTimerTemplateDocument) {
+        let game = document.game
+        queueLocalTemplates([
+            SavedTemplate(
+                id: document.templateID,
+                title: document.title,
+                roundCount: game.activeRounds.count,
+                repeatCount: game.roundCount,
+                totalSeconds: game.activeRounds.reduce(0) { total, round in
+                    total + round.durationSeconds
+                } * game.roundCount,
+                modifiedAt: document.modifiedAt,
+                url: URL(fileURLWithPath: "")
+            ),
+        ])
     }
 
     private func saveStateSerialization(_ serialization: CKSyncEngine.State.Serialization) {
