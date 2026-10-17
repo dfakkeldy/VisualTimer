@@ -36,6 +36,8 @@
 		EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020D0000000000000001 /* TemplateImportExport.swift */; };
 		EE00010E0000000000000001 /* TemplateDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020E0000000000000001 /* TemplateDocument.swift */; };
 		EE00010F0000000000000001 /* TimerVisualProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE00020F0000000000000001 /* TimerVisualProgress.swift */; };
+		EE0001100000000000000001 /* WatchTimerAlertCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002100000000000000001 /* WatchTimerAlertCoordinator.swift */; };
+		EE0001110000000000000001 /* WatchQuickTimerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0002110000000000000001 /* WatchQuickTimerViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +163,8 @@
 		EE00020C0000000000000001 /* HistoryDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/HistoryDocument.swift"; sourceTree = "<group>"; };
 		EE00020D0000000000000001 /* TemplateImportExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TemplateImportExport.swift"; sourceTree = "<group>"; };
 		EE00020E0000000000000001 /* TemplateDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/TemplateDocument.swift"; sourceTree = "<group>"; };
+		EE0002100000000000000001 /* WatchTimerAlertCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WatchTimerAlertCoordinator.swift"; sourceTree = "<group>"; };
+		EE0002110000000000000001 /* WatchQuickTimerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WatchQuickTimerViewModel.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -687,6 +691,8 @@
 				EE00010C0000000000000001 /* HistoryDocument.swift in Sources */,
 				EE00010D0000000000000001 /* TemplateImportExport.swift in Sources */,
 				EE00010E0000000000000001 /* TemplateDocument.swift in Sources */,
+				EE0001100000000000000001 /* WatchTimerAlertCoordinator.swift in Sources */,
+				EE0001110000000000000001 /* WatchQuickTimerViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -80,7 +80,13 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    clears Watch templates without deleting the iPhone library. Unit tests cover
    the transfer payloads; signed paired-device delivery is unverified. Verify
    it on hardware before promising saved-template sync.
-   Quick timer/starter templates are separate paths.
+   Quick timer/starter templates are separate paths. The Watch timer source
+   repairs the fixed Quick Timer digits and its silent completion. On screen,
+   completion now plays the selected sound with a haptic. Off-screen completion
+   uses a permission-gated local notification that is cancelled or rescheduled
+   on pause, resume, reset and end. There is no extended runtime and no
+   guaranteed background execution ([plan](../watch-quality-plan.md)). Physical
+   Watch acceptance of notifications, sound, haptics and Always On is pending.
    [Watch Connectivity](https://developer.apple.com/documentation/watchconnectivity)
    describes cross-device transfers.
 4. **Paid/production sync:** source implements purchase, cancellation, pending

@@ -10,6 +10,13 @@ struct TimerVisualProgress: Equatable {
         currentRunStartedAt != nil
     }
 
+    /// The exact moment a running countdown reaches zero, or nil while it
+    /// is idle or paused. Completion notifications are scheduled for this date.
+    var finishDate: Date? {
+        guard let currentRunStartedAt else { return nil }
+        return currentRunStartedAt.addingTimeInterval(totalDuration - elapsedBeforeCurrentRun)
+    }
+
     init(totalDuration: Int) {
         self.init(
             totalDuration: TimeInterval(max(totalDuration, 0)),
