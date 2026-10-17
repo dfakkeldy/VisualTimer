@@ -55,6 +55,10 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
         XCTAssertTrue(waitForLabel("Pause", on: primary))
         XCTAssertTrue(element("watch.quick.time", in: app).waitForExistence(timeout: 2))
         XCTAssertFalse(element("watch.quick.minutes", in: app).exists, "Duration editing is idle-only.")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Watch Quick Timer"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
 
         primary.tap()
         XCTAssertTrue(waitForLabel("Resume", on: primary))
