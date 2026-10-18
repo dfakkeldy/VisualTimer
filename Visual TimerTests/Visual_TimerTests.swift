@@ -676,6 +676,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertThrowsError(try mapper.document(from: mismatchedRecord))
     }
 
+    @MainActor
     func testHistoryCloudRecordMapperRejectsFutureSchemaVersion() throws {
         let history = makeHistoryRecords(count: 1)[0]
         let futureDocument = HistoryDocument(
@@ -868,6 +869,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(CloudSyncError.zoneNotFound.localizedDescription, "Cloud sync zone was not found.")
     }
 
+    @MainActor
     func testCloudKitValidationRunnerChecksTemplateAndHistoryResources() async {
         final class ValidationProbe {
             var savedZoneNames: [String] = []
