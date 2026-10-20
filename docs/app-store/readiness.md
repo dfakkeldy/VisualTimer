@@ -1,10 +1,11 @@
 # App Store Readiness
 
-Re-checked: 2026-10-17 UTC. Status: **preparation in progress; submission on hold**.
+Release checkpoint: 2026-10-17 UTC; historical main upload receipt checked
+2026-10-20. Status: **preparation in progress; submission on hold**.
 Account details and tester identities belong in the private release ledger, not
 this public repository.
 
-## Current evidence
+## Dated release evidence
 
 | Surface | Verified state |
 |---|---|
@@ -14,7 +15,7 @@ this public repository.
 | Native CI | [39053772715](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053772715): exact #114 head `f4b626663d82d04dee5f5a9dbc7e4c65e62cc889`. Web job passed. Native gate passed: 115 unit tests, 6 iOS UI tests, Watch control test with five fresh cycles, release-control checks. |
 | Internal delivery | [39052587053](https://github.com/dfakkeldy/VisualTimer/actions/runs/39052587053), 17 Oct: source `c253fec98aefbf70a69b4914fc8f73f21715dbde`, 115 unit tests; receipts confirm **1.0 (75)** uploaded, processed and distributed internally. Match installed `match AppStore Dan.Visual-Timer.watchkitapp`. |
 | External delivery | [39053761895](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053761895), 17 Oct: source `a6f18e7ccdc4a799c73f80dfa2ea42c286c0fd3a`, 115 unit tests; receipts confirm **1.0 (76)** uploaded, processed and distributed to External testers at 17:39 UTC. Same Watch App Store profile installed. |
-| Main upload | [39055266912](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912) started on the main push after #114. Ship appstore was still in progress at re-check; no finished upload, processing or distribution receipts. |
+| Main upload | [39055266912](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375) completed successfully after #114: **1.0 (77)** uploaded on 17 Oct at 18:05:26 UTC. `submit_for_review=false` and `automatic_release=false`. This historical upload does not establish a current selected build, App Review decision, public release or physical-device acceptance. |
 | App Store review / live | Current App Store version, selected build, review approval, release setting and territory availability remain unverified. Beta distribution does not establish store approval. The 17 Oct nightly and weekly jobs ran with `APP_STORE_SUBMIT_FOR_REVIEW=false` and `APP_STORE_AUTOMATIC_RELEASE=false`. Public release stays manual. |
 | Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 17 Oct. |
 | Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
@@ -32,9 +33,10 @@ The project build setting is not the uploaded build number.
 ## Release gates and permissions
 
 Keep `nightly` internal testers → `weekly` external testers → `main` App Store.
-All three branches currently require strict/up-to-date **Build gate + tests**,
-with admin enforcement and zero required review approvals; no rulesets were
-listed. Current nightly branch CI includes unit and UI test targets and fails
+Protection metadata checked October 20 requires **Build gate + tests** on all
+three branches, with admin enforcement and zero required review approvals.
+Weekly and Main require an up-to-date base; Nightly does not. Recheck the current
+rules before each promotion. Nightly branch CI includes unit and UI test targets and fails
 without a runnable iOS simulator. The default-main release workflow limits
 testing to `Visual TimerTests` and can skip those tests without a simulator;
 nightly workflow files differ. Inspect the actually executed workflow ref and

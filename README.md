@@ -6,11 +6,15 @@ starter templates for common timed sessions.
 
 ## Status
 
-Re-checked 2026-10-17: nightly build **1.0 (75)** has upload, processing and
+October 17 release checkpoint (main upload receipt checked October 20): nightly
+build **1.0 (75)** has upload, processing and
 internal-distribution receipts; weekly build **1.0 (76)** has upload, processing
-and external-distribution receipts. Main now includes that Weekly payload
+and external-distribution receipts. The October 17 Main promotion included that
+Weekly payload
 ([PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114)). The automatic
-main App Store Connect upload is in progress and unverified. App Store
+main App Store Connect upload completed with build **1.0 (77)** on October 17
+at 18:05:26 UTC ([receipt](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375)).
+Submission and automatic-release controls were both false. Current App Store
 review/live state is unverified; public release stays manual. The
 [readiness ledger](docs/app-store/readiness.md) records exact SHAs, CI,
 blockers and the required `nightly` → `weekly` → `main` ladder.
