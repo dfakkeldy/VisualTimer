@@ -1,46 +1,42 @@
 # App Store Readiness
 
-Re-checked: 2026-10-06 UTC. Status: **preparation in progress; submission on hold**.
+Release checkpoint: 2026-10-17 UTC; historical main upload receipt checked
+2026-10-20. Status: **preparation in progress; submission on hold**.
 Account details and tester identities belong in the private release ledger, not
 this public repository.
 
-## Current evidence
+## Dated release evidence
 
 | Surface | Verified state |
 |---|---|
-| `nightly` | `a637dbbccf8f4fcca9029273b2ae2e31a58beaf9` (6 Oct, PR #103 merge). Exact head `8a04cca2` passed [CI 37457703798](https://github.com/dfakkeldy/VisualTimer/actions/runs/37457703798). TestFlight upload for this SHA is not recorded here. |
-| `weekly` | `d1896f2f4a29fb8c75a986837b7d7c65dc1eb59a` (13 Aug) |
-| `main` | `0956da6e5b9b8e7c2a1b19ed0b29c694029cf866` (7 Aug) |
-| Native branch CI | [36335355019](https://github.com/dfakkeldy/VisualTimer/actions/runs/36335355019): exact nightly SHA; iOS build, watchOS build and iOS tests ran successfully. Web job also passed. |
-| Internal delivery | [37313869043](https://github.com/dfakkeldy/VisualTimer/actions/runs/37313869043), 5 Oct: exact nightly SHA, 75 unit tests passed; receipts confirm **1.0 (73)** uploaded, processed and distributed internally. |
-| External delivery | [36469910199](https://github.com/dfakkeldy/VisualTimer/actions/runs/36469910199), 28 Sep: exact weekly SHA, 73 unit tests passed; receipts confirm **1.0 (66)** uploaded, processed and distributed externally. This is an older source payload. |
-| Later runs | [37333265437](https://github.com/dfakkeldy/VisualTimer/actions/runs/37333265437) was green with ship skipped. [37367467449](https://github.com/dfakkeldy/VisualTimer/actions/runs/37367467449) and [37373007733](https://github.com/dfakkeldy/VisualTimer/actions/runs/37373007733) failed with resolver cancelled and ship skipped. These are not new uploads. |
-| App Store review / live | Current App Store version, selected build, review approval, release setting and territory availability remain unverified. Beta distribution does not establish store approval. |
-| Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 6 Oct. |
+| `nightly` | `c253fec98aefbf70a69b4914fc8f73f21715dbde` (17 Oct, PR #117) |
+| `weekly` | `a6f18e7ccdc4a799c73f80dfa2ea42c286c0fd3a` (17 Oct, [PR #113](https://github.com/dfakkeldy/VisualTimer/pull/113) merge) |
+| `main` | `95c9fe87b5b764bc21a309eee866410d50312831` (17 Oct, [PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114) merge of Weekly `a6f18e7ccdc4a799c73f80dfa2ea42c286c0fd3a`) |
+| Native CI | [39053772715](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053772715): exact #114 head `f4b626663d82d04dee5f5a9dbc7e4c65e62cc889`. Web job passed. Native gate passed: 115 unit tests, 6 iOS UI tests, Watch control test with five fresh cycles, release-control checks. |
+| Internal delivery | [39052587053](https://github.com/dfakkeldy/VisualTimer/actions/runs/39052587053), 17 Oct: source `c253fec98aefbf70a69b4914fc8f73f21715dbde`, 115 unit tests; receipts confirm **1.0 (75)** uploaded, processed and distributed internally. Match installed `match AppStore Dan.Visual-Timer.watchkitapp`. |
+| External delivery | [39053761895](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053761895), 17 Oct: source `a6f18e7ccdc4a799c73f80dfa2ea42c286c0fd3a`, 115 unit tests; receipts confirm **1.0 (76)** uploaded, processed and distributed to External testers at 17:39 UTC. Same Watch App Store profile installed. |
+| Main upload | [39055266912](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375) completed successfully after #114: **1.0 (77)** uploaded on 17 Oct at 18:05:26 UTC. `submit_for_review=false` and `automatic_release=false`. This historical upload does not establish a current selected build, App Review decision, public release or physical-device acceptance. |
+| App Store review / live | Current App Store version, selected build, review approval, release setting and territory availability remain unverified. Beta distribution does not establish store approval. The 17 Oct nightly and weekly jobs ran with `APP_STORE_SUBMIT_FOR_REVIEW=false` and `APP_STORE_AUTOMATIC_RELEASE=false`. Public release stays manual. |
+| Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 17 Oct. |
 | Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
 
 The project supports iPhone/iPad (iOS 18+) and embeds its widget extension.
 Since PR #103 it also embeds the watchOS 11+ companion: iOS depends on the
 Watch target, the Embed Watch Content phase copies it, and the Watch app uses
 `Dan.Visual-Timer.watchkitapp` with `WKWatchOnly=NO` and
-`WKCompanionAppBundleIdentifier=Dan.Visual-Timer`. Signed delivery still needs a
-matching provisioning profile for `Dan.Visual-Timer.watchkitapp` and paired
-hardware acceptance. Earlier uploads (1.0 (73) and older) predate the embedded
-companion. Marketing version is `1.0`; source build `1` is replaced by
-Fastlane's next TestFlight number. CI pins Xcode 26.6. The project build setting
-is not the uploaded build number.
-
-Documentation head `54a806bc1c24bc6d2f63357d303a035f4db173e7` passed
-[CI 37398433584](https://github.com/dfakkeldy/VisualTimer/actions/runs/37398433584)
-on 6 Oct: web job and native gate passed; native logs show 75 unit tests plus
-6 UI tests, zero failures. This is documentation CI, not a new upload.
+`WKCompanionAppBundleIdentifier=Dan.Visual-Timer`. Signed TestFlight 1.0 (75)
+and 1.0 (76) used that matching Watch App Store profile. Physical paired-Watch
+hardware acceptance is still unverified. Marketing version is `1.0`; source
+build `1` is replaced by Fastlane's next TestFlight number. CI pins Xcode 26.6.
+The project build setting is not the uploaded build number.
 
 ## Release gates and permissions
 
 Keep `nightly` internal testers → `weekly` external testers → `main` App Store.
-All three branches currently require strict/up-to-date **Build gate + tests**,
-with admin enforcement and zero required review approvals; no rulesets were
-listed. Current nightly branch CI includes unit and UI test targets and fails
+Protection metadata checked October 20 requires **Build gate + tests** on all
+three branches, with admin enforcement and zero required review approvals.
+Weekly and Main require an up-to-date base; Nightly does not. Recheck the current
+rules before each promotion. Nightly branch CI includes unit and UI test targets and fails
 without a runnable iOS simulator. The default-main release workflow limits
 testing to `Visual TimerTests` and can skip those tests without a simulator;
 nightly workflow files differ. Inspect the actually executed workflow ref and
@@ -50,8 +46,9 @@ Release workflows execute from `main`, check out the channel's source, and
 replace `.ruby-version`, `Gemfile` and `fastlane/` from the workflow-ref copy.
 Record both source and automation SHA. A `main` app-path push can trigger an
 upload. The `app_store` lane skips metadata/screenshots. Review submission and
-automatic release are separate controls, default false; both repository
-variables were false on 6 Oct. See [Fastlane](../../fastlane/README.md).
+automatic release are separate controls, default false. The 17 Oct nightly and
+weekly delivery jobs ran with both flags false. Live repository variable values
+were not re-read after the #114 merge. See [Fastlane](../../fastlane/README.md).
 
 This preparation includes scoped source repairs, documentation and draft assets. Do not backport
 features directly to weekly/main, promote, dispatch a release, upload, submit,
@@ -94,10 +91,10 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    connected to the launch scheme. ASC IAP status, Paid Apps Agreement,
    TestFlight sandbox purchase/restore, signed entitlements and production
    CloudKit schema are not proved by source or unit tests.
-5. **Candidate/screenshots:** nightly has newer timer UI/tests than weekly;
-   weekly has substantial app changes absent from main. Select one payload,
-   clear blockers, pass native CI and internal/external acceptance, then
-   capture that build. Do not describe nightly features using old main images.
+5. **Candidate/screenshots:** nightly, weekly and main now share the 17 Oct
+   promoted payload (PRs #113 and #114). Select one SHA, clear remaining
+   blockers, then capture that build. Do not describe current features using
+   old August main images.
 
 The roughly 50 open RW issues are an audit backlog, not 50 verified current
 blockers. Current source already normalizes imported durations/repeat counts/

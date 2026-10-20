@@ -6,13 +6,20 @@ starter templates for common timed sessions.
 
 ## Status
 
-Re-checked 2026-10-06: nightly build **1.0 (73)** has upload, processing and
-internal-distribution receipts; weekly build **1.0 (66)** has external receipts
-for an older payload. Main remains older. App Store review/live state is
-unverified. The [readiness ledger](docs/app-store/readiness.md) records exact
-SHAs, CI, blockers and the required `nightly` → `weekly` → `main` ladder.
+October 17 release checkpoint (main upload receipt checked October 20): nightly
+build **1.0 (75)** has upload, processing and
+internal-distribution receipts; weekly build **1.0 (76)** has upload, processing
+and external-distribution receipts. The October 17 Main promotion included that
+Weekly payload
+([PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114)). The automatic
+main App Store Connect upload completed with build **1.0 (77)** on October 17
+at 18:05:26 UTC ([receipt](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375)).
+Submission and automatic-release controls were both false. Current App Store
+review/live state is unverified; public release stays manual. The
+[readiness ledger](docs/app-store/readiness.md) records exact SHAs, CI,
+blockers and the required `nightly` → `weekly` → `main` ladder.
 [Submission materials](docs/app-store/submission-packet.md) are drafts. No
-promotion, upload or submission is authorized by this preparation.
+promotion, upload or submission is authorized by this documentation update.
 
 Useful docs:
 
@@ -53,9 +60,10 @@ Useful docs:
   (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
   saved templates are sent to the paired Watch as full snapshots through
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
-  iPhone library. Signed paired-device delivery is not yet verified. Watch
-  timers show live remaining time and keep running while you move between
-  screens. On screen, a finished timer plays the selected sound with a haptic.
+  iPhone library. Signed TestFlight now includes the Watch companion; physical
+  paired-Watch acceptance is not yet verified. Watch timers show live remaining
+  time and keep running while you move between screens. On screen, a finished
+  timer plays the selected sound with a haptic.
   If you allow alerts, a local notification covers completion while the app
   is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
   tested on a physical Watch.
@@ -63,7 +71,7 @@ Useful docs:
   `.turntimer` import/export, and local history in a responsive React PWA.
 
 These scope bullets describe implemented source, not signed-device acceptance
-or the old main release. Production sync, saved Watch-template transfer and
+or App Store live state. Production sync, saved Watch-template transfer and
 timer lock/background behavior still need the focused checks in the readiness
 ledger. No background-alarm guarantee is implied.
 
