@@ -43,7 +43,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             app.launchArguments += ["-savedTimerDuration", "300"]
             app.launch()
 
-            let quickTimer = app.buttons["watch.root.quickTimer"]
+            let quickTimer = app.buttons["probe.missing.watch.root.quickTimer"]
             let foundQuickTimer = quickTimer.waitForExistence(timeout: 10)
             if !foundQuickTimer {
                 captureControlFailure(in: app, cycle: cycle, expected: "watch.root.quickTimer")
