@@ -6,7 +6,7 @@ import Testing
 struct PredicateWaitTests {
     @Test
     func acceptsAnImmediateMatch() {
-        #expect(PredicateWait.matches(NSPredicate(value: true), object: nil, timeout: 0.05))
+        #expect(PredicateWait.matches(NSPredicate(value: true), object: nil, timeout: 2.5))
     }
 
     @Test
@@ -16,9 +16,11 @@ struct PredicateWaitTests {
 
     @Test
     func acceptsAMatchingReadThatReturnsAcrossTheWaitDeadline() {
-        let label = DelayedLabel(value: "Start", delay: 0.15)
+        // XCTest's first predicate poll is one second into the archived wait.
+        // Leave time for that poll to start, then return the read after expiry.
+        let label = DelayedLabel(value: "Start", delay: 3)
         let predicate = NSPredicate(format: "label == %@", "Start")
-        #expect(PredicateWait.matches(predicate, object: label, timeout: 0.05))
+        #expect(PredicateWait.matches(predicate, object: label, timeout: 2.5))
     }
 }
 
