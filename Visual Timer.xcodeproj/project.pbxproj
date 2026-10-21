@@ -194,6 +194,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		D7F2B39A4C1E402EA602A801 /* TestSupport */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TestSupport;
+			sourceTree = "<group>";
+		};
 		CC56F6C32FBA1C2200918D5A /* Visual Timer */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -314,6 +319,7 @@
 				CC56F6C32FBA1C2200918D5A /* Visual Timer */,
 				DD4403030000000000000001 /* TurnTimerWidgets */,
 				CC56F6D12FBA1C2400918D5A /* Visual TimerTests */,
+				D7F2B39A4C1E402EA602A801 /* TestSupport */,
 				CC56F6DB2FBA1C2400918D5A /* Visual TimerUITests */,
 				CC56FDFA2FBA5A7000918D5A /* Visual Timer Watch Watch App */,
 				CC56FE082FBA5A7200918D5A /* Visual Timer Watch Watch AppTests */,
@@ -384,6 +390,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CC56F6D12FBA1C2400918D5A /* Visual TimerTests */,
+				D7F2B39A4C1E402EA602A801 /* TestSupport */,
 			);
 			name = "Visual TimerTests";
 			packageProductDependencies = (
@@ -494,6 +501,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				CC56FE472FBA5ABE00918D5A /* Visual Timer Watch Watch AppUITests */,
+				D7F2B39A4C1E402EA602A801 /* TestSupport */,
 			);
 			name = "Visual Timer Watch Watch AppUITests";
 			packageProductDependencies = (

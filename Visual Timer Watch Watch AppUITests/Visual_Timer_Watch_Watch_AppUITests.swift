@@ -90,11 +90,11 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
 
     @MainActor
     private func waitForLabel(_ label: String, on element: XCUIElement, cycle: Int) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", label),
-            object: element
+        let matched = PredicateWait.matches(
+            NSPredicate(format: "label == %@", label),
+            object: element,
+            timeout: 3
         )
-        let matched = XCTWaiter().wait(for: [expectation], timeout: 3) == .completed
         if !matched {
             let app = XCUIApplication()
             let screenshot = XCTAttachment(screenshot: app.screenshot())
