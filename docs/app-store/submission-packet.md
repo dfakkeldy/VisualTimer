@@ -1,5 +1,11 @@
 # Turn Timer Submission Packet
 
+Historical planning worksheet. Prepared details and unchecked items below are
+not a current App Store status report. The October 17 source promotion and
+build 77 upload are recorded in [readiness](readiness.md). Recheck the selected candidate
+and store state before reusing this draft.
+
+
 Prepared: 2026-10-06 UTC. **Draft only: do not upload or submit.**
 [Readiness](readiness.md) records evidence and blockers. Files in
 [submission-draft/en-CA](submission-draft/en-CA/) contain copy-ready text outside

@@ -3,77 +3,98 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Turn Timer</title>
-  <meta name="description" content="Turn Timer is a visual sequence timer for turns, routines, and reusable countdowns.">
-  <style>
-    :root { color-scheme: dark; --bg: #101114; --panel: #191b20; --text: #f7f4ef; --muted: #b8b1a8; --line: #333742; --accent: #74c0fc; }
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; line-height: 1.55; }
-    a { color: var(--accent); }
-    header, main, footer { width: min(100% - 2rem, 920px); margin: 0 auto; }
-    header { padding: 1.25rem 0; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
-    nav { display: flex; gap: 1rem; flex-wrap: wrap; }
-    nav a { color: var(--muted); text-decoration: none; }
-    .hero { padding: 4rem 0 2.5rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    h1 { font-size: clamp(2.6rem, 8vw, 5rem); line-height: .95; margin: 0 0 1rem; }
-    h2 { margin-top: 0; }
-    .lede, .meta, footer { color: var(--muted); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; padding: 2rem 0 4rem; }
-    .panel { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 1rem; }
-    .panel p { margin-bottom: 0; }
-    footer { border-top: 1px solid var(--line); padding: 1.5rem 0 2rem; }
-  </style>
+  <meta name="theme-color" content="#081522">
+  <title>Turn Timer | Visual timers for turns and routines</title>
+  <meta name="description" content="Visual countdowns for turns, recipes, and routines. Try the free browser timer, customize six starter templates, and save your sequences.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Turn Timer | Visual timers for turns and routines">
+  <meta property="og:description" content="Visual countdowns for turns, recipes, and routines. Try the free browser timer, customize six starter templates, and save your sequences.">
+  <meta property="og:image" content="https://dfakkeldy.github.io/VisualTimer/assets/turn-timer-icon.png">
+  <meta property="og:url" content="https://dfakkeldy.github.io/VisualTimer/">
+  <link rel="canonical" href="https://dfakkeldy.github.io/VisualTimer/">
+  <link rel="icon" type="image/png" href="assets/turn-timer-icon.png">
+  <link rel="apple-touch-icon" href="assets/turn-timer-icon.png">
+  <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-  <header>
-    <strong>Turn Timer</strong>
-    <nav aria-label="Site navigation">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-current="page"><img src="assets/turn-timer-icon.png" alt="" width="34" height="34">Turn Timer</a>
+    <nav class="site-nav" aria-label="Main navigation">
       <a href="devlog.html">Devlog</a>
       <a href="support.html">Support</a>
       <a href="privacy.html">Privacy</a>
-      <a href="https://github.com/dfakkeldy/VisualTimer">GitHub</a>
+      <a class="nav-app" href="app/">Open timer <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
-  <main>
-    <section class="hero">
-      <p class="meta">Visual rounds for real-world countdowns</p>
-      <h1>Make time visible for turns, routines, and reusable sequences.</h1>
-      <p class="lede">Turn Timer is an Apple-native visual sequence timer being prepared for App Store release.</p>
+  <main id="main" tabindex="-1" class="container">
+    <section class="home-hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">A visual timer for everyday sequences</p>
+        <h1 id="hero-title">Make time<br> visible.</h1>
+        <p class="lede">See what's left at a glance. Give each turn, recipe step, or part of your routine its own countdown, then move on to the next.</p>
+        <div class="actions">
+          <a class="button" href="app/">Open the web timer <span aria-hidden="true">↗</span></a>
+          <a class="quiet-link" href="#templates">Find your starting point</a>
+        </div>
+        <p class="hero-note">Free in your browser. No account needed.</p>
+      </div>
+      <figure class="timer-preview" aria-label="Illustration of a Recipe Steps countdown with 3 minutes 45 seconds remaining in the Simmer round">
+        <div class="preview-heading"><strong>Recipe Steps</strong><span class="meta">Round 2 of 4</span></div>
+        <p class="preview-round">Simmer</p>
+        <div class="preview-dial" aria-hidden="true"><span class="dial-time">03:45<small>remaining</small></span></div>
+        <div class="preview-next"><span>Up next <strong>Flip or Stir</strong></span><span>02:00</span></div>
+        <figcaption>Countdown illustration. Start your own in the web app.</figcaption>
+      </figure>
     </section>
-    <section class="grid" aria-label="Project links">
-      <article class="panel">
-        <h2>Build Log</h2>
-        <p>Follow the weekly build-in-public digest generated from the real commit history.</p>
-        <p><a href="devlog.html">Read the devlog</a></p>
+    <section id="templates" class="section" aria-labelledby="templates-title">
+      <div class="section-intro">
+        <div><p class="eyebrow">Six ready-to-use starters</p><h2 id="templates-title">For the things you do again.</h2></div>
+        <p>Start with a template and make it yours. Name the rounds, choose their colors and sounds, set the time, and save your sequence for next time.</p>
+      </div>
+      <div class="starter-list">
+        <article class="starter"><span aria-hidden="true">01</span><h3>Game night</h3><p>Give every player a turn, with a timeout for the table.</p></article>
+        <article class="starter"><span aria-hidden="true">02</span><h3>Recipe steps</h3><p>Move through prep, simmering, stirring, and rest.</p></article>
+        <article class="starter"><span aria-hidden="true">03</span><h3>Plant watering</h3><p>Work through watering zones with a pause to soak.</p></article>
+        <article class="starter"><span aria-hidden="true">04</span><h3>Classroom stations</h3><p>Keep groups moving through each activity.</p></article>
+        <article class="starter"><span aria-hidden="true">05</span><h3>Meeting agenda</h3><p>Make room for updates, discussion, and wrap-up.</p></article>
+        <article class="starter"><span aria-hidden="true">06</span><h3>Morning routine</h3><p>Build a 40-minute sequence for the start of your day.</p></article>
+      </div>
+    </section>
+    <section class="section platforms" aria-label="Ways to use Turn Timer">
+      <article>
+        <p class="eyebrow">In your browser</p>
+        <h2>Ready when you are.</h2>
+        <p>Use a quick countdown or run a whole sequence. Save templates, review local history, and move templates between devices with a <code>.turntimer</code> file.</p>
+        <p>Install the web app on your Home Screen or desktop. Your templates and history stay in this browser unless you export them.</p>
+        <a class="quiet-link" href="support.html#web-app">How to install the web app <span aria-hidden="true">→</span></a>
       </article>
-      <article class="panel">
-        <h2>Roadmap</h2>
-        <p>See the release phases, staged branch work, and next ten App Store steps.</p>
-        <p><a href="https://github.com/dfakkeldy/VisualTimer/blob/main/Roadmap.md">Open the roadmap</a></p>
+      <article>
+        <p class="eyebrow">For iPhone, iPad, and Apple Watch</p>
+        <h2>Built for Apple, too.</h2>
+        <p>The native app adds a Watch companion, widgets, and Pro iCloud sync. The quick timer, starter templates, and one custom saved template are free. Pro is a one-time purchase.</p>
+        <p>Apple app release updates live in the devlog. The browser app is available now.</p>
+        <a class="quiet-link" href="devlog.html">Follow development <span aria-hidden="true">→</span></a>
       </article>
-      <article class="panel">
-        <h2>Architecture</h2>
-        <p>Review the MVVM boundaries, data formats, CloudKit notes, and release ladder.</p>
-        <p><a href="https://github.com/dfakkeldy/VisualTimer/blob/main/Architecture.md">Open architecture notes</a></p>
-      </article>
-      <article class="panel">
-        <h2>App Store Readiness</h2>
-        <p>Track metadata, privacy, screenshots, TestFlight, CloudKit, and submission blockers.</p>
-        <p><a href="https://github.com/dfakkeldy/VisualTimer/blob/main/docs/app-store/readiness.md">Open readiness checklist</a></p>
-      </article>
-      <article class="panel">
-        <h2>Support</h2>
-        <p>Get help with Turn Timer setup, Pro restore, templates, imports, exports, and app data.</p>
-        <p><a href="support.html">Open support</a></p>
-      </article>
-      <article class="panel">
-        <h2>Privacy</h2>
-        <p>Read how Turn Timer stores timer data locally and handles optional Apple services.</p>
-        <p><a href="privacy.html">Read privacy policy</a></p>
-      </article>
+    </section>
+    <section class="section" aria-labelledby="build-title">
+      <p class="eyebrow">Built in the open</p>
+      <h2 id="build-title">Follow what changes.</h2>
+      <p class="lede">Read the build record, explore the code, or see what's next.</p>
+      <div class="build-links">
+        <a href="devlog.html">Development log</a>
+        <a href="https://github.com/dfakkeldy/VisualTimer/blob/nightly/Roadmap.md">Roadmap</a>
+        <a href="https://github.com/dfakkeldy/VisualTimer/blob/nightly/Architecture.md">Architecture</a>
+      </div>
     </section>
   </main>
-  <footer>
-    <p>Turn Timer is being rebranded from Visual Timer. The public site is served from the repository's `main` branch.</p>
+  <footer class="site-footer">
+    <p>Turn Timer · Kinnoki Labs</p>
+    <nav aria-label="Footer navigation">
+      <a href="support.html">Get help</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/dfakkeldy/VisualTimer">GitHub</a>
+    </nav>
   </footer>
 </body>
 </html>

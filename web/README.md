@@ -22,11 +22,16 @@ npm run build
 npm run preview
 ```
 
-`npm run build:pages` writes the same production client to `docs/app/`. That
-package is the future GitHub Pages `/VisualTimer/app/` tree, but Pages is served
-from `main` `/docs`, and `docs/app/` is not on `main` yet. Until promotion, run
-the client locally. The build intentionally leaves the existing Pages homepage,
-support, privacy, and devlog routes intact.
+The [live browser app](https://dfakkeldy.github.io/VisualTimer/app/) is served
+from `main` at `/VisualTimer/app/`. Use the browser's install option to add it
+to your Home Screen or desktop. On iPhone or iPad, open it in Safari and choose
+Share, then Add to Home Screen.
+
+`npm run build:pages` writes the production client to committed `docs/app/`.
+Rebuild and commit that package with web-client changes. It leaves the Pages
+homepage, support, privacy, and devlog intact. Changes target `nightly`; the
+live copy updates after promotion to `main`. See
+[website maintenance](../docs/website.md) for local Pages previews.
 
 ## Architecture
 
@@ -38,7 +43,7 @@ support, privacy, and devlog routes intact.
 | Screens | `src/components` | Declarative timer, template, history, navigation, and settings UI |
 | Starter data | `src/data/starterTemplates.ts` | The six free starter workflows shared conceptually with the Apple app |
 | PWA shell | `public/manifest.webmanifest`, `public/sw.js` | Installation metadata and a small application-shell cache |
-| GitHub Pages package | `docs/app` | Committed production copy on `nightly`/`weekly`; not live on Pages until promoted to `main` |
+| GitHub Pages package | `docs/app` | Committed production copy; Pages serves the `main` version |
 
 The countdown is timestamp-derived rather than decrementing an integer once per
 second. This keeps the timer accurate when the browser delays callbacks or a
@@ -59,8 +64,9 @@ background tab is resumed.
 ## Browser support
 
 The production target is current evergreen browsers with ES modules, CSS grid,
-the Web Audio API, and service workers. The layout is explicitly verified at
-1536×1024 desktop and 390×844 mobile viewports. Reduced-motion preferences,
+the Web Audio API, and service workers. The original design was verified at
+1536×1024 desktop and 390×844 mobile viewports. Recheck affected layouts when
+changing the UI. Reduced-motion preferences,
 keyboard focus, semantic controls, and 44-pixel minimum touch targets are
 supported.
 
