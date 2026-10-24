@@ -44,11 +44,19 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             app.launch()
 
             let quickTimer = app.buttons["watch.root.quickTimer"]
-            XCTAssertTrue(quickTimer.waitForExistence(timeout: 10))
+            let foundQuickTimer = quickTimer.waitForExistence(timeout: 10)
+            if !foundQuickTimer {
+                captureControlFailure(in: app, cycle: cycle, expected: "watch.root.quickTimer")
+            }
+            XCTAssertTrue(foundQuickTimer)
             quickTimer.tap()
 
             let primary = app.buttons["watch.quick.primary"]
-            XCTAssertTrue(primary.waitForExistence(timeout: 5))
+            let foundPrimary = primary.waitForExistence(timeout: 5)
+            if !foundPrimary {
+                captureControlFailure(in: app, cycle: cycle, expected: "watch.quick.primary")
+            }
+            XCTAssertTrue(foundPrimary)
             XCTAssertEqual(primary.label, "Start")
             XCTAssertTrue(element("watch.quick.minutes", in: app).exists)
             XCTAssertTrue(element("watch.quick.seconds", in: app).exists)
@@ -96,26 +104,32 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
         )
         let matched = XCTWaiter().wait(for: [expectation], timeout: 3) == .completed
         if !matched {
-            let app = XCUIApplication()
-            let screenshot = XCTAttachment(screenshot: app.screenshot())
-            screenshot.name = "Watch control failure — cycle \(cycle), expected \(label)"
-            screenshot.lifetime = .keepAlways
-            add(screenshot)
-
-            let identifiers = ["watch.quick.primary", "watch.quick.reset", "watch.root.quickTimer"]
-            let controls = identifiers.map { identifier in
-                let matches = app.buttons.matching(identifier: identifier).allElementsBoundByIndex
-                let descriptions = matches.map {
-                    "label=\($0.label), frame=\($0.frame), hittable=\($0.isHittable)"
-                }
-                return "\(identifier): \(descriptions)"
-            }.joined(separator: "\n")
-            let hierarchy = XCTAttachment(string: "state=\(app.state)\n\(controls)\n\(app.debugDescription)")
-            hierarchy.name = "Watch control failure hierarchy — cycle \(cycle), expected \(label)"
-            hierarchy.lifetime = .keepAlways
-            add(hierarchy)
+            captureControlFailure(in: XCUIApplication(), cycle: cycle, expected: label)
         }
         return matched
+    }
+
+    @MainActor
+    private func captureControlFailure(in app: XCUIApplication, cycle: Int, expected: String) {
+        let context = "cycle \(cycle), expected \(expected)"
+        let state = app.state
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Watch control failure — \(context)"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let identifiers = ["watch.quick.primary", "watch.quick.reset", "watch.root.quickTimer"]
+        let controls = identifiers.map { identifier in
+            let matches = app.buttons.matching(identifier: identifier).allElementsBoundByIndex
+            let descriptions = matches.map {
+                "label=\($0.label), frame=\($0.frame), hittable=\($0.isHittable)"
+            }
+            return "\(identifier): count=\(matches.count), \(descriptions)"
+        }.joined(separator: "\n")
+        let hierarchy = XCTAttachment(string: "\(context)\nstate=\(state)\n\(controls)\n\(app.debugDescription)")
+        hierarchy.name = "Watch control failure hierarchy — \(context)"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
     }
 
     @MainActor
