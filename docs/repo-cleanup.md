@@ -1,15 +1,19 @@
 # Branch and Worktree Cleanup Map
 
-Last audited: 2026-07-01
+Historical inventory: 2026-07-01. Retained as a recovery record, not a current
+cleanup authorization. As of the October 24 documentation audit, ordinary
+changes target `nightly`; the October 17 promotion already moved the web,
+widgets, history sync, and embedded Watch source to `main`. Check live branches,
+worktrees, and PRs before acting on any recommendation below.
 
 This ledger records the repo/worktree state found while syncing docs. Verify
 live GitHub state again before deleting branches or worktrees.
 
-## Live Branch State
+## Branch state at the July audit
 
 | Branch | Status | Recommendation |
 |---|---|---|
-| `main` | Default branch and Pages source. At audit it included PR #78. | Keep. Merge docs and website fixes here. |
+| `main` | Default branch and Pages source. At audit it included PR #78. | Keep. Historical default/Pages branch; ordinary changes now target `nightly`. |
 | `nightly` | Protected train branch, ahead of `main` with staged app work. | Promote intentionally through `weekly` after validation. |
 | `weekly` | Protected beta train, behind `nightly`. | Promote from `nightly` when ready for external beta. |
 | `origin/codex/fix-release-api-key-env` | Merged to `main` via PR #78. | Safe remote cleanup after confirming no local-only work. |

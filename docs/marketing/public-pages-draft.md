@@ -1,13 +1,11 @@
 # Public Support and Privacy Pages
 
-Re-checked: 2026-10-06 UTC
-
-Both URLs below returned HTTPS 200 on 6 Oct. They are existing public contacts;
-a domain/email migration is not a launch prerequisite. In-app privacy-policy
-access is missing in current source and remains a release blocker. The policy
-says sync is chosen by the user, while Pro entitlement enables sync automatically
-in source: reconcile that wording before final privacy confirmation. No public
-policy change or legal attestation is made by this audit.
+Documentation audit: 2026-10-24. The support, privacy, homepage, and browser-app
+routes return HTTPS 200. The proposed site changes are maintained in `docs/`
+and reach Pages after promotion to `main`. Settings includes the privacy-policy
+link. The policy now describes automatic Pro template/history sync and browser
+storage. This note describes source and public URLs, not App Store privacy
+questionnaire confirmation.
 
 - Support URL: `https://dfakkeldy.github.io/VisualTimer/support.html`
 - Privacy Policy URL: `https://dfakkeldy.github.io/VisualTimer/privacy.html`
@@ -15,7 +13,7 @@ policy change or legal attestation is made by this audit.
 - Contact: `dfakkeldy@gmail.com`
 - Website: `https://dfakkeldy.github.io/VisualTimer/`
 
-## Support Page Summary
+## Support page summary
 
 The public support page asks users to email `dfakkeldy@gmail.com` with device,
 OS, app version, expected behavior, and actual behavior. It covers:
@@ -24,11 +22,11 @@ OS, app version, expected behavior, and actual behavior. It covers:
 - What is free.
 - What Turn Timer Pro unlocks.
 - Restore Purchases.
-- iCloud sync troubleshooting, only if the installed build includes sync.
+- iCloud sync troubleshooting, for the Apple app with Pro.
 - Import safety for `.turntimer` files.
 - Local and iCloud data deletion guidance.
 
-## Privacy Policy Summary
+## Privacy policy summary
 
 The public privacy page states that Turn Timer is designed to work without
 developer-run accounts, ads, tracking, or analytics SDKs. It says:
@@ -37,8 +35,8 @@ developer-run accounts, ads, tracking, or analytics SDKs. It says:
   analytics, advertising identifiers, or tracking data from Turn Timer.
 - Timer settings, saved templates, local session history, and purchase
   entitlement state are stored by the app on device.
-- If an installed build includes iCloud sync and the user chooses to use it,
-  supported templates or history are stored in the user's private iCloud
+- When Pro unlocks sync and iCloud is available,
+  saved templates and history are stored in the user's private iCloud
   database through Apple's CloudKit service.
 - Kinnoki Labs does not operate a separate account server for this sync and
   cannot read the contents of the user's private iCloud database.

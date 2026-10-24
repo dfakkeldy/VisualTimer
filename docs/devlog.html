@@ -3,46 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081522">
   <title>Building Turn Timer | Devlog</title>
-  <meta name="description" content="A weekly build log for Turn Timer, generated from the real commit history.">
-  <style>
-    :root { color-scheme: dark; --bg: #101114; --panel: #191b20; --text: #f7f4ef; --muted: #b8b1a8; --line: #333742; --accent: #74c0fc; }
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif; line-height: 1.55; }
-    a { color: var(--accent); }
-    header, main, footer { width: min(100% - 2rem, 860px); margin: 0 auto; }
-    header { padding: 1.25rem 0; display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
-    nav { display: flex; gap: 1rem; flex-wrap: wrap; }
-    nav a { color: var(--muted); text-decoration: none; }
-    .hero { padding: 4rem 0 2rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-    h1 { font-size: clamp(2.4rem, 8vw, 4.8rem); line-height: .95; margin: 0 0 1rem; }
-    .lede, .week-meta, footer { color: var(--muted); }
-    .devlog-timeline { padding: 2rem 0 4rem; }
-    .week-entry { border-bottom: 1px solid var(--line); padding: 1.5rem 0; }
-    .week-entry h2 { margin: .25rem 0 1rem; }
-  </style>
+  <meta name="description" content="Dated development notes and commit digests for Turn Timer.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Building Turn Timer | Devlog">
+  <meta property="og:description" content="Dated development notes and commit digests for Turn Timer.">
+  <meta property="og:image" content="https://dfakkeldy.github.io/VisualTimer/assets/turn-timer-icon.png">
+  <meta property="og:url" content="https://dfakkeldy.github.io/VisualTimer/devlog.html">
+  <link rel="canonical" href="https://dfakkeldy.github.io/VisualTimer/devlog.html">
+  <link rel="icon" type="image/png" href="assets/turn-timer-icon.png">
+  <link rel="apple-touch-icon" href="assets/turn-timer-icon.png">
+  <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-  <header>
-    <strong>Turn Timer</strong>
-    <nav aria-label="Devlog navigation">
-      <a href="index.html">Home</a>
-      <a href="https://github.com/dfakkeldy/VisualTimer">GitHub</a>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html"><img src="assets/turn-timer-icon.png" alt="" width="34" height="34">Turn Timer</a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="devlog.html" aria-current="page">Devlog</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy</a>
+      <a class="nav-app" href="app/">Open timer <span aria-hidden="true">↗</span></a>
     </nav>
   </header>
-  <main>
+  <main id="main" tabindex="-1" class="container document">
     <section class="hero">
-      <p class="week-meta">Build in public</p>
-      <h1>Building Turn Timer</h1>
-      <p class="lede">A weekly digest generated from the commits behind the round-based visual timer app.</p>
+      <p class="eyebrow">Build in public</p>
+      <h1>One round at a time.</h1>
+      <p class="lede">Development notes and commit digests from the work behind Turn Timer.</p>
     </section>
+    <article class="week-entry">
+      <p class="week-meta"><time datetime="2026-10-24">October 24, 2026</time> · Project update</p>
+      <h2>The browser timer is live.</h2>
+      <p><a href="app/">Try Turn Timer on the web</a> with six starter templates, editable sequences, local history, and portable template files. Install it on your Home Screen or desktop to return to it easily.</p>
+      <p>The Apple source now includes history sync, widgets, and the embedded Watch companion. That work reached <code>main</code> in the <a href="https://github.com/dfakkeldy/VisualTimer/pull/114">October 17 promotion</a>. App Store Connect upload 1.0 (77) succeeded; an upload alone does not establish public App Store availability.</p>
+      <p>The <a href="https://github.com/dfakkeldy/VisualTimer/blob/nightly/docs/app-store/readiness.md">readiness ledger</a> keeps release receipts and remaining checks separate. This page records development, not a public Apple launch announcement.</p>
+    </article>
     <div class="devlog-timeline">
             <!-- AUTO-DEVLOG:START -->
             <article class="week-entry automated-devlog">
-                <p class="week-meta">Automated · Jun 22-28, 2026 · 1 commit</p>
+                <p class="week-meta">Automated · Oct 12-18, 2026 · 5 commits</p>
                 <h2>Weekly build digest</h2>
+                <h3>Fixed</h3>
+                <ul>
+                    <li>Improve countdown controls and completion alerts (#106) <a href="https://github.com/dfakkeldy/VisualTimer/commit/0c43e84" target="_blank" rel="noopener noreferrer">0c43e84</a></li>
+                    <li>Skip unchanged train deliveries (#110) <a href="https://github.com/dfakkeldy/VisualTimer/commit/f45afb6" target="_blank" rel="noopener noreferrer">f45afb6</a></li>
+                </ul>
                 <h3>Build, docs, and housekeeping</h3>
                 <ul>
-                    <li>Add weekly automation <a href="https://github.com/dfakkeldy/VisualTimer/commit/46010c5" target="_blank" rel="noopener noreferrer">46010c5</a></li>
+                    <li>Wake Claude when Dan adds go:claude to an issue <a href="https://github.com/dfakkeldy/VisualTimer/commit/c8b9834" target="_blank" rel="noopener noreferrer">c8b9834</a></li>
+                    <li>Record Watch and widget privacy manifests (#116) <a href="https://github.com/dfakkeldy/VisualTimer/commit/6e5f887" target="_blank" rel="noopener noreferrer">6e5f887</a></li>
+                    <li>Document change-aware train delivery (#111) <a href="https://github.com/dfakkeldy/VisualTimer/commit/5ca5e00" target="_blank" rel="noopener noreferrer">5ca5e00</a></li>
                 </ul>
             </article>
             <!-- AUTO-DEVLOG:END -->
@@ -50,12 +62,17 @@
       <article class="week-entry">
         <p class="week-meta">Start</p>
         <h2>The build record begins</h2>
-        <p>Automated weekly updates will appear above this note after each Monday run.</p>
+        <p>Weekly automation prepares a digest PR from commit history. Entries appear here after that PR is merged to the website branch.</p>
       </article>
     </div>
   </main>
-  <footer>
-    <p>Turn Timer is being rebranded from Visual Timer. The generated digest links back to the commits it summarizes.</p>
+  <footer class="site-footer">
+    <p>Turn Timer · Kinnoki Labs</p>
+    <nav aria-label="Footer navigation">
+      <a href="support.html">Get help</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/dfakkeldy/VisualTimer">GitHub</a>
+    </nav>
   </footer>
 </body>
 </html>

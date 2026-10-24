@@ -139,8 +139,13 @@ and advanced customization.
 - Before submitting web changes, run `npm test`, `npm run check`, and
   `npm run build` from `web/`, then smoke-test both desktop and 390-pixel mobile
   layouts in a real browser.
-- Before submitting a PR, verify the app builds with `xcodebuild` and
-  manually smoke-test the four timer states.
+- For native changes, use the relevant hosted build/test gate. On Dan's Mac,
+  run local Apple   builds and tests through the required `xcode-build-slot.sh -- <command>`
+  wrapper; do not bypass its schedule. Routine work ends at the
+  merged PR and does not require physical-device testing.
+- For documentation/static-site changes, check links, affected browser layouts,
+  and `make doc-automation-test` when the devlog structure changes. See
+  [website maintenance](docs/website.md).
 - Keep `TurnTimer.storekit` valid with
   `python3 -m json.tool TurnTimer.storekit >/dev/null`.
 - For sync and widget changes, run the iOS build-for-testing gate, the iOS app

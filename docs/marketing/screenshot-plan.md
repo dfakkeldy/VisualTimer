@@ -1,5 +1,11 @@
 # Screenshot Capture Manifest
 
+Historical planning worksheet. Prepared details and unchecked items below are
+not a current App Store status report. The October 17 source promotion and
+build 77 upload are recorded in [readiness](../app-store/readiness.md). Recheck the selected candidate
+and store state before reusing this draft.
+
+
 Re-checked: 2026-10-06 UTC. **Native images pending selected candidate**.
 App icon PNGs/SVG exist; `web/docs/design/*.png` are web design evidence and
 must not be uploaded as native screenshots. Do not fabricate screens or use

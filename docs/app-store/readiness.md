@@ -1,9 +1,22 @@
 # App Store Readiness
 
-Release checkpoint: 2026-10-17 UTC; historical main upload receipt checked
-2026-10-20. Status: **preparation in progress; submission on hold**.
-Account details and tester identities belong in the private release ledger, not
-this public repository.
+Documentation audit: 2026-10-24. The table below preserves the October 17
+release receipts, with the historical main upload checked October 20. Main
+upload **1.0 (77)** succeeded. Current App Review, selected-build, and public
+App Store state were not rechecked in this documentation pass. The earlier
+"submission on hold" wording described an old preparation session, not a live
+store status.
+
+Current source checkpoint: `nightly` `0599f744d4a3ff36aed183c66c8b2fa300dafa4a`
+and `main` `8aeab7eb5cabc38b0f61c517a69f467786fa62bd`. Nightly
+[CI 39504562374](https://github.com/dfakkeldy/VisualTimer/actions/runs/39504562374)
+passed. The public homepage, browser app, support, and privacy routes returned
+HTTPS 200 on October 24. Pages serves `main:/docs`; a Nightly documentation
+merge alone does not publish new website content.
+
+Account details and tester identities belong in the private release ledger,
+not this public repository. This ledger records evidence and remaining release
+work; it does not authorize a promotion or store action.
 
 ## Dated release evidence
 
@@ -50,12 +63,13 @@ automatic release are separate controls, default false. The 17 Oct nightly and
 weekly delivery jobs ran with both flags false. Live repository variable values
 were not re-read after the #114 merge. See [Fastlane](../../fastlane/README.md).
 
-This preparation includes scoped source repairs, documentation and draft assets. Do not backport
-features directly to weekly/main, promote, dispatch a release, upload, submit,
-refresh signing, change protections/pipelines, set prices, or accept legal
-answers/agreements without exact authorization. Documentation PRs stay drafts.
+Ordinary documentation and website maintenance targets `nightly` in a ready
+PR after relevant validation. Promotions, release dispatches, uploads,
+submissions, signing changes, prices, and legal declarations need their own
+authorization. Do not treat historical preparation holds as a requirement to
+keep ordinary maintenance PRs in draft.
 
-## Blockers before choosing a candidate
+## Candidate-specific verification still requiring evidence
 
 1. **In-app privacy link:** Settings now exposes the existing HTTPS policy URL
    (`settings.privacy-policy`). The URL returned HTTP 200 on 6 Oct. Verify the
@@ -96,12 +110,13 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    blockers, then capture that build. Do not describe current features using
    old August main images.
 
-The roughly 50 open RW issues are an audit backlog, not 50 verified current
-blockers. Current source already normalizes imported durations/repeat counts/
-palette indices; cancels final-round timers; includes timestamp reasons; maps
-widget signing; and configures StoreKit testing. Reproduce critical reports on
-the selected SHA. Prioritize crashes, timing, purchase/restore, data loss and
-unusable layout over cosmetic work.
+The June issue audit closed the old bug backlog after checking the fixing
+PRs against source and hosted CI. As of October 24, the repository has no open
+issues; open engineering PRs remain separate from that count. Use the live
+[issues](https://github.com/dfakkeldy/VisualTimer/issues) and
+[pull requests](https://github.com/dfakkeldy/VisualTimer/pulls) instead of the
+old "roughly 50 open RW issues" count. New reports still require reproduction
+on the selected SHA.
 
 ## Privacy and capabilities
 
@@ -136,10 +151,11 @@ unusable layout over cosmetic work.
   confirmation remains for export/territories, content rights, updated
   age/social-media questionnaire and DSA status. No declaration was submitted.
 
-## Prepared packet and pending ASC read
+## Historical packet and future store reconciliation
 
-[Submission packet](submission-packet.md) contains copy-ready metadata and
-IAP/review notes. [Screenshot plan](../marketing/screenshot-plan.md) gives
+[Submission packet](submission-packet.md) retains the October 6 metadata and
+IAP/review drafts. Its unchecked fields describe preparation at that date and
+are not a current list of missing store configuration. [Screenshot plan](../marketing/screenshot-plan.md) gives
 current sizes and fixtures. [Acceptance](signed-device-smoke.md) keeps focused
 release checks; no result is pre-filled.
 
@@ -149,9 +165,9 @@ export answers, agreements/DSA and release settings. Resolve only consequential
 choices with the owner. Helper project dates/prices are planning data, not store
 configuration or authorization.
 
-Apple currently requires Xcode 26+ / corresponding SDK 26+ for these platforms;
-iOS 18 meets the current iOS 13 minimum. Inspect updated age questions and
-September social-media questions in ASC.
+The October 6 requirements review referenced Xcode/SDK 26 and updated age
+questions. Recheck the current requirements and questionnaire for a future
+submission rather than treating that dated review as current policy.
 [Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)
 
 Continuation validation on 6 Oct ran one serial, resource-gated iOS regression
