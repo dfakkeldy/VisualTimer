@@ -7,7 +7,8 @@ starter templates for common timed sessions.
 ## Status
 
 Documentation audited 2026-10-24. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
-is live and installable. The Apple app includes the quick timer, sequences,
+is live and installable. The iPhone and iPad app is in public beta on
+[TestFlight](https://testflight.apple.com/join/s7w4YGWU). The Apple app includes the quick timer, sequences,
 Pro, CloudKit sync, widgets, and embedded Watch companion in source promoted
 through `weekly` to `main` on October 17. Main upload **1.0 (77)** succeeded;
 current App Review and public App Store availability have not been rechecked.
@@ -20,7 +21,6 @@ Useful docs:
 - [Roadmap](Roadmap.md)
 - [App Store readiness](docs/app-store/readiness.md)
 - [Fastlane release docs](fastlane/README.md)
-- [Branch and worktree cleanup map](docs/repo-cleanup.md)
 - [Public devlog](docs/guides/devlog.md)
 - [Website and documentation maintenance](docs/website.md)
 
