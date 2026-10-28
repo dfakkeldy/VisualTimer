@@ -9,13 +9,13 @@ questionnaire confirmation.
 
 - Support URL: `https://dfakkeldy.github.io/VisualTimer/support.html`
 - Privacy Policy URL: `https://dfakkeldy.github.io/VisualTimer/privacy.html`
-- Developer: Kinnoki Labs
-- Contact: `dfakkeldy@gmail.com`
+- Developer: KinNoKi Labs
+- Contact: `hello@kinnokilabs.com`
 - Website: `https://dfakkeldy.github.io/VisualTimer/`
 
 ## Support page summary
 
-The public support page asks users to email `dfakkeldy@gmail.com` with device,
+The public support page asks users to email `hello@kinnokilabs.com` with device,
 OS, app version, expected behavior, and actual behavior. It covers:
 
 - What Turn Timer is.
@@ -31,14 +31,14 @@ OS, app version, expected behavior, and actual behavior. It covers:
 The public privacy page states that Turn Timer is designed to work without
 developer-run accounts, ads, tracking, or analytics SDKs. It says:
 
-- Kinnoki Labs does not collect timer templates, session history, device
+- KinNoKi Labs does not collect timer templates, session history, device
   analytics, advertising identifiers, or tracking data from Turn Timer.
 - Timer settings, saved templates, local session history, and purchase
   entitlement state are stored by the app on device.
 - When Pro unlocks sync and iCloud is available,
   saved templates and history are stored in the user's private iCloud
   database through Apple's CloudKit service.
-- Kinnoki Labs does not operate a separate account server for this sync and
+- KinNoKi Labs does not operate a separate account server for this sync and
   cannot read the contents of the user's private iCloud database.
 - Apple processes App Store purchases through StoreKit.
 - Support email receives only the email address and message content the user

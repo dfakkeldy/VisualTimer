@@ -20,7 +20,6 @@ Useful docs:
 - [Roadmap](Roadmap.md)
 - [App Store readiness](docs/app-store/readiness.md)
 - [Fastlane release docs](fastlane/README.md)
-- [Branch and worktree cleanup map](docs/repo-cleanup.md)
 - [Public devlog](docs/guides/devlog.md)
 - [Website and documentation maintenance](docs/website.md)
 

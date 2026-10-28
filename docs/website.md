@@ -62,7 +62,7 @@ history; it does not announce an App Store launch or publish a social post.
 - [Readiness](app-store/readiness.md): dated release evidence and outstanding checks.
 - [Fastlane](../fastlane/README.md): lane behavior and release controls.
 
-`docs/superpowers/plans/`, the July cleanup inventory, and October submission,
+`docs/superpowers/plans/` and the October submission,
 marketing, screenshot, and signed-device worksheets are dated planning or
 historical evidence. Their dates describe when they were prepared; they are not
 live task lists or proof of store configuration. Follow their links to current
