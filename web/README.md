@@ -22,11 +22,16 @@ npm run build
 npm run preview
 ```
 
-`npm run build:pages` writes the same production client to `docs/app/`. That
-package is the future GitHub Pages `/VisualTimer/app/` tree, but Pages is served
-from `main` `/docs`, and `docs/app/` is not on `main` yet. Until promotion, run
-the client locally. The build intentionally leaves the existing Pages homepage,
-support, privacy, and devlog routes intact.
+The [live browser app](https://dfakkeldy.github.io/VisualTimer/app/) is served
+from `main` at `/VisualTimer/app/`. Use the browser's install option to add it
+to your Home Screen or desktop. On iPhone or iPad, open it in Safari and choose
+Share, then Add to Home Screen.
+
+`npm run build:pages` writes the production client to committed `docs/app/`.
+Rebuild and commit that package with web-client changes. It leaves the Pages
+homepage, support, privacy, and devlog intact. Changes target `nightly`; the
+live copy updates after promotion to `main`. See
+[website maintenance](../docs/website.md) for local Pages previews.
 
 ## Architecture
 
