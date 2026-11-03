@@ -44,11 +44,33 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             app.launch()
 
             let quickTimer = app.buttons["watch.root.quickTimer"]
-            XCTAssertTrue(quickTimer.waitForExistence(timeout: 10))
+            let foundQuickTimer = quickTimer.waitForExistence(timeout: 10)
+            if !foundQuickTimer {
+                captureControlFailure(in: app, cycle: cycle, expected: "watch.root.quickTimer")
+            }
+            XCTAssertTrue(foundQuickTimer)
+            _ = poll(timeout: 5) { quickTimer.isHittable }
             quickTimer.tap()
 
             let primary = app.buttons["watch.quick.primary"]
-            XCTAssertTrue(primary.waitForExistence(timeout: 5))
+            // On hosted CI the first root tap after a cold Watch boot has twice
+            // been synthesized without the push starting. Retry once, visibly,
+            // only while the root row is still on screen; the assertion below
+            // still fails if navigation is broken.
+            if !primary.waitForExistence(timeout: 3), quickTimer.exists, quickTimer.isHittable {
+                XCTContext.runActivity(named: "Retry Quick Timer tap — cycle \(cycle), root still shown") { activity in
+                    let screenshot = XCTAttachment(screenshot: app.screenshot())
+                    screenshot.name = "Watch root before retry — cycle \(cycle)"
+                    screenshot.lifetime = .keepAlways
+                    activity.add(screenshot)
+                    quickTimer.tap()
+                }
+            }
+            let foundPrimary = primary.waitForExistence(timeout: 5)
+            if !foundPrimary {
+                captureControlFailure(in: app, cycle: cycle, expected: "watch.quick.primary")
+            }
+            XCTAssertTrue(foundPrimary)
             XCTAssertEqual(primary.label, "Start")
             XCTAssertTrue(element("watch.quick.minutes", in: app).exists)
             XCTAssertTrue(element("watch.quick.seconds", in: app).exists)
@@ -56,7 +78,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
 
             primary.tap()
             XCTAssertTrue(waitForLabel("Pause", on: primary, cycle: cycle))
-            XCTAssertTrue(element("watch.quick.time", in: app).waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(element("watch.quick.time", in: app)))
             XCTAssertFalse(element("watch.quick.minutes", in: app).exists, "Duration editing is idle-only.")
             let screenshot = XCTAttachment(screenshot: app.screenshot())
             screenshot.name = "Watch Quick Timer — cycle \(cycle)"
@@ -66,7 +88,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             primary.tap()
             XCTAssertTrue(waitForLabel("Resume", on: primary, cycle: cycle))
             let reset = app.buttons["watch.quick.reset"]
-            XCTAssertTrue(reset.waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(reset))
             XCTAssertEqual(reset.label, "Reset")
 
             primary.tap()
@@ -74,7 +96,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             XCTAssertFalse(reset.exists)
             primary.tap()
             XCTAssertTrue(waitForLabel("Resume", on: primary, cycle: cycle))
-            XCTAssertTrue(reset.waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(reset))
 
             reset.tap()
             XCTAssertTrue(waitForLabel("Start", on: primary, cycle: cycle))
@@ -88,34 +110,56 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
         app.descendants(matching: .any)[identifier]
     }
 
+    /// Each element query is a full accessibility snapshot, which took up to
+    /// 2.8 s on hosted watchOS runners. XCTest's predicate waits first check
+    /// about 1 s in and discard a check still running at the deadline, so the
+    /// old 3 s (and 2 s) budgets allowed a single check. Poll directly, count
+    /// a check that started before the deadline, and leave room for several.
+    @MainActor
+    private func poll(timeout: TimeInterval = 10, _ condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while true {
+            if condition() { return true }
+            if Date() >= deadline { return false }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+    }
+
+    @MainActor
+    private func waitForElement(_ element: XCUIElement) -> Bool {
+        poll { element.exists }
+    }
+
     @MainActor
     private func waitForLabel(_ label: String, on element: XCUIElement, cycle: Int) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", label),
-            object: element
-        )
-        let matched = XCTWaiter().wait(for: [expectation], timeout: 3) == .completed
+        let matched = poll { element.exists && element.label == label }
         if !matched {
-            let app = XCUIApplication()
-            let screenshot = XCTAttachment(screenshot: app.screenshot())
-            screenshot.name = "Watch control failure — cycle \(cycle), expected \(label)"
-            screenshot.lifetime = .keepAlways
-            add(screenshot)
-
-            let identifiers = ["watch.quick.primary", "watch.quick.reset", "watch.root.quickTimer"]
-            let controls = identifiers.map { identifier in
-                let matches = app.buttons.matching(identifier: identifier).allElementsBoundByIndex
-                let descriptions = matches.map {
-                    "label=\($0.label), frame=\($0.frame), hittable=\($0.isHittable)"
-                }
-                return "\(identifier): \(descriptions)"
-            }.joined(separator: "\n")
-            let hierarchy = XCTAttachment(string: "state=\(app.state)\n\(controls)\n\(app.debugDescription)")
-            hierarchy.name = "Watch control failure hierarchy — cycle \(cycle), expected \(label)"
-            hierarchy.lifetime = .keepAlways
-            add(hierarchy)
+            captureControlFailure(in: XCUIApplication(), cycle: cycle, expected: label)
         }
         return matched
+    }
+
+    @MainActor
+    private func captureControlFailure(in app: XCUIApplication, cycle: Int, expected: String) {
+        let context = "cycle \(cycle), expected \(expected)"
+        let state = app.state
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Watch control failure — \(context)"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+
+        let identifiers = ["watch.quick.primary", "watch.quick.reset", "watch.root.quickTimer"]
+        let controls = identifiers.map { identifier in
+            let matches = app.buttons.matching(identifier: identifier).allElementsBoundByIndex
+            let descriptions = matches.map {
+                "label=\($0.label), frame=\($0.frame), hittable=\($0.isHittable)"
+            }
+            return "\(identifier): count=\(matches.count), \(descriptions)"
+        }.joined(separator: "\n")
+        let hierarchy = XCTAttachment(string: "\(context)\nstate=\(state)\n\(controls)\n\(app.debugDescription)")
+        hierarchy.name = "Watch control failure hierarchy — \(context)"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
     }
 
     @MainActor
