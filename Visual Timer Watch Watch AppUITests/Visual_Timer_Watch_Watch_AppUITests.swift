@@ -49,9 +49,23 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
                 captureControlFailure(in: app, cycle: cycle, expected: "watch.root.quickTimer")
             }
             XCTAssertTrue(foundQuickTimer)
+            _ = poll(timeout: 5) { quickTimer.isHittable }
             quickTimer.tap()
 
             let primary = app.buttons["watch.quick.primary"]
+            // On hosted CI the first root tap after a cold Watch boot has twice
+            // been synthesized without the push starting. Retry once, visibly,
+            // only while the root row is still on screen; the assertion below
+            // still fails if navigation is broken.
+            if !primary.waitForExistence(timeout: 3), quickTimer.exists, quickTimer.isHittable {
+                XCTContext.runActivity(named: "Retry Quick Timer tap — cycle \(cycle), root still shown") { activity in
+                    let screenshot = XCTAttachment(screenshot: app.screenshot())
+                    screenshot.name = "Watch root before retry — cycle \(cycle)"
+                    screenshot.lifetime = .keepAlways
+                    activity.add(screenshot)
+                    quickTimer.tap()
+                }
+            }
             let foundPrimary = primary.waitForExistence(timeout: 5)
             if !foundPrimary {
                 captureControlFailure(in: app, cycle: cycle, expected: "watch.quick.primary")
@@ -64,7 +78,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
 
             primary.tap()
             XCTAssertTrue(waitForLabel("Pause", on: primary, cycle: cycle))
-            XCTAssertTrue(element("watch.quick.time", in: app).waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(element("watch.quick.time", in: app)))
             XCTAssertFalse(element("watch.quick.minutes", in: app).exists, "Duration editing is idle-only.")
             let screenshot = XCTAttachment(screenshot: app.screenshot())
             screenshot.name = "Watch Quick Timer — cycle \(cycle)"
@@ -74,7 +88,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             primary.tap()
             XCTAssertTrue(waitForLabel("Resume", on: primary, cycle: cycle))
             let reset = app.buttons["watch.quick.reset"]
-            XCTAssertTrue(reset.waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(reset))
             XCTAssertEqual(reset.label, "Reset")
 
             primary.tap()
@@ -82,7 +96,7 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
             XCTAssertFalse(reset.exists)
             primary.tap()
             XCTAssertTrue(waitForLabel("Resume", on: primary, cycle: cycle))
-            XCTAssertTrue(reset.waitForExistence(timeout: 2))
+            XCTAssertTrue(waitForElement(reset))
 
             reset.tap()
             XCTAssertTrue(waitForLabel("Start", on: primary, cycle: cycle))
@@ -96,13 +110,29 @@ final class Visual_Timer_Watch_Watch_AppUITests: XCTestCase {
         app.descendants(matching: .any)[identifier]
     }
 
+    /// Each element query is a full accessibility snapshot, which took up to
+    /// 2.8 s on hosted watchOS runners. XCTest's predicate waits first check
+    /// about 1 s in and discard a check still running at the deadline, so the
+    /// old 3 s (and 2 s) budgets allowed a single check. Poll directly, count
+    /// a check that started before the deadline, and leave room for several.
+    @MainActor
+    private func poll(timeout: TimeInterval = 10, _ condition: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while true {
+            if condition() { return true }
+            if Date() >= deadline { return false }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+    }
+
+    @MainActor
+    private func waitForElement(_ element: XCUIElement) -> Bool {
+        poll { element.exists }
+    }
+
     @MainActor
     private func waitForLabel(_ label: String, on element: XCUIElement, cycle: Int) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", label),
-            object: element
-        )
-        let matched = XCTWaiter().wait(for: [expectation], timeout: 3) == .completed
+        let matched = poll { element.exists && element.label == label }
         if !matched {
             captureControlFailure(in: XCUIApplication(), cycle: cycle, expected: label)
         }
