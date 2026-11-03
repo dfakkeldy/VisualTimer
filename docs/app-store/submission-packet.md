@@ -1,5 +1,11 @@
 # Turn Timer Submission Packet
 
+Historical planning worksheet. Prepared details and unchecked items below are
+not a current App Store status report. The October 17 source promotion and
+build 77 upload are recorded in [readiness](readiness.md). Recheck the selected candidate
+and store state before reusing this draft.
+
+
 Prepared: 2026-10-06 UTC. **Draft only: do not upload or submit.**
 [Readiness](readiness.md) records evidence and blockers. Files in
 [submission-draft/en-CA](submission-draft/en-CA/) contain copy-ready text outside
@@ -13,7 +19,7 @@ legal declarations or release.
 | Name | Turn Timer; locked product name. Confirm current ASC name/locale availability. |
 | Subtitle | Visual rounds & routines |
 | Category | Productivity proposal; source category is Utilities. Read ASC before choosing. |
-| Platforms | iPhone/iPad with embedded widget. Watch embedding/companion repair is under native/archive validation; require signed paired delivery before Watch listing claims. No native Mac target. |
+| Platforms | iPhone/iPad with embedded widget. Watch companion is embedded and included in signed TestFlight 1.0 (75) and 1.0 (76). Physical paired-Watch acceptance is still required before Watch listing claims. No native Mac target. |
 | Locale | en-CA draft; historical en-CA/fallback notes need current ASC verification before creating en-US or asserting a name conflict. |
 | Version | Source `1.0`; choose exact candidate/build after ladder gates. |
 | Support | https://dfakkeldy.github.io/VisualTimer/support.html — HTTPS 200 on 6 Oct. |

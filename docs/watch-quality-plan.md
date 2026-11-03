@@ -1,5 +1,11 @@
 # Watch Quality Plan
 
+Dated implementation and acceptance plan. The source repairs described here
+were promoted to `main` on October 17; physical-device results remain separate.
+See [current readiness](app-store/readiness.md) and the [roadmap](../Roadmap.md)
+for release evidence and remaining work.
+
+
 Status: implemented in source on 2026-10-08; hosted simulator validation
 passed on 2026-10-09 at implementation head
 `78697ea9e66349f3a09f7eaace3b2bbc0e8c30e9`. The executed checks are

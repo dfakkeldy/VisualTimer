@@ -1,6 +1,7 @@
 # Fastlane Release Docs
 
-Re-checked: 2026-10-06 UTC
+Lane documentation audited: 2026-10-24. Live release receipts and store state
+are tracked separately in [readiness](../docs/app-store/readiness.md).
 
 Fastlane owns Turn Timer's archive, signing-profile sync, TestFlight upload, and
 App Store upload lanes. App Store copy is prepared outside automation in

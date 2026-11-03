@@ -2,17 +2,24 @@
 
 Turn Timer's public build record is generated from the real commit history, with room for hand-written notes when a week needs more context.
 
-This project is still being rebranded from Visual Timer, so update hand-written notes when the public naming settles.
+Turn Timer is the public product name. The repository and Xcode project retain
+VisualTimer / Visual Timer identifiers for compatibility.
 
 ---
 
 <!-- AUTO-DEVLOG:START -->
-## Automated update - Jun 22-28, 2026
+## Automated update - Oct 12-18, 2026
 
-*Generated from 1 commit merged during the week.*
+*Generated from 5 commits merged during the week.*
+
+### Fixed
+- Improve countdown controls and completion alerts (#106) ([0c43e84](https://github.com/dfakkeldy/VisualTimer/commit/0c43e84))
+- Skip unchanged train deliveries (#110) ([f45afb6](https://github.com/dfakkeldy/VisualTimer/commit/f45afb6))
 
 ### Build, docs, and housekeeping
-- Add weekly automation ([46010c5](https://github.com/dfakkeldy/VisualTimer/commit/46010c5))
+- Wake Claude when Dan adds go:claude to an issue ([c8b9834](https://github.com/dfakkeldy/VisualTimer/commit/c8b9834))
+- Record Watch and widget privacy manifests (#116) ([6e5f887](https://github.com/dfakkeldy/VisualTimer/commit/6e5f887))
+- Document change-aware train delivery (#111) ([5ca5e00](https://github.com/dfakkeldy/VisualTimer/commit/5ca5e00))
 
 <!-- AUTO-DEVLOG:END -->
 
@@ -25,9 +32,17 @@ Nothing is posted publicly without a human choosing to merge and reuse the copy.
 
 The generated weekly digest above is safe to refresh automatically. Hand-written launch notes can live below this section when there is a story worth telling in more detail.
 
-### Turn Timer Pro sync and widgets validation
+### October 24, 2026: browser app and promoted Apple source
 
-This branch adds the release-validation path for Pro iCloud sync and widgets:
+The [browser app](https://dfakkeldy.github.io/VisualTimer/app/) is live with six
+starters, editable sequences, local history, and portable templates. The Apple
+source reached `main` in [PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114)
+on October 17, followed by App Store Connect upload 1.0 (77). Upload is separate
+from public availability; see the [readiness ledger](../app-store/readiness.md).
+
+### July 2026: Pro sync and widgets validation
+
+The implementation added the release-validation path for Pro iCloud sync and widgets:
 template sync has a live CloudKit probe, completed history can sync through the
 private `TurnTimerHistory` zone, and Home Screen plus Lock Screen widgets launch
 templates from App Group snapshots. Local simulator builds cover compilation,

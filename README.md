@@ -6,13 +6,14 @@ starter templates for common timed sessions.
 
 ## Status
 
-Re-checked 2026-10-06: nightly build **1.0 (73)** has upload, processing and
-internal-distribution receipts; weekly build **1.0 (66)** has external receipts
-for an older payload. Main remains older. App Store review/live state is
-unverified. The [readiness ledger](docs/app-store/readiness.md) records exact
-SHAs, CI, blockers and the required `nightly` → `weekly` → `main` ladder.
-[Submission materials](docs/app-store/submission-packet.md) are drafts. No
-promotion, upload or submission is authorized by this preparation.
+Documentation audited 2026-10-24. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
+is live and installable. The iPhone and iPad app is in public beta on
+[TestFlight](https://testflight.apple.com/join/s7w4YGWU). The Apple app includes the quick timer, sequences,
+Pro, CloudKit sync, widgets, and embedded Watch companion in source promoted
+through `weekly` to `main` on October 17. Main upload **1.0 (77)** succeeded;
+current App Review and public App Store availability have not been rechecked.
+See the [readiness ledger](docs/app-store/readiness.md) for dated receipts and
+remaining verification, and [Roadmap](Roadmap.md) for the current priorities.
 
 Useful docs:
 
@@ -20,8 +21,8 @@ Useful docs:
 - [Roadmap](Roadmap.md)
 - [App Store readiness](docs/app-store/readiness.md)
 - [Fastlane release docs](fastlane/README.md)
-- [Branch and worktree cleanup map](docs/repo-cleanup.md)
 - [Public devlog](docs/guides/devlog.md)
+- [Website and documentation maintenance](docs/website.md)
 
 ## Current Scope
 
@@ -53,9 +54,10 @@ Useful docs:
   (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
   saved templates are sent to the paired Watch as full snapshots through
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
-  iPhone library. Signed paired-device delivery is not yet verified. Watch
-  timers show live remaining time and keep running while you move between
-  screens. On screen, a finished timer plays the selected sound with a haptic.
+  iPhone library. Signed TestFlight now includes the Watch companion; physical
+  paired-Watch acceptance is not yet verified. Watch timers show live remaining
+  time and keep running while you move between screens. On screen, a finished
+  timer plays the selected sound with a haptic.
   If you allow alerts, a local notification covers completion while the app
   is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
   tested on a physical Watch.
@@ -63,7 +65,7 @@ Useful docs:
   `.turntimer` import/export, and local history in a responsive React PWA.
 
 These scope bullets describe implemented source, not signed-device acceptance
-or the old main release. Production sync, saved Watch-template transfer and
+or App Store live state. Production sync, saved Watch-template transfer and
 timer lock/background behavior still need the focused checks in the readiness
 ledger. No background-alarm guarantee is implied.
 
@@ -97,24 +99,15 @@ ledger. No background-alarm guarantee is implied.
   shared App Group container `group.Dan.Visual-Timer`; widgets never read the
   app's Documents directory directly.
 
-## Product Roadmap
+## Product direction
 
-Turn Timer is planned as a free timer with a one-time Pro unlock (no
-subscription; the store price is set in App Store Connect). The
-core timer, built-in starter templates, and one custom saved template remain
-free. Pro value is built around reuse and portability: unlimited templates,
-history/export, iCloud sync, sharing, widgets, and Apple Watch convenience.
+The quick timer, six starters, and one custom saved template are free on Apple
+platforms. Pro is a one-time purchase for reuse and portability, including
+unlimited saved templates, history/export, iCloud sync, sharing, widgets, and
+advanced customization. The app displays StoreKit's localized price. The web
+client stores its data in the browser and has no StoreKit purchase gate.
 
-- Additional saved templates.
-- Full local history and history export.
-- iCloud sync for saved templates.
-- iCloud sync for history.
-- Shared templates for families, classrooms, kitchens, meetings, and game
-  nights.
-- Home Screen and Lock Screen widgets for one-tap template starts.
-
-See [Roadmap](Roadmap.md) for the current release phases, staged branch work,
-and the next ten App Store steps.
+See [Roadmap](Roadmap.md) for implemented features and remaining work.
 
 ## Architecture
 
@@ -195,9 +188,11 @@ The public website is served from `main` at `docs/`. The site root is
 `docs/devlog.html`. Weekly devlog automation opens a PR against `main`; it does
 not publish social posts automatically.
 
-The installable web app (`web/` and the committed `docs/app/` package) lives on
-`nightly` and `weekly` until that tree is promoted to `main`. GitHub Pages does
-not host `/app/` until `docs/app/` exists on `main`.
+The installable [web app](https://dfakkeldy.github.io/VisualTimer/app/) is live
+at `/VisualTimer/app/`. Its source is `web/`; `make web-pages` regenerates the
+committed `docs/app/` package. Pages serves the copy on `main`. Ordinary docs
+and website changes target `nightly` and reach the live site after the normal
+promotion ladder. See [website maintenance](docs/website.md).
 
 ## Getting Started
 
@@ -237,11 +232,9 @@ StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
 See [`web/README.md`](web/README.md) for the web architecture and support
 details.
 
-Until `docs/app/` is promoted to `main`, run the PWA locally with the commands
-above. `make web-pages` regenerates the committed `docs/app/` package on this
-branch and leaves the existing homepage, devlog, support, and privacy routes
-intact. It does not publish a live GitHub Pages `/app/` URL while Pages still
-reads `main`.
+`make web-pages` rebuilds only `docs/app/`; it leaves the homepage, devlog,
+support, and privacy routes intact. Commit a regenerated package when changing
+the web client so the source and deployed assets stay together.
 
 ## CloudKit and Widget Setup
 

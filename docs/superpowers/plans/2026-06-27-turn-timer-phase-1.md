@@ -1,8 +1,8 @@
 # Turn Timer Phase 1 Implementation Plan
 
 > Status update, 2026-07-01: archival plan. Phase 1 was merged through PR #2.
-> Use `Roadmap.md` and `docs/repo-cleanup.md` for current release status and
-> branch cleanup instead of treating the unchecked boxes below as live work.
+> Use `Roadmap.md` for current release status instead of treating the
+> unchecked boxes below as live work.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -28,7 +28,7 @@
 
 ## Baseline Notes
 
-- Branch/worktree: `/Users/dfakkeldy/Developer/VisualTimer-turn-timer-phase1` on `codex/turn-timer-phase1`.
+- Branch/worktree: a separate worktree on `codex/turn-timer-phase1`.
 - Watch build baseline passed:
 
 ```bash

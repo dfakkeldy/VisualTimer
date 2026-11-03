@@ -1,5 +1,11 @@
 # App Store Featuring Nomination Draft
 
+Historical planning worksheet. Prepared details and unchecked items below are
+not a current App Store status report. The October 17 source promotion and
+build 77 upload are recorded in [readiness](../app-store/readiness.md). Recheck the selected candidate
+and store state before reusing this draft.
+
+
 Re-checked: 2026-10-06 UTC
 
 Status: optional draft; no featuring nomination authorized. Not a launch blocker.

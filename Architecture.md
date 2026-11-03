@@ -1,153 +1,128 @@
-# Turn Timer Architecture
+# Turn Timer architecture
 
-Last updated: 2026-07-01
+Last audited: 2026-10-24
 
-Turn Timer is an Apple-platform Swift app for visual sequence timers. The
-project currently targets iOS 18.0 and watchOS 11.0, uses Xcode 26 project
-settings, and keeps `SWIFT_VERSION = 5.0` in the Xcode project. Do not raise
-platform support or change the Swift language mode as part of unrelated work.
+Turn Timer has SwiftUI apps for iOS 18+ and watchOS 11+, a WidgetKit extension,
+and a local-first React web app. The Xcode project uses Swift 5 language mode
+and Xcode 26 settings. Keep platform and language changes separate from
+unrelated work.
 
-## Branch Truth
+## Branches and delivered code
 
-`main` is the deployable GitHub Pages and App Store release branch. `nightly`
-is ahead of `main` with staged app work, including widget, watch, history-sync,
-and release-validation changes. Docs on `main` should say when a feature is
-staged instead of implying it is already in the App Store branch.
+Ordinary changes branch from and target `nightly`, then follow
+`nightly` → `weekly` → `main`. `main` is the GitHub default branch and serves
+GitHub Pages from `docs/`. The October 17 promotion included the web app,
+history sync, widgets, and embedded Watch companion. These are implemented
+architecture, rather than future work. Implementation, a signed upload,
+physical-device behavior, and public availability are separate evidence.
 
-## Product Model
+The [readiness ledger](docs/app-store/readiness.md) holds dated delivery
+receipts and remaining release checks. [Website maintenance](docs/website.md)
+explains the static site and committed web build.
 
-The app keeps the original visual countdown and extends it into reusable
-sequences:
+## Product model
 
-- Quick timer remains free.
-- Starter templates remain free.
-- One custom saved template remains free.
-- Turn Timer Pro is a one-time non-consumable unlock with product ID
-  `turntimer.pro.unlock`.
-- Pro gates reuse and portability: additional saved templates, full
-  history/export, iCloud sync, sharing, widgets, and advanced customization.
+The quick timer, built-in starters, one custom saved template, and recent
+history are free on Apple platforms. Turn Timer Pro is a one-time StoreKit
+non-consumable, `turntimer.pro.unlock`, for unlimited saved templates, full
+history/export, iCloud sync, sharing, widgets, and advanced customization.
+The app displays StoreKit's localized price.
 
-## App Layers
+The browser app has no purchase gate or Apple entitlement emulation. Templates,
+preferences, and history stay in browser storage. `.turntimer` files are its
+portability boundary.
 
-| Layer | Main files | Responsibility |
+## Apple app layers
+
+| Layer | Main types | Responsibility |
 |---|---|---|
-| Timer core | `TimerViewModel`, `TimerState`, `TimerSound`, `SoundManager` | Countdown state, audio session behavior, generated WAV tones, sleep prevention |
-| Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered rounds, repeats, skip/restart/do-over, turn progress |
-| Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Starter data, editing, save/load, import/export, legacy migration |
-| History | `HistoryViewModel`, `GameRecord`, `SessionEvent`, `SessionDetailView` | Completed session storage, review, and Pro-gated export |
-| Sync | `TemplateCloudSyncEngine`, `TemplateCloudRecordMapper`, `UbiquitousSettingsStore` | Pro template sync and lightweight iCloud setting sync |
-| Monetization | `ProAccessViewModel`, `ProProduct`, `ProFeature`, `HistoryAccessPolicy`, `TemplateSavePolicy` | StoreKit state and Pro feature boundaries |
-| Views | `MainTabView`, `ContentView`, `GamePlaybackView`, `GameEditorView`, `HistoryView`, leaf components | SwiftUI presentation and user interactions |
-| Theme | `Theme` | Shared labels, symbols, colors, dimensions, and animation constants |
+| Timer | `TimerViewModel`, `TimerState`, `TimerVisualProgress` | Guarded countdown transitions, timestamp-derived remaining time and pie progress, sleep prevention |
+| Sound | `TimerSound`, `SoundManager` | Audio session and synthesized WAV tones |
+| Sequence | `GameViewModel`, `GameSequence`, `Round` | Ordered rounds, repeats, skip, restart, do-over, turn progress |
+| Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Editing, built-ins, persistence, import/export, legacy reads |
+| History | `HistoryViewModel`, `GameRecord`, `SessionEvent` | Local session storage, review, export |
+| iCloud | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, record mappers, `UbiquitousSettingsStore` | Pro private-database sync and sound preferences |
+| Pro | `ProAccessViewModel`, `ProFeature`, access policies | Verified StoreKit entitlement, purchase/restore, feature gates |
+| Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, timelines, template launch URLs |
+| Watch | `WatchTemplateConnectivity`, `WatchTemplateStore`, `WatchTimerAlertCoordinator` | Paired-template delivery, local snapshots, completion alerts |
+| Presentation | `MainTabView`, playback/editor/history views, leaf controls | Declarative UI, observation, action callbacks |
+| Theme | `Theme` | Shared labels, symbols, colors, spacing, animation values |
 
-Staged on `nightly`: `HistoryCloudSyncEngine`, widget snapshot/deep-link types,
-the WidgetKit extension, and fuller watch template playback. Promote those
-branches before treating them as `main` architecture.
+View models and storage/parser helpers own business logic. Leaf views receive
+values and callbacks. Keep CloudKit, StoreKit, file parsing, and state-machine
+rules out of leaf SwiftUI views. Feature containers may observe their owners.
 
-## View Model Boundary
+Countdowns reconcile from elapsed dates on pause and activation. A sequence
+starts its next round on return rather than catching up through several missed
+rounds. The separate session elapsed counter has different behavior; do not
+infer background-alarm delivery from countdown reconciliation.
 
-The codebase is MVVM with deliberately small SwiftUI views:
+## Documents and sync
 
-- View models own timer, sequence, template, history, StoreKit, and sync logic.
-- Leaf views receive values through `let` properties and send actions through
-  closures.
-- Views should not parse files, talk to CloudKit, run StoreKit purchase logic,
-  own timers, or enforce Pro access rules directly.
+Apple templates are JSON at
+`Documents/Templates/<templateID>.turntimer`. Legacy `.vtgame` files still load.
+Imports assign a new local identity and conflict-safe title instead of
+replacing an existing document. The web codec uses the same portable shape.
 
-This keeps timer and sequence state testable and prevents UI edits from
-accidentally weakening guarded state transitions.
+The private CloudKit container is `iCloud.Dan.Visual-Timer`:
 
-## Data Formats
+| Data | Zone | Record type |
+|---|---|---|
+| Saved templates | `TurnTimerTemplates` | `Template` |
+| Completed history | `TurnTimerHistory` | `HistoryRecord` |
 
-Saved templates use `.turntimer` JSON documents in:
-
-```text
-Documents/Templates/<templateID>.turntimer
-```
-
-Legacy `.vtgame` files may still load for migration. New saves should use
-`TemplateLibraryStore` and `TemplateDocumentCodec`. Imports duplicate templates
-with a new local ID and conflict-safe title instead of editing a shared file in
-place.
-
-## iCloud
-
-Current `main` supports Pro template sync:
-
-- Container: `iCloud.Dan.Visual-Timer`
-- Zone: `TurnTimerTemplates`
-- Record type: `Template`
-
-The app must stay local-first. Template editing and recent history should remain
-usable while offline, signed out, restricted, or before the CloudKit production
-schema is deployed.
-
-Staged on `nightly`: history sync using zone `TurnTimerHistory` and record type
-`HistoryRecord`.
+`MainTabView` enables both sync engines when Pro is unlocked. Local editing,
+playback, and history remain usable offline or without iCloud. Sound
+preferences use `NSUbiquitousKeyValueStore`. Source configuration does not
+prove production schema or signed-account behavior.
 
 ## Widgets and Watch
 
-Widget and watch expansion is staged on `nightly`:
+Widgets read compact snapshots from App Group `group.Dan.Visual-Timer`, not
+Documents. Their links use `turntimer://starter/<id>` and
+`turntimer://template/<uuid>`; the main app routes them into existing owners.
 
-- App Group: `group.Dan.Visual-Timer`
-- Widgets read compact snapshots, not the app's Documents directory.
-- Widget taps route through `turntimer://starter/<id>` or
-  `turntimer://template/<uuid>`.
-- Watch playback is being aligned around starter/saved template sources.
+The iPhone app embeds companion `Dan.Visual-Timer.watchkitapp`.
+`WatchTemplateConnectivity` sends full saved-template snapshots using
+WatchConnectivity application context and file transfers. App Group files alone
+do not cross devices. Revision ordering and atomic writes reject stale data;
+revoking Pro clears Watch templates without deleting the iPhone library.
 
-Promote and smoke-test the widget/watch branch before moving these features into
-App Store screenshots or production metadata.
+Watch quick timer and starter playback are separate paths. Foreground
+completion uses sound and haptics; permitted local notifications cover
+completion off screen. No extended runtime or guaranteed background execution
+is implemented. See the dated [Watch quality plan](docs/watch-quality-plan.md).
 
-## Privacy and Compliance
+## Web and public website
 
-Current code has `PrivacyInfo.xcprivacy` and no third-party analytics, ads, or
-tracking SDKs. App Store readiness still needs:
+`web/src/domain` owns pure transitions and template parsing.
+`useTurnTimerController` orchestrates templates, history, and timer actions;
+`usePersistentState` owns versioned local storage. React views receive state and
+callbacks. The browser timer derives remaining time from timestamps.
 
-- A public privacy policy URL.
-- An in-app privacy policy link.
-- App Privacy labels matching the final shipping binary.
-- `ITSAppUsesNonExemptEncryption = NO` in the shipping Info.plist if the app
-  only uses Apple-provided HTTPS/iCloud/StoreKit encryption.
+Vite builds the installable client into `web/dist/`, or committed `docs/app/`
+with `make web-pages`. `web/public/sw.js` caches the application shell. Apple
+StoreKit, CloudKit, widgets, and Watch integrations remain native features.
 
-See `docs/app-store/readiness.md` for the submission checklist.
+The public homepage, support, privacy, 404, and devlog pages are plain HTML with
+shared `docs/assets/site.css`. Weekly devlog automation replaces only marked
+blocks in the HTML and Markdown pair. See [web documentation](web/README.md)
+and [website maintenance](docs/website.md).
 
-## Release Engineering
+## Release engineering and verification
 
-Promotion is one-way:
+Release workflows execute from the default branch, check out the selected train,
+and restore that workflow ref's Fastlane config. Signing reads bundle identifiers
+from the train's Xcode project. Schedules compare effective app inputs with the
+last successful delivery and skip unchanged binaries. Documentation changes do
+not imply a new app upload. See [release delivery](.github/RELEASE_DELIVERY.md).
 
-```text
-feature/* -> nightly -> weekly -> main
-```
+Native CI builds iOS and Watch targets, runs iOS tests and a focused Watch UI
+test, and checks release controls. Web CI runs tests, TypeScript checks, and a
+production build. Follow [contributor validation](CONTRIBUTING.md#testing) for
+the affected area; use the Mac build-slot wrapper for local Apple commands.
 
-`main` remains the default branch because scheduled workflows run from the
-default-branch workflow file. Release automation checks out the selected train
-branch, then restores default-branch Fastlane files so signing and distribution
-policy stay centralized.
-
-Distribution policy:
-
-- `nightly`: daily scheduled check; internal TestFlight group named `nightly`
-  only when app inputs changed since the last successful delivery.
-- `weekly`: Monday scheduled check; external TestFlight group named `weekly`
-  only when app inputs changed since the last successful delivery.
-- `main`: App Store Connect upload on app-affecting pushes; review submission
-  is opt-in and off by default (`APP_STORE_SUBMIT_FOR_REVIEW`).
-
-Scheduled trains skip the macOS build and upload when inputs match the last
-successful platform/channel receipt. Documentation-only edits do not create a
-new binary. `force=true` requests an intentional rebuild through the same
-gates. The scheduler runs the controller from the default branch, so this
-takes effect only after promotion to `main`. See `.github/RELEASE_DELIVERY.md`.
-
-## Validation
-
-Use these checks for doc or release readiness changes:
-
-```bash
-make doc-automation-test
-python3 -m json.tool TurnTimer.storekit >/dev/null
-```
-
-Use the README's Xcode build commands for app, watch, sync, or widget changes.
-Local simulator builds do not prove live iCloud account state, production
-CloudKit schema, TestFlight distribution, or App Store review readiness.
+The app has no developer-run accounts, advertising, or analytics SDKs. Each
+Apple executable has a privacy manifest. Manifest presence, archive reports,
+App Store questionnaire answers, and live service behavior need their own
+evidence; the [privacy page](docs/privacy.html) describes the data paths.

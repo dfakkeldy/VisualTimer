@@ -1,5 +1,11 @@
 # Turn Timer Release Acceptance
 
+Historical planning worksheet. Prepared details and unchecked items below are
+not a current App Store status report. The October 17 source promotion and
+build 77 upload are recorded in [readiness](readiness.md). Recheck the selected candidate
+and store state before reusing this draft.
+
+
 Re-checked: 2026-10-06 UTC. Results: **not recorded for a selected candidate**.
 This focused launch check is not a demand to retest each nightly update. Prefer
 an authorized tester/agent; consolidate device-only observations into one
