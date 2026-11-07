@@ -74,13 +74,17 @@ If a separately authorized release needs changed entitlements, the workflow
 accepts `refresh_signing_profiles=true`. This regenerates profiles and is not a
 read-only preparation step; obtain exact authorization before using it.
 
-Current known app identifiers:
+Known app identifiers (match fetches the subset present on the train project):
 
 - `Dan.Visual-Timer`
 - `Dan.Visual-Timer.watchkitapp` (embedded paired Watch companion)
 - `Dan.Visual-Timer-Watch` and `Dan.Visual-Timer-Watch.watchkitapp` (older
-  watch-only identities, kept in `Matchfile` for existing records)
+  watch-only identities, kept for existing records)
 - `Dan.Visual-Timer.TurnTimerWidgets`
+
+Release trains read identifiers from the checked-out Xcode project rather than
+stamping the controller branch's Watch ID onto every train. A missing App Store
+profile requires the authorized signing-resource step described above.
 
 Automation comes from the default-branch workflow ref for every channel. Keep
 source/automation SHAs distinct and follow internal nightly → external weekly →

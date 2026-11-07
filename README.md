@@ -160,7 +160,10 @@ back down into `weekly` and `nightly`.
 Release automation runs from the default-branch workflow, then checks out the
 selected train branch before building. The workflow restores the default-branch
 `fastlane` configuration after checkout so signing and distribution policy stay
-centralized while the app code comes from the selected train.
+centralized while the app code comes from the selected train. Fastlane reads
+each target's `PRODUCT_BUNDLE_IDENTIFIER` from that checked-out Xcode project
+before calling `match`, so a Watch identifier change on `nightly` is not
+overwritten by hardcoded IDs from `main`.
 
 Scheduled trains still check on that daily and Monday cadence. They compare
 effective app build inputs with the last successful platform/channel delivery
