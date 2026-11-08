@@ -44,10 +44,13 @@ final class DesignCouncilWatchCaptureTests: XCTestCase {
 
     @MainActor
     func test15WatchSession() throws {
-        let app = launch(["-designCouncilWatchSession", "game-night"])
+        let app = launch()
+        let row = app.buttons["watch.root.starter.game-night"]
+        XCTAssertTrue(row.waitForExistence(timeout: 15))
+        row.tap()
         // The live dial animates every frame, which makes Watch accessibility
         // snapshots time out; wait instead of querying, then capture.
-        sleep(30)
+        sleep(8)
         capture("15-watch-session", app: app)
     }
 

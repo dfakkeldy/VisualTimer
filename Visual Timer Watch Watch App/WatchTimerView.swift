@@ -32,8 +32,6 @@ struct WatchTimerView: View {
 
             controls
         }
-        .navigationTitle(Theme.Watch.Label.quickTimer)
-        .navigationBarTitleDisplayMode(.inline)
         .focusable(true)
         .digitalCrownRotation(
             $viewModel.crownValue,

@@ -84,16 +84,18 @@ struct WatchRootView: View {
             WatchTemplateConnectivity.shared.activate()
             model.refreshSavedTemplates()
             await model.refreshNotificationPermission()
+        }
 #if DEBUG
+        .task {
             // Design-council captures: `-designCouncilWatchSession <starter id>`.
             if let id = UserDefaults.standard.string(forKey: "designCouncilWatchSession"),
                let template = StarterTemplateLibrary.template(id: id) {
                 // Let the list finish its first layout so the push isn't dropped.
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(1.5))
                 startSession(template.game)
             }
-#endif
         }
+#endif
         .onReceive(NotificationCenter.default.publisher(for: WatchTemplateConnectivity.templatesChanged)) { _ in
             model.refreshSavedTemplates()
         }
