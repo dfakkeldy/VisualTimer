@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A sheet that lets the user pick one of three finish sounds.
-/// The selection is persisted via `@AppStorage` inside `SoundManager`.
+/// Settings: the end sound, Turn Timer Pro, and iCloud sync once it applies.
 struct SettingsView: View {
 
     @ObservedObject var soundManager: SoundManager
@@ -17,110 +16,148 @@ struct SettingsView: View {
                     ForEach(TimerSound.allCases, id: \.self) { sound in
                         Button {
                             soundManager.selectedSound = sound
+                            soundManager.playPreview(sound)
                         } label: {
                             HStack {
                                 Text(sound.displayName)
-                                    .foregroundStyle(.primary)
-
+                                    .foregroundStyle(Theme.ColorValue.textPrimary)
                                 Spacer()
-
                                 if soundManager.selectedSound == sound {
                                     Image(systemName: Theme.Symbol.checkmark)
+                                        .font(.body.weight(.semibold))
                                         .foregroundStyle(Theme.ColorValue.selectionAccent)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
+                        .accessibilityAddTraits(soundManager.selectedSound == sound ? .isSelected : [])
+                        .accessibilityHint("Plays a preview")
+                        .listRowBackground(Theme.ColorValue.surface)
                     }
                 } header: {
-                    Text("Timer End Sound")
+                    header("End sound")
                 } footer: {
-                    Text("This sound will play when the timer reaches zero.")
+                    Text("Plays when a timer reaches zero. Tap one to hear it.")
                 }
 
                 Section {
-                    HStack {
-                        Text("Template Sync")
-                        Spacer()
-                        Text(templateSync.statusText)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-
-                    Button {
-                        Task {
-                            await templateSync.refreshNow()
-                        }
-                    } label: {
-                        Text("Refresh Template Sync")
-                    }
-                    .disabled(!proAccess.isProUnlocked)
-
-                    HStack {
-                        Text("History Sync")
-                        Spacer()
-                        Text(historySync.statusText)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-
-                    Button {
-                        Task {
-                            await historySync.refreshNow()
-                        }
-                    } label: {
-                        Text("Refresh History Sync")
-                    }
-                    .disabled(!proAccess.isProUnlocked)
-
                     HStack {
                         Text("Status")
                         Spacer()
                         Text(proAccess.isProUnlocked ? "Unlocked" : "Free")
                             .foregroundStyle(Theme.ColorValue.textSecondary)
                     }
+                    .listRowBackground(Theme.ColorValue.surface)
 
                     if !proAccess.isProUnlocked {
-                        Button {
-                            Task { await proAccess.purchasePro() }
-                        } label: {
-                            Text(proAccess.purchaseButtonTitle)
+                        if proAccess.product == nil && proAccess.purchaseState != .loading {
+                            Button("Retry loading Pro") {
+                                Task { await proAccess.loadProducts() }
+                            }
+                            .listRowBackground(Theme.ColorValue.surface)
+                        } else {
+                            Button {
+                                Task { await proAccess.purchasePro() }
+                            } label: {
+                                Text(proAccess.purchaseButtonTitle)
+                                    .font(.body.weight(.semibold))
+                            }
+                            .disabled(!proAccess.canPurchase)
+                            .listRowBackground(Theme.ColorValue.surface)
                         }
-                        .disabled(!proAccess.canPurchase)
                     }
 
-                    if proAccess.product == nil && proAccess.purchaseState != .loading {
-                        Button("Retry Loading Pro") {
-                            Task { await proAccess.loadProducts() }
-                        }
-                    }
-
-                    Button {
+                    Button("Restore purchases") {
                         Task { await proAccess.restorePurchases() }
-                    } label: {
-                        Text("Restore Purchases")
                     }
                     .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                    .listRowBackground(Theme.ColorValue.surface)
 
                     if let statusMessage {
                         Text(statusMessage)
                             .font(.footnote)
                             .foregroundStyle(Theme.ColorValue.textSecondary)
+                            .listRowBackground(Theme.ColorValue.surface)
                     }
                 } header: {
-                    Text("Turn Timer Pro")
+                    header("Turn Timer Pro")
                 } footer: {
-                    Text("Pro unlocks unlimited templates, full history export, iCloud template and history sync, sharing, and widgets.")
+                    Text(ProFeature.benefitsSentence)
                 }
-                Section("Privacy") {
-                    Link("Privacy Policy", destination: URL(string: "https://dfakkeldy.github.io/VisualTimer/privacy.html")!)
+
+                Section {
+                    syncRow("Templates", status: templateSync.statusText) {
+                        await templateSync.refreshNow()
+                    }
+                    syncRow("History", status: historySync.statusText) {
+                        await historySync.refreshNow()
+                    }
+                } header: {
+                    header("iCloud sync")
+                } footer: {
+                    if !proAccess.isProUnlocked {
+                        Text("Sync keeps templates and history on all your devices. It comes with Pro.")
+                    }
+                }
+
+                Section {
+                    Link("Privacy policy", destination: URL(string: "https://dfakkeldy.github.io/VisualTimer/privacy.html")!)
                         .accessibilityIdentifier("settings.privacy-policy")
+                        .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    header("Privacy")
                 }
             }
-            .navigationTitle("Settings")
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Theme.ColorValue.appBackground)
+            .navigationTitle(Theme.Label.settings)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(Theme.Label.done) { dismiss() }
+                        .font(.body.weight(.semibold))
                 }
             }
+        }
+        .presentationBackground(Theme.ColorValue.appBackground)
+    }
+
+    private func header(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .textCase(nil)
+    }
+
+    /// A sync status line. With Pro it refreshes on tap; without, it reads
+    /// "With Pro" rather than offering a control that can't act.
+    @ViewBuilder
+    private func syncRow(_ title: String, status: String, refresh: @escaping () async -> Void) -> some View {
+        if proAccess.isProUnlocked {
+            Button {
+                Task { await refresh() }
+            } label: {
+                HStack {
+                    Text(title).foregroundStyle(Theme.ColorValue.textPrimary)
+                    Spacer()
+                    Text(status).foregroundStyle(Theme.ColorValue.textSecondary)
+                    Image(systemName: Theme.Symbol.restart)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.ColorValue.selectionAccent)
+                }
+            }
+            .accessibilityHint("Syncs now")
+            .listRowBackground(Theme.ColorValue.surface)
+        } else {
+            HStack {
+                Text(title)
+                Spacer()
+                Label("With Pro", systemImage: "lock")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            .listRowBackground(Theme.ColorValue.surface)
         }
     }
 
@@ -129,9 +166,9 @@ struct SettingsView: View {
         case .idle, .purchased:
             return nil
         case .loading:
-            return "Checking purchase status..."
+            return "Checking purchase status…"
         case .purchasing:
-            return "Purchasing..."
+            return "Purchasing…"
         case .pending:
             return "Purchase pending approval."
         case .failed(let message):

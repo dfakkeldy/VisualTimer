@@ -12,22 +12,28 @@ struct WatchTimerView: View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
-                color: viewModel.timer.timerColor
+                color: viewModel.timer.timerColor,
+                dialSize: Theme.Watch.Dimension.quickPieSize
             ) { date in
                 if viewModel.canEditDuration {
-                    durationEditor
+                    VStack(spacing: 0) {
+                        durationEditor
+                        Text(Theme.Watch.Label.crownCue)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
+                            .accessibilityHidden(true)
+                    }
                 } else {
                     remainingTime(at: date)
                 }
             }
-            .frame(
-                maxWidth: Theme.Watch.Dimension.quickDialMaxSize,
-                maxHeight: Theme.Watch.Dimension.quickDialMaxSize
-            )
 
             controls
         }
         .navigationTitle(Theme.Watch.Label.quickTimer)
+        .navigationBarTitleDisplayMode(.inline)
         .focusable(true)
         .digitalCrownRotation(
             $viewModel.crownValue,
@@ -78,7 +84,7 @@ struct WatchTimerView: View {
                 )
                 .background(
                     RoundedRectangle(cornerRadius: Theme.Watch.Dimension.selectionCornerRadius)
-                        .fill(isSelected ? Theme.Watch.ColorValue.selection : Color.clear)
+                        .fill(isSelected ? Theme.Watch.ColorValue.selection : Theme.Watch.ColorValue.editable)
                 )
         }
         .buttonStyle(.plain)
@@ -105,7 +111,8 @@ struct WatchTimerView: View {
                     title: primary.title,
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    isProminent: true
+                    isProminent: true,
+                    tint: viewModel.timer.timerColor
                 ) {
                     viewModel.performPrimaryAction()
                 }

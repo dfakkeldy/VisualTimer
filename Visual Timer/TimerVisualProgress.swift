@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct TimerVisualProgress: Equatable {
     let totalDuration: TimeInterval
@@ -69,5 +70,34 @@ struct TimerVisualProgress: Equatable {
             elapsed += max(date.timeIntervalSince(currentRunStartedAt), 0)
         }
         return min(max(elapsed, 0), totalDuration)
+    }
+}
+
+/// Saved with an active session so a countdown can resume exactly after the
+/// app is closed.
+extension TimerVisualProgress: Codable {}
+
+/// Deliberately has no interpolated animatable data: wall-clock samples describe
+/// the exact wedge, including pause/resume and a newly replenished round.
+struct RemainingTimerWedge: Shape {
+    let elapsedFraction: Double
+
+    func path(in rect: CGRect) -> Path {
+        let fraction = min(max(elapsedFraction, 0), 1)
+        guard fraction < 1 else { return Path() }
+        if fraction == 0 { return Path(ellipseIn: rect) }
+
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        var path = Path()
+        path.move(to: center)
+        path.addArc(
+            center: center,
+            radius: min(rect.width, rect.height) / 2,
+            startAngle: .degrees(Theme.Rotation.trimOriginOffset + fraction * 360),
+            endAngle: .degrees(Theme.Rotation.trimOriginOffset + 360),
+            clockwise: false
+        )
+        path.closeSubpath()
+        return path
     }
 }

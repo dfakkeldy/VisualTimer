@@ -12,6 +12,8 @@ struct Visual_TimerApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                // One ink canvas for every tab and sheet, independent of system appearance.
+                .preferredColorScheme(.dark)
         }
     }
 }

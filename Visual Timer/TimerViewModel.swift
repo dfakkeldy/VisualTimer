@@ -150,6 +150,31 @@ final class TimerViewModel: ObservableObject {
         state = .notStarted
     }
 
+    /// Puts back a countdown saved before the app was closed. Allowed only from
+    /// `.notStarted`, so it never interrupts a timer in progress. A restored
+    /// running timer resumes ticking; one that ran out while closed finishes on
+    /// its next tick, through the normal completion path.
+    func restore(totalDuration: Int, progress: TimerVisualProgress, state restoredState: TimerState, color: Color?) {
+        guard case .notStarted = state else { return }
+        endCountdown()
+        timerColorOverride = color
+        self.totalDuration = max(Theme.TimerMechanic.minimumDuration, totalDuration)
+        visualProgress = progress
+        timeRemaining = progress.remainingSeconds()
+        switch restoredState {
+        case .running:
+            state = .running
+#if !os(watchOS)
+            UIApplication.shared.isIdleTimerDisabled = true
+#endif
+            beginCountdown()
+        case .paused:
+            state = .paused
+        case .notStarted, .finished:
+            state = .notStarted
+        }
+    }
+
     /// Adjusts the timer duration and persists the new value so it
     /// becomes the default for future launches. Only permitted before
     /// the timer starts, so the running or paused timer is never disrupted.

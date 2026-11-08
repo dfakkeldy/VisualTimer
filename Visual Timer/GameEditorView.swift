@@ -6,6 +6,7 @@ struct GameEditorView: View {
     @ObservedObject var editor: GameEditorViewModel
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
+    @ObservedObject var soundManager: SoundManager
     let onPlayGame: (GameSequence) -> Void
 
     @State private var showSaveAlert = false
@@ -20,43 +21,78 @@ struct GameEditorView: View {
         return editor.rounds.first(where: { $0.id == id })
     }
 
+    private var currentGame: GameSequence { editor.buildGameSequence() }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                titleField
-                TemplateSyncStatusView(syncEngine: templateSync, isProUnlocked: proAccess.isProUnlocked)
-                templatePicker
-                roundCountStepper
-                roundsList
+            List {
+                Section {
+                    templatePicker
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                } header: {
+                    sectionHeader("Start from")
+                }
+
+                Section {
+                    sequenceHeader
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 12, trailing: 20))
+                }
+
+                Section {
+                    ForEach(editor.rounds) { round in
+                        PlayerRowView(
+                            round: round,
+                            onTap: { editor.expandedRoundId = round.id },
+                            onToggleActive: { editor.toggleActive(id: round.id) },
+                            onDelete: { editor.deleteRound(id: round.id) }
+                        )
+                        .listRowBackground(Theme.ColorValue.surface)
+                    }
+                    .onMove(perform: editor.moveRounds)
+
+                    Button {
+                        editor.addRound()
+                    } label: {
+                        Label(Theme.Label.addPlayer, systemImage: Theme.Symbol.addPlayer)
+                            .font(.body.weight(.medium))
+                    }
+                    .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    sectionHeader("Rounds")
+                } footer: {
+                    Text("Tap a round to edit it. Touch and hold to reorder.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.ColorValue.textTertiary)
+                }
             }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
             .background(Theme.ColorValue.appBackground)
+            .safeAreaInset(edge: .bottom) {
+                startBar
+            }
             .navigationTitle("Templates")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarLeading) {
-                    Button {
-                        showImportPicker = true
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showImportPicker = true
+                        } label: {
+                            Label(Theme.Label.importTemplate, systemImage: Theme.Symbol.importTemplate)
+                        }
+                        Button {
+                            exportCurrentTemplate()
+                        } label: {
+                            Label(Theme.Label.exportTemplate, systemImage: Theme.Symbol.exportTemplate)
+                        }
+                        .disabled(!editor.canSaveOrStartTemplate)
                     } label: {
-                        Image(systemName: Theme.Symbol.importTemplate)
+                        Image(systemName: Theme.Symbol.more)
                     }
-                    .accessibilityLabel(Theme.Label.importTemplate)
-
-                    Button {
-                        exportCurrentTemplate()
-                    } label: {
-                        Image(systemName: Theme.Symbol.exportTemplate)
-                    }
-                    .accessibilityLabel(Theme.Label.exportTemplate)
-                    .disabled(!editor.canSaveOrStartTemplate)
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Start") {
-                        editor.autoSave()
-                        let game = editor.buildGameSequence()
-                        onPlayGame(game)
-                    }
-                    .disabled(!editor.canSaveOrStartTemplate)
+                    .accessibilityLabel("Import or export")
                 }
             }
             .onAppear {
@@ -68,7 +104,7 @@ struct GameEditorView: View {
                 allowsMultipleSelection: false,
                 onCompletion: handleImportResult
             )
-            .alert("Save Status", isPresented: $showSaveAlert) {
+            .alert("Template", isPresented: $showSaveAlert) {
                 Button("OK") {}
             } message: {
                 Text(saveAlertMessage)
@@ -88,6 +124,7 @@ struct GameEditorView: View {
                     onUpdateName: { editor.updateName(id: round.id, name: $0) },
                     onUpdateColor: { editor.updateColor(id: round.id, color: $0) },
                     onUpdateSound: { editor.updateSound(id: round.id, sound: $0) },
+                    onPreviewSound: { soundManager.playPreview($0) },
                     onUpdateEmoji: { editor.updateEmoji(id: round.id, emoji: $0) },
                     onUpdateDuration: { editor.updateDuration(id: round.id, duration: $0) },
                     onToggleStartPaused: { editor.toggleStartPaused(id: round.id) },
@@ -98,143 +135,170 @@ struct GameEditorView: View {
         }
     }
 
-    // MARK: - Title Field
-
-    private var titleField: some View {
-        HStack {
-            TextField("Template Name", text: $editor.gameTitle)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-                .focused($titleFocused)
-
-            Spacer()
-
-            Button("Save") {
-                saveGame()
-            }
-            .font(.body.weight(.medium))
-            .disabled(!editor.canSaveOrStartTemplate)
-        }
-        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-        .padding(.vertical, 12)
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .textCase(nil)
     }
+
+    // MARK: - Sequence header
+
+    private var sequenceHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                TextField("Template name", text: $editor.gameTitle)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
+                    .focused($titleFocused)
+                    .submitLabel(.done)
+
+                saveControl
+            }
+
+            Text(summaryLine)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+
+            SequenceRibbon(segments: currentGame.segments, height: 8)
+
+            HStack {
+                Text("Repeat")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                Spacer()
+                GlassStepper(
+                    value: "\(editor.roundCount)×",
+                    decrementLabel: "Fewer repeats",
+                    incrementLabel: "More repeats",
+                    canDecrement: editor.roundCount > 1,
+                    onDecrement: { editor.roundCount = max(1, editor.roundCount - 1) },
+                    onIncrement: { editor.roundCount += 1 }
+                )
+            }
+            .padding(.top, 4)
+
+            TemplateSyncStatusView(syncEngine: templateSync, isProUnlocked: proAccess.isProUnlocked)
+        }
+    }
+
+    private var summaryLine: String {
+        let game = currentGame
+        let rounds = TurnTimerCountText.label(for: game.activeRounds.count, singular: "round")
+        let repeats = game.roundCount > 1 ? " × \(game.roundCount)" : ""
+        return "\(rounds)\(repeats) · about \(TimerText.words(game.totalSeconds))"
+    }
+
+    @ViewBuilder
+    private var saveControl: some View {
+        if editor.isShowingSavedTemplate && !editor.hasUnsavedChanges {
+            Label("Saved", systemImage: Theme.Symbol.checkmark)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+                .labelStyle(.titleAndIcon)
+        } else {
+            Button {
+                saveGame()
+            } label: {
+                Text(editor.isShowingSavedTemplate ? "Save changes" : "Save")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .disabled(!editor.canSaveOrStartTemplate)
+            .accessibilityHint(editor.isShowingSavedTemplate ? "You have unsaved changes" : "Save as your own template")
+        }
+    }
+
+    // MARK: - Template picker
 
     private var templatePicker: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 ForEach(editor.savedTemplates) { template in
+                    let isCurrent = editor.isShowingSavedTemplate && editor.currentSavedTemplateID == template.id
                     Button {
                         loadSavedTemplate(template)
                     } label: {
                         templateCard(
                             title: template.title,
-                            subtitle: template.subtitle,
-                            systemImage: Theme.Symbol.savedTemplates
+                            detail: "Yours · about \(TimerText.words(template.totalSeconds))",
+                            segments: editor.savedTemplateSegments[template.id] ?? [],
+                            isCurrent: isCurrent
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TimerPressStyle())
+                    .accessibilityAddTraits(isCurrent ? .isSelected : [])
                 }
 
                 ForEach(StarterTemplateLibrary.templates) { template in
+                    let isCurrent = editor.currentStarterID == template.id
                     Button {
                         editor.applyStarterTemplate(template)
                     } label: {
                         templateCard(
                             title: template.title,
-                            subtitle: template.subtitle,
-                            systemImage: Theme.Symbol.templates
+                            detail: "Starter · about \(TimerText.words(template.game.totalSeconds))",
+                            segments: template.game.segments,
+                            isCurrent: isCurrent
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(TimerPressStyle())
+                    .accessibilityAddTraits(isCurrent ? .isSelected : [])
                 }
             }
-            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
     }
 
-    private func templateCard(title: String, subtitle: String, systemImage: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.ColorValue.selectionAccent)
-
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.ColorValue.textPrimary)
-                    .lineLimit(1)
-            }
-
-            Text(subtitle)
+    private func templateCard(title: String, detail: String, segments: [SequenceSegment], isCurrent: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SequenceRibbon(segments: segments, height: 5)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+            Text(detail)
                 .font(.caption)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-                .lineLimit(2)
+                .lineLimit(1)
         }
-        .frame(width: 156, height: 66, alignment: .leading)
         .padding(12)
-        .background(Theme.ColorValue.circleBackground)
-        .clipShape(.rect(cornerRadius: 8))
+        .frame(width: 148, alignment: .leading)
+        .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(isCurrent ? Theme.ColorValue.selectionAccent : Theme.ColorValue.surfaceStroke,
+                              lineWidth: isCurrent ? 2 : 1)
+        }
     }
 
-    // MARK: - Round Count Stepper
+    // MARK: - Start
 
-    private var roundCountStepper: some View {
-        HStack {
-            Text("Repeat Sequence")
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-            Spacer()
-            Button {
-                editor.roundCount = max(1, editor.roundCount - 1)
-            } label: {
-                Image(systemName: Theme.Symbol.decrement)
-            }
-            Text("\(editor.roundCount)")
-                .monospacedDigit()
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-                .frame(minWidth: 24)
-            Button {
-                editor.roundCount += 1
-            } label: {
-                Image(systemName: Theme.Symbol.increment)
-            }
+    private var startBar: some View {
+        GlassCapsuleButton(
+            title: "Start \(editor.gameTitle.isEmpty ? "sequence" : editor.gameTitle)",
+            systemImage: Theme.Symbol.play,
+            prominent: true
+        ) {
+            editor.autoSave()
+            onPlayGame(editor.buildGameSequence())
         }
-        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-        .padding(.vertical, 8)
-    }
-
-    // MARK: - Rounds List
-
-    private var roundsList: some View {
-        List {
-            Section {
-                ForEach(editor.rounds) { round in
-                    PlayerRowView(
-                        round: round,
-                        onTap: { editor.expandedRoundId = round.id },
-                        onToggleActive: { editor.toggleActive(id: round.id) },
-                        onDelete: { editor.deleteRound(id: round.id) }
-                    )
-                    .listRowBackground(Theme.ColorValue.circleBackground)
-                }
-                .onMove(perform: editor.moveRounds)
-
-                // Add Round button
-                Button {
-                    editor.addRound()
-                } label: {
-                    Label(Theme.Label.addPlayer, systemImage: Theme.Symbol.addPlayer)
-                }
-                .listRowBackground(Theme.ColorValue.circleBackground)
-            } header: {
-                Text("Rounds (\(editor.rounds.count))")
-                    .font(.system(size: Theme.Editor.sectionHeaderFontSize))
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
+        .disabled(!editor.canSaveOrStartTemplate)
+        .accessibilityIdentifier("templates.start")
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity)
+        .background {
+            LinearGradient(
+                colors: [Theme.ColorValue.appBackground.opacity(0), Theme.ColorValue.appBackground],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .ignoresSafeArea()
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
     }
 
     // MARK: - Helpers
@@ -243,8 +307,7 @@ struct GameEditorView: View {
         let result = editor.saveToDocuments(isProUnlocked: proAccess.isProUnlocked)
         switch result {
         case .saved:
-            saveAlertMessage = "Template saved."
-            showSaveAlert = true
+            break
         case .requiresPro:
             requestedProFeature = .unlimitedTemplates
         case .failed(let errors):
@@ -309,6 +372,7 @@ private struct PlayerEditSheet: View {
     let onUpdateName: (String) -> Void
     let onUpdateColor: (RoundColor) -> Void
     let onUpdateSound: (TimerSound) -> Void
+    let onPreviewSound: (TimerSound) -> Void
     let onUpdateEmoji: (String) -> Void
     let onUpdateDuration: (Int) -> Void
     let onToggleStartPaused: () -> Void
@@ -328,6 +392,7 @@ private struct PlayerEditSheet: View {
         onUpdateName: @escaping (String) -> Void,
         onUpdateColor: @escaping (RoundColor) -> Void,
         onUpdateSound: @escaping (TimerSound) -> Void,
+        onPreviewSound: @escaping (TimerSound) -> Void,
         onUpdateEmoji: @escaping (String) -> Void,
         onUpdateDuration: @escaping (Int) -> Void,
         onToggleStartPaused: @escaping () -> Void,
@@ -338,6 +403,7 @@ private struct PlayerEditSheet: View {
         self.onUpdateName = onUpdateName
         self.onUpdateColor = onUpdateColor
         self.onUpdateSound = onUpdateSound
+        self.onPreviewSound = onPreviewSound
         self.onUpdateEmoji = onUpdateEmoji
         self.onUpdateDuration = onUpdateDuration
         self.onToggleStartPaused = onToggleStartPaused
@@ -356,57 +422,75 @@ private struct PlayerEditSheet: View {
         _countsAsPlayer = State(initialValue: round.countsAsPlayer)
     }
 
+    private var selectedColor: Color {
+        RoundColor.palette(index: selectedColorIndex).swiftUIColor
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Name field
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Name")
-                            .font(.caption)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                VStack(alignment: .leading, spacing: 22) {
+                    preview
+
+                    field("Name") {
                         TextField("Round name", text: $nameText)
-                            .textFieldStyle(.roundedBorder)
+                            .font(.body.weight(.medium))
+                            .padding(12)
+                            .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 12))
                             .onChange(of: nameText) { _, newValue in
                                 onUpdateName(newValue)
                             }
                     }
 
-                    // Color picker
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Color")
-                            .font(.caption)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    field("Time") {
+                        GlassStepper(
+                            value: durationDisplay,
+                            decrementLabel: "Shorter",
+                            incrementLabel: "Longer",
+                            canDecrement: localDuration > Theme.TimerMechanic.minimumDuration,
+                            onDecrement: { setDuration(localDuration - Theme.TimerMechanic.durationStep) },
+                            onIncrement: { setDuration(localDuration + Theme.TimerMechanic.durationStep) }
+                        )
+                        .accessibilityLabel("Time, \(durationDisplay)")
+                    }
+
+                    field("Colour") {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Editor.colorSwatchSpacing), count: 8), spacing: Theme.Editor.colorSwatchSpacing) {
                             ForEach(0..<Theme.ColorValue.timerPalette.count, id: \.self) { index in
-                                let color = Theme.ColorValue.timerPalette[index]
                                 Button {
                                     selectedColorIndex = index
                                     onUpdateColor(.palette(index: index))
                                 } label: {
                                     Circle()
-                                        .fill(color)
+                                        .fill(Theme.ColorValue.timerPalette[index])
                                         .frame(width: Theme.Editor.colorSwatchSize, height: Theme.Editor.colorSwatchSize)
+                                        .padding(3)
                                         .overlay {
                                             if selectedColorIndex == index {
-                                                Circle()
-                                                    .strokeBorder(.white, lineWidth: 3)
+                                                Circle().strokeBorder(.white, lineWidth: 2.5)
                                             }
                                         }
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel("\(RoundColor.paletteNames[index]) color")
-                                .accessibilityValue(selectedColorIndex == index ? "Selected" : "Not selected")
+                                .accessibilityLabel("\(RoundColor.paletteNames[index]) colour")
+                                .accessibilityAddTraits(selectedColorIndex == index ? .isSelected : [])
                             }
                         }
                     }
 
-                    // Sound picker
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Sound")
-                            .font(.caption)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                        Picker("Sound", selection: $selectedSound) {
+                    field("Emoji") {
+                        TextField("Add an emoji", text: $emojiText)
+                            .font(.title2)
+                            .padding(10)
+                            .frame(width: 120)
+                            .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 12))
+                            .onChange(of: emojiText) { _, newValue in
+                                onUpdateEmoji(newValue)
+                            }
+                    }
+
+                    field("End sound") {
+                        Picker("End sound", selection: $selectedSound) {
                             ForEach(TimerSound.allCases, id: \.self) { sound in
                                 Text(sound.displayName).tag(sound)
                             }
@@ -414,83 +498,102 @@ private struct PlayerEditSheet: View {
                         .pickerStyle(.segmented)
                         .onChange(of: selectedSound) { _, newValue in
                             onUpdateSound(newValue)
+                            onPreviewSound(newValue)
                         }
                     }
 
-                    // Emoji field
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Emoji")
-                            .font(.caption)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                        TextField("🎮", text: $emojiText)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: emojiText) { _, newValue in
-                                onUpdateEmoji(newValue)
-                            }
-                    }
-
-                    // Duration stepper
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Time")
-                            .font(.caption)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                        HStack(spacing: 16) {
-                            Button {
-                                let newDuration = max(Theme.TimerMechanic.minimumDuration,
-                                    localDuration - Theme.TimerMechanic.durationStep)
-                                localDuration = newDuration
-                                onUpdateDuration(newDuration)
-                            } label: {
-                                Image(systemName: Theme.Symbol.decrement)
-                                    .font(.title3)
-                            }
-
-                            Text(durationDisplay)
-                                .font(.title3.monospacedDigit())
-                                .foregroundStyle(Theme.ColorValue.textPrimary)
-                                .frame(minWidth: 80)
-
-                            Button {
-                                let newDuration = localDuration + Theme.TimerMechanic.durationStep
-                                localDuration = newDuration
-                                onUpdateDuration(newDuration)
-                            } label: {
-                                Image(systemName: Theme.Symbol.increment)
-                                    .font(.title3)
-                            }
+                    VStack(alignment: .leading, spacing: 16) {
+                        toggle(
+                            "Counts as a turn",
+                            hint: "On for players. Off for breaks and steps, which don't count in “Turn 2 of 3”.",
+                            symbol: "person.fill",
+                            isOn: $countsAsPlayer
+                        )
+                        .onChange(of: countsAsPlayer) { _, newValue in
+                            onUpdateCountsAsPlayer(newValue)
                         }
-                    }
 
-                    // Start paused toggle
-                    Toggle(isOn: $startPaused) {
-                        Label(Theme.Label.startPaused, systemImage: Theme.Symbol.startPaused)
-                    }
-                    .toggleStyle(.switch)
-                    .onChange(of: startPaused) {
-                        onToggleStartPaused()
-                    }
-
-                    // Counts as turn toggle
-                    Toggle(isOn: $countsAsPlayer) {
-                        Label("Counts as turn", systemImage: "person.fill")
-                    }
-                    .toggleStyle(.switch)
-                    .onChange(of: countsAsPlayer) { _, newValue in
-                        onUpdateCountsAsPlayer(newValue)
+                        toggle(
+                            Theme.Label.startPaused,
+                            hint: "Waits for a tap on the dial before this round counts down.",
+                            symbol: Theme.Symbol.startPaused,
+                            isOn: $startPaused
+                        )
+                        .onChange(of: startPaused) {
+                            onToggleStartPaused()
+                        }
                     }
                 }
-                .padding()
+                .padding(20)
             }
             .background(Theme.ColorValue.appBackground)
-            .navigationTitle(round.name)
+            .navigationTitle("Edit round")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { onDismiss() }
-                        .font(.body.weight(.medium))
+                    Button(Theme.Label.done) { onDismiss() }
+                        .font(.body.weight(.semibold))
                 }
             }
         }
+        .presentationBackground(Theme.ColorValue.appBackground)
+    }
+
+    /// The round as it will look on the dial, updated with every change.
+    private var preview: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle().fill(selectedColor)
+                Circle().strokeBorder(.white.opacity(Theme.TimerStyle.highlightOpacity), lineWidth: Theme.TimerStyle.rimWidth)
+                if !emojiText.isEmpty {
+                    GlyphDisc(size: 46) {
+                        Text(emojiText).font(.system(size: 26))
+                    }
+                }
+            }
+            .frame(width: 84, height: 84)
+            .animation(.easeInOut(duration: Theme.TimerStyle.colourDuration), value: selectedColorIndex)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(nameText.isEmpty ? "Untitled round" : nameText)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(selectedColor)
+                    .lineLimit(1)
+                Text(TimerText.clock(localDuration))
+                    .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
+            }
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+            content()
+        }
+    }
+
+    private func toggle(_ title: String, hint: String, symbol: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Label(title, systemImage: symbol)
+                    .font(.body.weight(.medium))
+                Text(hint)
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .toggleStyle(.switch)
+    }
+
+    private func setDuration(_ seconds: Int) {
+        localDuration = max(Theme.TimerMechanic.minimumDuration, seconds)
+        onUpdateDuration(localDuration)
     }
 
     private var durationDisplay: String {

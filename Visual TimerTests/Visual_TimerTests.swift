@@ -1367,7 +1367,7 @@ final class Visual_TimerTests: XCTestCase {
         gameViewModel.loadGame(routine)
         gameViewModel.startGame()
 
-        XCTAssertEqual(gameViewModel.roundProgressText, "Round 1 of 2")
+        XCTAssertEqual(gameViewModel.roundProgressText, "Step 1 of 2")
         XCTAssertEqual(gameViewModel.countingPlayerCount, 0)
     }
 

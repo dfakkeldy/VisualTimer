@@ -19,10 +19,16 @@ struct MainTabView: View {
     private var timerViewModel: TimerViewModel { gameViewModel.timerViewModel }
 
     init() {
+#if DEBUG
+        let documentsDirectory = DesignCouncilFixture.current?.documentsDirectory
+        _selectedTab = State(initialValue: DesignCouncilFixture.current?.initialTab ?? 0)
+#else
+        let documentsDirectory: URL? = nil
+#endif
         let tvm = TimerViewModel()
         let settingsStore = UbiquitousSettingsStore()
-        let templateLibrary = TemplateLibraryStore()
-        let historyStore = HistoryStore()
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: documentsDirectory)
+        let historyStore = HistoryStore(documentsDirectory: documentsDirectory)
         let syncEngine = TemplateCloudSyncEngine(templateLibrary: templateLibrary)
         let historySyncEngine = HistoryCloudSyncEngine(historyStore: historyStore)
         let historyViewModel = HistoryViewModel(store: historyStore)
@@ -34,14 +40,16 @@ struct MainTabView: View {
         }
         self.templateLibrary = templateLibrary
         _soundManager = StateObject(wrappedValue: sm)
-        _gameViewModel = StateObject(wrappedValue: GameViewModel(
+        let gameViewModel = GameViewModel(
             timerViewModel: tvm,
             soundManager: sm,
             historyStore: historyStore,
             onHistoryRecordSaved: { [weak historyViewModel] record in
                 historyViewModel?.recordSaved(record)
             }
-        ))
+        )
+        gameViewModel.sessionStore = ActiveSessionStore(directory: documentsDirectory)
+        _gameViewModel = StateObject(wrappedValue: gameViewModel)
         _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary))
         _historyViewModel = StateObject(wrappedValue: historyViewModel)
         _proAccess = StateObject(wrappedValue: ProAccessViewModel())
@@ -69,6 +77,7 @@ struct MainTabView: View {
                 editor: gameEditorViewModel,
                 proAccess: proAccess,
                 templateSync: templateSync,
+                soundManager: soundManager,
                 onPlayGame: { game in
                     gameViewModel.loadGame(game)
                     gameViewModel.startGame()
@@ -80,7 +89,7 @@ struct MainTabView: View {
             }
             .tag(1)
 
-            HistoryView(history: historyViewModel, proAccess: proAccess)
+            HistoryView(history: historyViewModel, proAccess: proAccess, onBrowseTemplates: { selectedTab = 1 })
                 .tabItem {
                     Label(Theme.Tab.historyTabTitle, systemImage: Theme.Tab.historyTabSymbol)
                 }
@@ -96,6 +105,12 @@ struct MainTabView: View {
         .task {
             WatchTemplateConnectivity.shared.activate()
             gameEditorViewModel.refreshSavedTemplates()
+            if gameViewModel.restoreSavedSession() {
+                selectedTab = 0
+            }
+#if DEBUG
+            DesignCouncilFixture.current?.apply(to: gameViewModel)
+#endif
         }
         .task(id: proAccess.isProUnlocked) {
             gameEditorViewModel.setWidgetPublishingEnabled(proAccess.isProUnlocked)

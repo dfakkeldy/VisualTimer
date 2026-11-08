@@ -46,14 +46,11 @@ struct WatchGamePlaybackView: View {
 
         WatchTimerDial(
             progress: timerViewModel.visualProgress,
-            color: timerViewModel.timerColor
+            color: timerViewModel.timerColor,
+            dialSize: Theme.Watch.Dimension.sessionDialSize
         ) { date in
             remainingTime(at: date)
         }
-        .frame(
-            width: Theme.Watch.Dimension.sessionDialSize,
-            height: Theme.Watch.Dimension.sessionDialSize
-        )
 
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             if let primary = WatchPrimaryControl(state: timerViewModel.state) {
@@ -62,6 +59,7 @@ struct WatchGamePlaybackView: View {
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.sessionPrimary,
                     isProminent: true,
+                    tint: timerViewModel.timerColor,
                     action: onPrimary
                 )
             }
@@ -77,6 +75,13 @@ struct WatchGamePlaybackView: View {
         Text(gameViewModel.roundProgressText)
             .font(.caption2)
             .foregroundStyle(.secondary)
+
+        if let next = gameViewModel.nextRound {
+            Text("Next: \(next.emoji.isEmpty ? "" : next.emoji + " ")\(next.name)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
 
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             WatchControlButton(

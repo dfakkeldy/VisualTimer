@@ -9,11 +9,12 @@ struct WatchControlButton: View {
     let systemImage: String
     let accessibilityID: String
     let isProminent: Bool
+    var tint: Color? = nil
     let action: () -> Void
 
     var body: some View {
         if isProminent {
-            button.buttonStyle(.borderedProminent)
+            button.buttonStyle(.borderedProminent).tint(tint)
         } else {
             button.buttonStyle(.bordered)
         }
