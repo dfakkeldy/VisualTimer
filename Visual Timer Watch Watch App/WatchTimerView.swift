@@ -9,11 +9,35 @@ struct WatchTimerView: View {
     @ObservedObject var viewModel: WatchQuickTimerViewModel
 
     var body: some View {
+        GeometryReader { proxy in
+            content(dialSize: dialSize(forHeight: proxy.size.height))
+                .frame(width: proxy.size.width)
+        }
+        .focusable(true)
+        .digitalCrownRotation(
+            $viewModel.crownValue,
+            from: Double(WatchQuickTimerViewModel.componentRange.lowerBound),
+            through: Double(WatchQuickTimerViewModel.componentRange.upperBound),
+            by: 1,
+            sensitivity: .low,
+            isContinuous: false,
+            isHapticFeedbackEnabled: viewModel.selectedComponent != nil
+        )
+    }
+
+    /// Leaves room for the readout row and the crown cue, so the dial keeps
+    /// one size in every state on every Watch.
+    private func dialSize(forHeight height: CGFloat) -> CGFloat {
+        let dimension = Theme.Watch.Dimension.self
+        return min(dimension.quickPieSize, max(dimension.quickPieMinSize, height - dimension.quickBelowDialHeight))
+    }
+
+    private func content(dialSize: CGFloat) -> some View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
                 color: viewModel.timer.timerColor,
-                dialSize: Theme.Watch.Dimension.quickPieSize,
+                dialSize: dialSize,
                 button: viewModel.primaryControl.map { primary in
                     WatchDialButton(
                         title: primary.title,
@@ -37,34 +61,39 @@ struct WatchTimerView: View {
                         }
                     }
                 } else {
+                    // One row for the digits and Reset: the digits stay centred
+                    // and the dial keeps its size when Reset appears.
                     remainingTime(at: date)
+                        .frame(maxWidth: .infinity, minHeight: Theme.Watch.Dimension.controlMinHeight)
+                        .overlay(alignment: .trailing) {
+                            if viewModel.showsReset {
+                                resetButton
+                            }
+                        }
                 }
             }
-
-            if viewModel.showsReset {
-                WatchControlButton(
-                    title: Theme.Label.reset,
-                    systemImage: Theme.Symbol.reset,
-                    accessibilityID: Theme.Watch.Identifier.quickReset,
-                    isProminent: false
-                ) {
-                    viewModel.reset()
-                }
-                .padding(.horizontal, Theme.Watch.Dimension.quickResetInset)
-            }
+            // The timeline would otherwise take spare height and re-centre
+            // the dial inside it.
+            .fixedSize(horizontal: false, vertical: true)
         }
-        // Top-anchored, so the dial stays under the finger when Reset appears.
-        .frame(maxHeight: .infinity, alignment: .top)
-        .focusable(true)
-        .digitalCrownRotation(
-            $viewModel.crownValue,
-            from: Double(WatchQuickTimerViewModel.componentRange.lowerBound),
-            through: Double(WatchQuickTimerViewModel.componentRange.upperBound),
-            by: 1,
-            sensitivity: .low,
-            isContinuous: false,
-            isHapticFeedbackEnabled: viewModel.selectedComponent != nil
-        )
+    }
+
+    private var resetButton: some View {
+        Button {
+            viewModel.reset()
+        } label: {
+            Image(systemName: Theme.Symbol.reset)
+                .font(.body.weight(.semibold))
+                .frame(
+                    width: Theme.Watch.Dimension.controlMinHeight,
+                    height: Theme.Watch.Dimension.controlMinHeight
+                )
+                .background(Circle().fill(Theme.Watch.ColorValue.editable))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Theme.Label.reset)
+        .accessibilityIdentifier(Theme.Watch.Identifier.quickReset)
     }
 
     // MARK: - Digits

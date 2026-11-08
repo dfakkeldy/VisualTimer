@@ -90,12 +90,13 @@ struct WatchTimerDial<Content: View>: View {
                 Image(systemName: button.symbol)
                     .font(.system(size: dialSize * 0.15, weight: .semibold))
                 Text(button.title)
-                    .font(.caption2.weight(.semibold))
+                    // Scales with the dial, so "Resume" fits on the smallest Watch.
+                    .font(.system(size: dialSize * 0.135, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
             }
             .foregroundStyle(.white)
-            .frame(width: disc * 0.88)
+            .frame(width: disc * 0.92)
         } else if let centerSymbol {
             Circle()
                 .fill(Theme.TimerStyle.ink)

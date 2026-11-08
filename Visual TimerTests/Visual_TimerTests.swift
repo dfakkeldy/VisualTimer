@@ -1304,6 +1304,29 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().map(\.gameTitle), ["Finished"])
     }
 
+    func testGameViewModelLoadingEmptyGameLeavesSessionRunning() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+        var emptyGame = GameSequence(title: "Inactive")
+        emptyGame.rounds = [
+            Round(name: "Muted", durationSeconds: 30, isActive: false, orderIndex: 0),
+        ]
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Running"))
+        gameViewModel.startGame()
+        gameViewModel.loadGame(emptyGame)
+
+        assertGamePhase(gameViewModel, is: .playing)
+        XCTAssertEqual(gameViewModel.gameSequence?.title, "Running")
+        XCTAssertTrue(store.loadAll().isEmpty)
+    }
+
     func testGameViewModelRejectsGameWithNoActiveRounds() {
         let gameViewModel = GameViewModel(timerViewModel: TimerViewModel())
         var emptyGame = GameSequence(title: "Inactive")

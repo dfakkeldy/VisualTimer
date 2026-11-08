@@ -179,6 +179,9 @@ struct MainTabView: View {
     }
 
     private func startGame(_ game: GameSequence) {
+        // A cold-launch deep link can arrive before the launch restore runs.
+        // Restore first, so the saved session reaches History, not oblivion.
+        gameViewModel.restoreSavedSession()
         gameViewModel.loadGame(game)
         gameViewModel.startGame()
         selectedTab = 0

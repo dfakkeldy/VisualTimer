@@ -65,7 +65,7 @@ struct ProPaywallView: View {
         .presentationBackground(Theme.ColorValue.appBackground)
         // A sheet sized close to its content, so no empty band sits between
         // the benefits and the purchase.
-        .presentationDetents([.fraction(0.86), .large])
+        .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
     }
 
