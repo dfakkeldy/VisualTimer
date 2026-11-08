@@ -12,22 +12,31 @@ struct WatchTimerView: View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
-                color: viewModel.timer.timerColor
+                color: viewModel.timer.timerColor,
+                dialSize: Theme.Watch.Dimension.quickPieSize,
+                centerSymbol: viewModel.primaryControl?.symbol,
+                onTap: { viewModel.performPrimaryAction() }
             ) { date in
                 if viewModel.canEditDuration {
-                    durationEditor
+                    VStack(spacing: 0) {
+                        durationEditor
+                        // The cue teaches once; it goes once a number is chosen.
+                        if viewModel.selectedComponent == nil {
+                            Text(Theme.Watch.Label.crownCue)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
+                            .accessibilityHidden(true)
+                        }
+                    }
                 } else {
                     remainingTime(at: date)
                 }
             }
-            .frame(
-                maxWidth: Theme.Watch.Dimension.quickDialMaxSize,
-                maxHeight: Theme.Watch.Dimension.quickDialMaxSize
-            )
 
             controls
         }
-        .navigationTitle(Theme.Watch.Label.quickTimer)
         .focusable(true)
         .digitalCrownRotation(
             $viewModel.crownValue,
@@ -63,6 +72,12 @@ struct WatchTimerView: View {
         .font(.system(.title2, design: .rounded).monospacedDigit())
         .lineLimit(1)
         .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
+        .padding(.horizontal, 4)
+        // One well for the one readout; the selected number lights up inside it.
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Watch.Dimension.selectionCornerRadius)
+                .fill(Theme.Watch.ColorValue.editable)
+        )
     }
 
     private func componentButton(_ component: WatchTimeComponent, label: String, id: String) -> some View {
@@ -105,7 +120,11 @@ struct WatchTimerView: View {
                     title: primary.title,
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    isProminent: true
+                    // A quiet text control: the dial is the one visible door,
+                    // and this labelled button stays for VoiceOver and tests.
+                    isProminent: false,
+                    tint: nil,
+                    showsIcon: false
                 ) {
                     viewModel.performPrimaryAction()
                 }
@@ -121,6 +140,7 @@ struct WatchTimerView: View {
                 }
             }
         }
+        .padding(.horizontal, viewModel.showsReset ? 0 : 40)
     }
 }
 

@@ -11,6 +11,74 @@ final class GameEditorViewModel: ObservableObject {
     @Published var roundCount: Int = 1
     @Published var expandedRoundId: UUID?
     @Published private(set) var savedTemplates: [SavedTemplate] = []
+    /// Round colours of each saved template, for the picker cards.
+    @Published private(set) var savedTemplateSegments: [UUID: [SequenceSegment]] = [:]
+    /// The starter template on screen, if the sequence came from one.
+    @Published private(set) var currentStarterID: String?
+    /// The sequence as last loaded or saved, to tell whether there are edits to keep.
+    @Published private var cleanState: EditorSnapshot?
+
+    struct EditorSnapshot: Equatable, Codable {
+        let title: String
+        let rounds: [Round]
+        let roundCount: Int
+    }
+
+    private var currentSnapshot: EditorSnapshot {
+        EditorSnapshot(title: gameTitle, rounds: rounds, roundCount: roundCount)
+    }
+
+    /// True when the sequence on screen differs from what was loaded or saved.
+    var hasUnsavedChanges: Bool { cleanState != currentSnapshot }
+
+    /// True when the sequence on screen is one of the saved templates.
+    var isShowingSavedTemplate: Bool {
+        guard currentStarterID == nil, let id = currentSavedTemplateID else { return false }
+        return savedTemplates.contains { $0.id == id }
+    }
+
+    private func markClean() {
+        cleanState = currentSnapshot
+        persistDraft()
+    }
+
+    // MARK: - Draft (edits that survive an app close)
+
+    private struct EditorDraft: Codable {
+        let current: EditorSnapshot
+        let clean: EditorSnapshot?
+        let starterID: String?
+    }
+
+    private let draftURL: URL
+    private var draftCancellable: AnyCancellable?
+
+    /// Writes the sequence on screen when it differs from what was loaded or
+    /// saved, and removes the draft once it matches again.
+    func persistDraft() {
+        guard hasUnsavedChanges, !rounds.isEmpty else {
+            try? FileManager.default.removeItem(at: draftURL)
+            return
+        }
+        let draft = EditorDraft(current: currentSnapshot, clean: cleanState, starterID: currentStarterID)
+        guard let data = try? JSONEncoder().encode(draft) else { return }
+        try? data.write(to: draftURL, options: .atomic)
+    }
+
+    /// Puts back unsaved edits from before the app closed. Malformed drafts are discarded.
+    private func restoreDraft() -> Bool {
+        guard let data = try? Data(contentsOf: draftURL) else { return false }
+        guard let draft = try? JSONDecoder().decode(EditorDraft.self, from: data) else {
+            try? FileManager.default.removeItem(at: draftURL)
+            return false
+        }
+        gameTitle = draft.current.title
+        rounds = draft.current.rounds
+        roundCount = draft.current.roundCount
+        currentStarterID = draft.starterID
+        cleanState = draft.clean
+        return true
+    }
 
     @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
     @AppStorage("lastTemplateID") private var lastTemplateID: String = ""
@@ -41,12 +109,21 @@ final class GameEditorViewModel: ObservableObject {
         watchTemplateStore: WatchTemplateStore = WatchTemplateStore(),
         watchTemplatePublisher: @escaping @MainActor ([WatchTemplate]) -> Void = {
             WatchTemplateConnectivity.shared.publish(templates: $0)
-        }
+        },
+        draftDirectory: URL? = nil
     ) {
+        let base = draftDirectory
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        self.draftURL = base.appendingPathComponent("TemplateDraft.json")
         self.templateLibrary = templateLibrary
         self.widgetSnapshotStore = widgetSnapshotStore
         self.watchTemplateStore = watchTemplateStore
         self.watchTemplatePublisher = watchTemplatePublisher
+        draftCancellable = Publishers.CombineLatest3($gameTitle, $rounds, $roundCount)
+            .dropFirst()
+            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.persistDraft() }
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -144,6 +221,8 @@ final class GameEditorViewModel: ObservableObject {
         roundCount = game.roundCount
         expandedRoundId = nil
         lastTemplateID = ""
+        currentStarterID = template.id
+        markClean()
     }
 
     func applySavedTemplate(_ template: SavedTemplate) -> (Bool, [ParseError]) {
@@ -151,6 +230,8 @@ final class GameEditorViewModel: ObservableObject {
             let document = try templateLibrary.loadDocument(id: template.id)
             applyDocument(document)
             lastTemplateID = template.id.uuidString
+            currentStarterID = nil
+            markClean()
             return (true, [])
         } catch {
             return (false, [ParseError("Failed to load template: \(error.localizedDescription)")])
@@ -161,6 +242,7 @@ final class GameEditorViewModel: ObservableObject {
         refreshSavedTemplates()
         migrateLegacyTemplateIfNeeded()
         guard rounds.isEmpty else { return }
+        if restoreDraft() { return }
         if loadLastGame() { return }
         applyStarterTemplate(StarterTemplateLibrary.defaultTemplate)
     }
@@ -217,7 +299,9 @@ final class GameEditorViewModel: ObservableObject {
             let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
+            currentStarterID = nil
             refreshSavedTemplates()
+            markClean()
             return .saved
         } catch {
             return .failed([ParseError("Failed to save: \(error.localizedDescription)")])
@@ -238,7 +322,9 @@ final class GameEditorViewModel: ObservableObject {
             let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
             lastGameFileName = ""
+            currentStarterID = nil
             refreshSavedTemplates()
+            markClean()
         } catch {
             return
         }
@@ -320,6 +406,13 @@ final class GameEditorViewModel: ObservableObject {
     func refreshSavedTemplates() {
         let templates = templateLibrary.listTemplates()
         savedTemplates = templates
+        var segments: [UUID: [SequenceSegment]] = [:]
+        for template in templates {
+            if let document = try? templateLibrary.loadDocument(id: template.id) {
+                segments[template.id] = document.game.segments
+            }
+        }
+        savedTemplateSegments = segments
         publishWidgetSnapshots(for: templates)
         publishWatchTemplates(for: templates)
     }
@@ -382,6 +475,8 @@ final class GameEditorViewModel: ObservableObject {
         rounds = game.rounds
         roundCount = game.roundCount
         expandedRoundId = nil
+        currentStarterID = nil
+        markClean()
     }
 
     private func migrateLegacyTemplateIfNeeded() {

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Game Session
 
@@ -80,6 +81,13 @@ struct GameRecord: Identifiable, Codable, Equatable {
     /// Snapshot of active player names at game start (ordered).
     var playerNames: [String]
     var playedAt: Date
+    /// Each round's colour by name, so History can show the session in its
+    /// colours. Optional: records saved before this field read as nil.
+    var roundColors: [String: RoundColor]? = nil
+
+    func color(forRound name: String) -> Color? {
+        roundColors?[name]?.swiftUIColor
+    }
 }
 
 // MARK: - History Store
@@ -99,18 +107,23 @@ struct HistoryStore {
         try? fileManager.createDirectory(at: historyURL, withIntermediateDirectories: true)
     }
 
-    func save(_ record: GameRecord) {
+    /// Writes the record. Returns false if it could not be saved, so the
+    /// screen never says "saved" when it wasn't.
+    @discardableResult
+    func save(_ record: GameRecord) -> Bool {
         let url = historyFileURL(for: record.id)
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
         guard let data = try? encoder.encode(record) else {
             print("HistoryStore: failed to encode record \(record.id)")
-            return
+            return false
         }
         do {
             try data.write(to: url)
+            return true
         } catch {
             print("HistoryStore: failed to write record: \(error)")
+            return false
         }
     }
 

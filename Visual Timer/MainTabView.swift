@@ -16,13 +16,20 @@ struct MainTabView: View {
     @State private var selectedTab = 0
 
     private let templateLibrary: TemplateLibraryStore
+    private let quickTimerStore: QuickTimerStore
     private var timerViewModel: TimerViewModel { gameViewModel.timerViewModel }
 
     init() {
+#if DEBUG
+        let documentsDirectory = DesignCouncilFixture.current?.documentsDirectory ?? Self.uiTestStateDirectory
+        _selectedTab = State(initialValue: DesignCouncilFixture.current?.initialTab ?? 0)
+#else
+        let documentsDirectory: URL? = nil
+#endif
         let tvm = TimerViewModel()
         let settingsStore = UbiquitousSettingsStore()
-        let templateLibrary = TemplateLibraryStore()
-        let historyStore = HistoryStore()
+        let templateLibrary = TemplateLibraryStore(documentsDirectory: documentsDirectory)
+        let historyStore = HistoryStore(documentsDirectory: documentsDirectory)
         let syncEngine = TemplateCloudSyncEngine(templateLibrary: templateLibrary)
         let historySyncEngine = HistoryCloudSyncEngine(historyStore: historyStore)
         let historyViewModel = HistoryViewModel(store: historyStore)
@@ -34,21 +41,37 @@ struct MainTabView: View {
         }
         self.templateLibrary = templateLibrary
         _soundManager = StateObject(wrappedValue: sm)
-        _gameViewModel = StateObject(wrappedValue: GameViewModel(
+        let gameViewModel = GameViewModel(
             timerViewModel: tvm,
             soundManager: sm,
             historyStore: historyStore,
             onHistoryRecordSaved: { [weak historyViewModel] record in
                 historyViewModel?.recordSaved(record)
             }
-        ))
-        _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary))
+        )
+        gameViewModel.sessionStore = ActiveSessionStore(directory: documentsDirectory)
+        quickTimerStore = QuickTimerStore(directory: documentsDirectory)
+        _gameViewModel = StateObject(wrappedValue: gameViewModel)
+        _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary, draftDirectory: documentsDirectory))
         _historyViewModel = StateObject(wrappedValue: historyViewModel)
         _proAccess = StateObject(wrappedValue: ProAccessViewModel())
         _templateSync = StateObject(wrappedValue: syncEngine)
         _historySync = StateObject(wrappedValue: historySyncEngine)
         _ubiquitousSettingsStore = StateObject(wrappedValue: settingsStore)
     }
+
+#if DEBUG
+    /// `-resetPersistedState YES` (UI tests): a fresh folder for saved
+    /// sessions, quick timers, drafts, templates and history, so no state from
+    /// an earlier run is restored.
+    private static let uiTestStateDirectory: URL? = {
+        guard UserDefaults.standard.bool(forKey: "resetPersistedState") else { return nil }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("UITestState", isDirectory: true)
+        try? FileManager.default.removeItem(at: directory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }()
+#endif
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -58,7 +81,14 @@ struct MainTabView: View {
                 soundManager: soundManager,
                 proAccess: proAccess,
                 templateSync: templateSync,
-                historySync: historySync
+                historySync: historySync,
+                onTimerStateChange: { [quickTimerStore, gameViewModel] in
+                    if gameViewModel.hasActiveGame {
+                        quickTimerStore.clear()
+                    } else {
+                        quickTimerStore.save(gameViewModel.timerViewModel)
+                    }
+                }
             )
             .tabItem {
                 Label(Theme.Tab.timerTabTitle, systemImage: Theme.Tab.timerTabSymbol)
@@ -69,6 +99,7 @@ struct MainTabView: View {
                 editor: gameEditorViewModel,
                 proAccess: proAccess,
                 templateSync: templateSync,
+                soundManager: soundManager,
                 onPlayGame: { game in
                     gameViewModel.loadGame(game)
                     gameViewModel.startGame()
@@ -80,7 +111,7 @@ struct MainTabView: View {
             }
             .tag(1)
 
-            HistoryView(history: historyViewModel, proAccess: proAccess)
+            HistoryView(history: historyViewModel, proAccess: proAccess, onBrowseTemplates: { selectedTab = 1 })
                 .tabItem {
                     Label(Theme.Tab.historyTabTitle, systemImage: Theme.Tab.historyTabSymbol)
                 }
@@ -96,6 +127,14 @@ struct MainTabView: View {
         .task {
             WatchTemplateConnectivity.shared.activate()
             gameEditorViewModel.refreshSavedTemplates()
+            if gameViewModel.restoreSavedSession() {
+                selectedTab = 0
+            } else if !gameViewModel.hasActiveGame {
+                quickTimerStore.restore(into: timerViewModel)
+            }
+#if DEBUG
+            DesignCouncilFixture.current?.apply(to: gameViewModel)
+#endif
         }
         .task(id: proAccess.isProUnlocked) {
             gameEditorViewModel.setWidgetPublishingEnabled(proAccess.isProUnlocked)

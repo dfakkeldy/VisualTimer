@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A sheet that lets the user pick one of three finish sounds.
-/// The selection is persisted via `@AppStorage` inside `SoundManager`.
+/// Settings: the end sound, Turn Timer Pro, and iCloud sync once it applies.
 struct SettingsView: View {
 
     @ObservedObject var soundManager: SoundManager
@@ -9,6 +8,8 @@ struct SettingsView: View {
     @ObservedObject var templateSync: TemplateCloudSyncEngine
     @ObservedObject var historySync: HistoryCloudSyncEngine
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
+    @State private var alertsDenied = false
 
     var body: some View {
         NavigationStack {
@@ -17,110 +18,193 @@ struct SettingsView: View {
                     ForEach(TimerSound.allCases, id: \.self) { sound in
                         Button {
                             soundManager.selectedSound = sound
+                            soundManager.playPreview(sound)
                         } label: {
                             HStack {
                                 Text(sound.displayName)
-                                    .foregroundStyle(.primary)
-
+                                    .foregroundStyle(Theme.ColorValue.textPrimary)
                                 Spacer()
-
                                 if soundManager.selectedSound == sound {
                                     Image(systemName: Theme.Symbol.checkmark)
+                                        .font(.body.weight(.semibold))
                                         .foregroundStyle(Theme.ColorValue.selectionAccent)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
+                        .accessibilityAddTraits(soundManager.selectedSound == sound ? .isSelected : [])
+                        .accessibilityHint("Plays a preview")
+                        .listRowBackground(Theme.ColorValue.surface)
                     }
                 } header: {
-                    Text("Timer End Sound")
+                    header("End sound")
                 } footer: {
-                    Text("This sound will play when the timer reaches zero.")
+                    Text("Plays when a timer reaches zero. Tap one to hear it.")
                 }
 
                 Section {
-                    HStack {
-                        Text("Template Sync")
-                        Spacer()
-                        Text(templateSync.statusText)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-
-                    Button {
-                        Task {
-                            await templateSync.refreshNow()
+                    Toggle(isOn: Binding(
+                        get: { alertsEnabled },
+                        set: { newValue in
+                            guard newValue else {
+                                alertsEnabled = false
+                                return
+                            }
+                            Task {
+                                let granted = await TimerAlertScheduler.requestPermission()
+                                alertsEnabled = granted
+                                alertsDenied = !granted
+                            }
                         }
-                    } label: {
-                        Text("Refresh Template Sync")
+                    )) {
+                        Text("Alert me when time's up")
                     }
-                    .disabled(!proAccess.isProUnlocked)
+                    .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    header("Alerts")
+                } footer: {
+                    Text(alertsDenied
+                         ? "Notifications are off for Turn Timer. You can turn them on in the Settings app."
+                         : "A notification when a timer or round ends while Turn Timer isn't on screen.")
+                }
 
-                    HStack {
-                        Text("History Sync")
-                        Spacer()
-                        Text(historySync.statusText)
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-
-                    Button {
-                        Task {
-                            await historySync.refreshNow()
-                        }
-                    } label: {
-                        Text("Refresh History Sync")
-                    }
-                    .disabled(!proAccess.isProUnlocked)
-
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(proAccess.isProUnlocked ? "Unlocked" : "Free")
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                Section {
+                    if proAccess.isProUnlocked {
+                        Label("Pro is unlocked", systemImage: Theme.Symbol.checkmark)
+                            .listRowBackground(Theme.ColorValue.surface)
                     }
 
                     if !proAccess.isProUnlocked {
-                        Button {
-                            Task { await proAccess.purchasePro() }
-                        } label: {
-                            Text(proAccess.purchaseButtonTitle)
-                        }
-                        .disabled(!proAccess.canPurchase)
-                    }
+                        if proAccess.product == nil && proAccess.purchaseState != .loading {
+                            Button("Retry loading Pro") {
+                                Task { await proAccess.loadProducts() }
+                            }
+                            .listRowBackground(Theme.ColorValue.surface)
+                            Button("Restore purchases") {
+                                Task { await proAccess.restorePurchases() }
+                            }
+                            .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                            .listRowBackground(Theme.ColorValue.surface)
+                        } else {
+                            // One door, with Restore as a quiet line under it.
+                            VStack(spacing: 10) {
+                                Button {
+                                    Task { await proAccess.purchasePro() }
+                                } label: {
+                                    Text(proAccess.purchaseButtonTitle)
+                                        .font(.body.weight(.semibold))
+                                        .padding(.horizontal, 8)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(!proAccess.canPurchase)
 
-                    if proAccess.product == nil && proAccess.purchaseState != .loading {
-                        Button("Retry Loading Pro") {
-                            Task { await proAccess.loadProducts() }
+                                Button("Restore purchases") {
+                                    Task { await proAccess.restorePurchases() }
+                                }
+                                .font(.subheadline)
+                                .buttonStyle(.borderless)
+                                .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .listRowBackground(Theme.ColorValue.surface)
                         }
+                    } else {
+                        Button("Restore purchases") {
+                            Task { await proAccess.restorePurchases() }
+                        }
+                        .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                        .listRowBackground(Theme.ColorValue.surface)
                     }
-
-                    Button {
-                        Task { await proAccess.restorePurchases() }
-                    } label: {
-                        Text("Restore Purchases")
-                    }
-                    .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
 
                     if let statusMessage {
                         Text(statusMessage)
                             .font(.footnote)
                             .foregroundStyle(Theme.ColorValue.textSecondary)
+                            .listRowBackground(Theme.ColorValue.surface)
                     }
                 } header: {
-                    Text("Turn Timer Pro")
+                    header("Turn Timer Pro")
                 } footer: {
-                    Text("Pro unlocks unlimited templates, full history export, iCloud template and history sync, sharing, and widgets.")
+                    Text("One-time purchase: more saved templates, full history and export, iCloud sync, sharing and widgets.")
                 }
-                Section("Privacy") {
-                    Link("Privacy Policy", destination: URL(string: "https://dfakkeldy.github.io/VisualTimer/privacy.html")!)
+
+                Section {
+                    syncRow("Templates", status: templateSync.statusText) {
+                        await templateSync.refreshNow()
+                    }
+                    syncRow("History", status: historySync.statusText) {
+                        await historySync.refreshNow()
+                    }
+                } header: {
+                    header("iCloud sync")
+                }
+
+                Section {
+                    Link("Privacy policy", destination: URL(string: "https://dfakkeldy.github.io/VisualTimer/privacy.html")!)
                         .accessibilityIdentifier("settings.privacy-policy")
+                        .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    header("Privacy")
                 }
             }
-            .navigationTitle("Settings")
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Theme.ColorValue.appBackground)
+            .navigationTitle(Theme.Label.settings)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(Theme.Label.done) { dismiss() }
+                        .font(.body.weight(.semibold))
                 }
             }
+        }
+        .presentationBackground(Theme.ColorValue.appBackground)
+        .task {
+            // Show what iOS allows now, as the Templates control does.
+            if let authorized = await TimerAlertScheduler.isAuthorized(), !authorized, alertsEnabled {
+                alertsEnabled = false
+                alertsDenied = true
+            }
+        }
+    }
+
+    private func header(_ title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .textCase(nil)
+    }
+
+    /// A sync status line. With Pro it refreshes on tap; without, it reads
+    /// "With Pro" rather than offering a control that can't act.
+    @ViewBuilder
+    private func syncRow(_ title: String, status: String, refresh: @escaping () async -> Void) -> some View {
+        if proAccess.isProUnlocked {
+            Button {
+                Task { await refresh() }
+            } label: {
+                HStack {
+                    Text(title).foregroundStyle(Theme.ColorValue.textPrimary)
+                    Spacer()
+                    Text(status).foregroundStyle(Theme.ColorValue.textSecondary)
+                    Image(systemName: Theme.Symbol.restart)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.ColorValue.selectionAccent)
+                }
+            }
+            .accessibilityHint("Syncs now")
+            .listRowBackground(Theme.ColorValue.surface)
+        } else {
+            HStack {
+                Text(title)
+                Spacer()
+                Text("With Pro")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            .listRowBackground(Theme.ColorValue.surface)
         }
     }
 
@@ -129,9 +213,9 @@ struct SettingsView: View {
         case .idle, .purchased:
             return nil
         case .loading:
-            return "Checking purchase status..."
+            return "Checking purchase status…"
         case .purchasing:
-            return "Purchasing..."
+            return "Purchasing…"
         case .pending:
             return "Purchase pending approval."
         case .failed(let message):

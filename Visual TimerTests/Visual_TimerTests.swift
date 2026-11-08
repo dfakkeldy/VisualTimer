@@ -239,7 +239,7 @@ final class Visual_TimerTests: XCTestCase {
     }
 
     func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
-        let editor = GameEditorViewModel()
+        let editor = GameEditorViewModel(draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
 
         editor.addRound()
         editor.applyStarterTemplate(StarterTemplateLibrary.templates[1])
@@ -399,7 +399,7 @@ final class Visual_TimerTests: XCTestCase {
         name: Bad Round
         time: nope
         """.write(to: url, atomically: true, encoding: .utf8)
-        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory))
+        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory), draftDirectory: directory)
         editor.gameTitle = "Current Draft"
         editor.rounds = [Round(name: "Keep Me", durationSeconds: 30, orderIndex: 0)]
         editor.roundCount = 3
@@ -417,7 +417,7 @@ final class Visual_TimerTests: XCTestCase {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let templateLibrary = TemplateLibraryStore(documentsDirectory: directory)
-        let editor = GameEditorViewModel(templateLibrary: templateLibrary)
+        let editor = GameEditorViewModel(templateLibrary: templateLibrary, draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         editor.gameTitle = "Inactive Routine"
         editor.rounds = [Round(name: "Hidden", durationSeconds: 30, isActive: false, orderIndex: 0)]
 
@@ -571,7 +571,8 @@ final class Visual_TimerTests: XCTestCase {
         )
         let viewModel = GameEditorViewModel(
             templateLibrary: templateLibrary,
-            widgetSnapshotStore: snapshotStore
+            widgetSnapshotStore: snapshotStore,
+            draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         )
 
         viewModel.refreshSavedTemplates()
@@ -1367,7 +1368,7 @@ final class Visual_TimerTests: XCTestCase {
         gameViewModel.loadGame(routine)
         gameViewModel.startGame()
 
-        XCTAssertEqual(gameViewModel.roundProgressText, "Round 1 of 2")
+        XCTAssertEqual(gameViewModel.roundProgressText, "Step 1 of 2")
         XCTAssertEqual(gameViewModel.countingPlayerCount, 0)
     }
 

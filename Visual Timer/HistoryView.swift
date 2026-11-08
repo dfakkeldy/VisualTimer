@@ -4,10 +4,12 @@ struct HistoryView: View {
 
     @ObservedObject var history: HistoryViewModel
     @ObservedObject var proAccess: ProAccessViewModel
+    var onBrowseTemplates: () -> Void = {}
 
-    init(history: HistoryViewModel, proAccess: ProAccessViewModel) {
+    init(history: HistoryViewModel, proAccess: ProAccessViewModel, onBrowseTemplates: @escaping () -> Void = {}) {
         self.history = history
         self.proAccess = proAccess
+        self.onBrowseTemplates = onBrowseTemplates
     }
 
     @State private var deleteTargets: [GameRecord] = []
@@ -52,74 +54,180 @@ struct HistoryView: View {
     // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: Theme.Symbol.history)
-                .font(.system(size: 48))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("No sessions yet")
-                .font(.title3.weight(.medium))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text("Complete a session to see it here.")
+        VStack(spacing: 14) {
+            GhostDial()
+                .frame(width: 96, height: 96)
+                .accessibilityHidden(true)
+            Text("Your finished sessions appear here")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("Finished and ended sessions are kept. Quick timers aren't.")
                 .font(.subheadline)
-                .foregroundStyle(Theme.ColorValue.textSecondary.opacity(0.7))
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .multilineTextAlignment(.center)
+            GlassCapsuleButton(title: "Choose a template", systemImage: Theme.Symbol.templates, prominent: true) {
+                onBrowseTemplates()
+            }
+            .padding(.top, 6)
         }
+        .padding(.horizontal, 40)
+        .padding(.bottom, 140)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Records List
 
     private var recordsList: some View {
         List {
-            ForEach(visibleRecords) { record in
-                NavigationLink {
-                    SessionDetailView(record: record, history: history, proAccess: proAccess)
-                } label: {
-                    recordRow(record)
+            ForEach(dayGroups, id: \.title) { group in
+                Section {
+                    ForEach(group.records) { record in
+                        NavigationLink {
+                            SessionDetailView(record: record, history: history, proAccess: proAccess)
+                        } label: {
+                            recordRow(record)
+                        }
+                        .listRowBackground(Theme.ColorValue.surface)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                requestDelete([record])
+                            } label: {
+                                Label("Delete", systemImage: Theme.Symbol.delete)
+                            }
+                        }
+                    }
+                } header: {
+                    Text(group.title)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                        .textCase(nil)
+                } footer: {
+                    // The free rule, quietly, right after your first sessions:
+                    // readable at rest, never ahead of your own history.
+                    if group.title == dayGroups.first?.title,
+                       HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
+                        Button {
+                            requestedProFeature = .fullHistory
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(hiddenRecordsText)
+                                    .foregroundStyle(Theme.ColorValue.textTertiary)
+                                Text("Unlock ›")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+                            }
+                            .font(.footnote)
+                        }
+                        .accessibilityLabel("Unlock full history. \(hiddenRecordsText)")
+                    }
                 }
-                .listRowBackground(Theme.ColorValue.circleBackground)
-            }
-            .onDelete { offsets in
-                let recordsToDelete = offsets.compactMap { index in
-                    visibleRecords.indices.contains(index) ? visibleRecords[index] : nil
-                }
-                requestDelete(recordsToDelete)
             }
 
-            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
-                Button {
-                    requestedProFeature = .fullHistory
-                } label: {
-                    Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
-                }
-                .listRowBackground(Theme.ColorValue.circleBackground)
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .contentMargins(.bottom, 24, for: .scrollContent)
+    }
+
+    private var hiddenRecordsText: String {
+        let hidden = history.records.count - visibleRecords.count
+        let noun = hidden == 1 ? "older session" : "older sessions"
+        return "\(HistoryAccessPolicy.freeRecordLimit) most recent shown · \(hidden) \(noun) kept"
+    }
+
+    private struct DayGroup {
+        let title: String
+        let records: [GameRecord]
+    }
+
+    private var dayGroups: [DayGroup] {
+        let calendar = Calendar.current
+        var groups: [DayGroup] = []
+        for record in visibleRecords {
+            let title: String
+            // A record from a clock running ahead counts as today.
+            if calendar.isDateInToday(record.playedAt) || record.playedAt > Date() {
+                title = "Today"
+            } else if calendar.isDateInYesterday(record.playedAt) {
+                title = "Yesterday"
+            } else if let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: record.playedAt), to: calendar.startOfDay(for: Date())).day, days >= 0, days < 7 {
+                title = "This week"
+            } else {
+                title = "Earlier"
+            }
+            if let last = groups.last, last.title == title {
+                groups[groups.count - 1] = DayGroup(title: title, records: last.records + [record])
+            } else {
+                groups.append(DayGroup(title: title, records: [record]))
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
+        return groups
     }
 
     private func recordRow(_ record: GameRecord) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(record.gameTitle)
-                .font(.body.weight(.medium))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(record.gameTitle)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Theme.ColorValue.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text(dateText(record.playedAt))
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textTertiary)
+            }
+
+            let segments = colorSegments(record)
+            if !segments.isEmpty {
+                SequenceRibbon(segments: segments, height: 4)
+                    .padding(.vertical, 2)
+            }
 
             Text(summaryLine(record))
                 .font(.caption)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
+                .lineLimit(1)
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The rounds as they ran, in their colours and sized by time.
+    private func colorSegments(_ record: GameRecord) -> [SequenceSegment] {
+        guard record.roundColors != nil else { return [] }
+        return SessionTimeline(record: record).items.enumerated().compactMap { index, item in
+            guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
+            return SequenceSegment(id: index, color: color, seconds: max(length, 1))
+        }
+    }
+
+    /// The session's rounds as their emoji, in order, each once.
+    private func emojiStrip(_ record: GameRecord) -> String {
+        var seen: [String] = []
+        for event in record.session.events {
+            if case .roundStarted(_, let emoji, _) = event, !emoji.isEmpty, !seen.contains(emoji) {
+                seen.append(emoji)
+            }
+        }
+        return seen.prefix(6).joined()
     }
 
     private func summaryLine(_ record: GameRecord) -> String {
         let session = record.session
-        let elapsed = formatElapsed(session.totalElapsedSeconds)
-        var parts: [String] = []
-        parts.append(elapsed)
+        var parts: [String] = [TimerText.words(Int(session.totalElapsedSeconds))]
         parts.append(TurnTimerCountText.label(for: session.roundCount, singular: "round"))
         if session.skipCount > 0 { parts.append(TurnTimerCountText.label(for: session.skipCount, singular: "skip")) }
-        if session.doOverCount > 0 { parts.append(TurnTimerCountText.label(for: session.doOverCount, singular: "do-over")) }
-        parts.append(playedAtFormatter.string(from: record.playedAt))
+        if session.doOverCount > 0 { parts.append(session.doOverCount == 1 ? "went back once" : "went back \(session.doOverCount)×") }
         return parts.joined(separator: " · ")
+    }
+
+    private func dateText(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) || calendar.isDateInYesterday(date) {
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 
     private var deleteConfirmationTitle: String {
@@ -150,16 +258,31 @@ struct HistoryView: View {
         deleteTargets = []
     }
 
-    private func formatElapsed(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
-    }
 
-    private var playedAtFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f
-    }()
+}
+
+/// The empty dial: a closed hairline rim, three uneven seams from twelve,
+/// and one faint wedge of colour. A dial waiting to fill, never a spinner.
+private struct GhostDial: View {
+    var body: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let radius = min(size.width, size.height) / 2 - 1
+            let origin = Theme.Rotation.trimOriginOffset
+            var wedge = Path()
+            wedge.move(to: center)
+            wedge.addArc(center: center, radius: radius, startAngle: .degrees(origin), endAngle: .degrees(origin + 110), clockwise: false)
+            wedge.closeSubpath()
+            context.fill(wedge, with: .color(Theme.ColorValue.timerPalette[7].opacity(0.28)))
+            for angle in [0.0, 110, 250] {
+                var seam = Path()
+                seam.move(to: center)
+                let radians = (origin + angle) * .pi / 180
+                seam.addLine(to: CGPoint(x: center.x + radius * cos(radians), y: center.y + radius * sin(radians)))
+                context.stroke(seam, with: .color(Theme.ColorValue.textTertiary), lineWidth: 1)
+            }
+            context.stroke(Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
+                           with: .color(Theme.ColorValue.textTertiary), lineWidth: 1)
+        }
+    }
 }

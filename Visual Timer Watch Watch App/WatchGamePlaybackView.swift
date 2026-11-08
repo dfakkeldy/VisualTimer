@@ -18,6 +18,7 @@ struct WatchGamePlaybackView: View {
     let onEnd: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmEnd = false
 
     var body: some View {
         ScrollView {
@@ -30,6 +31,15 @@ struct WatchGamePlaybackView: View {
             }
         }
         .navigationTitle(gameViewModel.gameSequence?.title ?? "")
+        .confirmationDialog("End this session?", isPresented: $confirmEnd, titleVisibility: .visible) {
+            Button("End and save", role: .destructive) {
+                onEnd()
+                dismiss()
+            }
+            Button("Keep going", role: .cancel) {}
+        } message: {
+            Text("What you've done so far is saved to History.")
+        }
     }
 
     // MARK: - Playing
@@ -46,14 +56,23 @@ struct WatchGamePlaybackView: View {
 
         WatchTimerDial(
             progress: timerViewModel.visualProgress,
-            color: timerViewModel.timerColor
+            color: timerViewModel.timerColor,
+            dialSize: Theme.Watch.Dimension.sessionDialSize,
+            centerSymbol: WatchPrimaryControl(state: timerViewModel.state)?.symbol,
+            onTap: onPrimary
         ) { date in
             remainingTime(at: date)
         }
-        .frame(
-            width: Theme.Watch.Dimension.sessionDialSize,
-            height: Theme.Watch.Dimension.sessionDialSize
-        )
+
+        if let next = gameViewModel.nextRound {
+            Text("Next: \(next.emoji.isEmpty ? "" : next.emoji + " ")\(next.name)")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(next.color.swiftUIColor)
+                .lineLimit(1)
+        }
+        Text("\(gameViewModel.roundProgressText) · \(sessionLeftText) left")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
 
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             if let primary = WatchPrimaryControl(state: timerViewModel.state) {
@@ -62,6 +81,7 @@ struct WatchGamePlaybackView: View {
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.sessionPrimary,
                     isProminent: true,
+                    tint: timerViewModel.timerColor,
                     action: onPrimary
                 )
             }
@@ -77,6 +97,7 @@ struct WatchGamePlaybackView: View {
         Text(gameViewModel.roundProgressText)
             .font(.caption2)
             .foregroundStyle(.secondary)
+
 
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             WatchControlButton(
@@ -103,15 +124,19 @@ struct WatchGamePlaybackView: View {
             accessibilityID: Theme.Watch.Identifier.sessionEnd,
             isProminent: false
         ) {
-            onEnd()
-            dismiss()
+            confirmEnd = true
         }
+    }
+
+    private var sessionLeftText: String {
+        let seconds = gameViewModel.remainingSessionSeconds(currentRemaining: timerViewModel.timeRemaining)
+        return seconds < 60 ? "under a minute" : "\(Int((Double(seconds) / 60).rounded())) min"
     }
 
     private func remainingTime(at date: Date) -> some View {
         let seconds = timerViewModel.visualProgress.remainingSeconds(at: date)
         return Text(WatchTimeText.clock(seconds))
-            .font(.system(.title3, design: .rounded).monospacedDigit())
+            .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
             .lineLimit(1)
             .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
             .accessibilityLabel(Theme.Watch.Label.timeRemaining)
@@ -125,10 +150,13 @@ struct WatchGamePlaybackView: View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             Image(systemName: Theme.Watch.Symbol.sessionComplete)
                 .font(.title)
-                .foregroundStyle(Theme.Watch.ColorValue.sessionComplete)
+                .foregroundStyle(gameViewModel.activeRounds.last?.color.swiftUIColor ?? Theme.Watch.ColorValue.sessionComplete)
                 .accessibilityHidden(true)
             Text(Theme.Watch.Label.sessionComplete)
                 .font(.headline)
+            Text("Total \(WatchTimeText.clock(Int(gameViewModel.sessionDurationSeconds))) · saved")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             WatchControlButton(
                 title: Theme.Watch.Label.done,
                 systemImage: Theme.Symbol.checkmark,

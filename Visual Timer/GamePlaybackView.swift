@@ -1,5 +1,10 @@
 import SwiftUI
 
+/// The Timer tab: the quick timer, or the running session when one is active.
+///
+/// Everything sits on one vertical axis: a top row (settings, or the session
+/// header with End), the dial (which is the play/pause control), the digits
+/// with one plain caption, one control row, and the session's progress.
 struct GamePlaybackView: View {
 
     @ObservedObject var timerViewModel: TimerViewModel
@@ -8,27 +13,30 @@ struct GamePlaybackView: View {
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
     @ObservedObject var historySync: HistoryCloudSyncEngine
+    var onTimerStateChange: () -> Void = {}
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass
-
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showSettings = false
+    @State private var confirmEnd = false
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
+    @State private var dialSize: CGSize = .zero
+    /// While someone drags the rim: the set time as a fraction of an hour.
+    @State private var rimDragFraction: Double?
 
     var body: some View {
         ZStack {
-            TimerBackdrop(color: timerViewModel.timerColor)
+            TimerBackdrop(color: backdropColor)
 
-            if gameViewModel.hasActiveGame {
-                gamePlaybackContent
-            } else {
-                quickTimerContent
+            Group {
+                if verticalSizeClass == .compact {
+                    landscapeContent
+                } else {
+                    portraitContent
+                }
             }
-
-            // Settings gear — only in quick timer mode
-            if !gameViewModel.hasActiveGame {
-                settingsGear
-            }
+            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
         }
         .animation(
             reduceMotion ? nil : .easeInOut(duration: Theme.AnimationValue.stateTransitionDuration),
@@ -46,6 +54,24 @@ struct GamePlaybackView: View {
                 historySync: historySync
             )
         }
+        .confirmationDialog("End this session?", isPresented: $confirmEnd, titleVisibility: .visible) {
+            Button("End and save to History", role: .destructive) {
+                gameViewModel.endGame()
+            }
+            Button("Keep going", role: .cancel) {}
+        } message: {
+            Text("What you've done so far is saved to History.")
+        }
+        .onChange(of: timerViewModel.state) { _, _ in
+            onTimerStateChange()
+        }
+        .onChange(of: timerViewModel.visualProgress) { _, progress in
+            scheduleEndAlert(progress)
+        }
+        .onChange(of: alertsEnabled) { _, _ in
+            // Switching alerts on or off takes effect for the running countdown now.
+            scheduleEndAlert(timerViewModel.visualProgress)
+        }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
                 soundManager?.playFinishSound()
@@ -54,273 +80,195 @@ struct GamePlaybackView: View {
         }
     }
 
-    // MARK: - Quick Timer (existing behavior)
+    private var isComplete: Bool { gameViewModel.gamePhase == .gameOver }
 
-    private var quickTimerContent: some View {
-        Group {
-            if verticalSizeClass == .compact {
-                quickTimerLandscapeContent
-            } else {
-                quickTimerPortraitContent
-            }
-        }
-        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-    }
-
-    private var quickTimerPortraitContent: some View {
-        ViewThatFits(in: .vertical) {
-            quickTimerRegularContent
-            quickTimerCompactContent
+    /// One pending alert for the running countdown's end; none otherwise.
+    private func scheduleEndAlert(_ progress: TimerVisualProgress) {
+        if inSession, let round = gameViewModel.currentRound {
+            let name = round.emoji.isEmpty ? round.name : "\(round.emoji) \(round.name)"
+            let next = gameViewModel.nextRound.map { "Next: \($0.name)" } ?? "That was the last one."
+            TimerAlertScheduler.update(finishDate: progress.finishDate, title: "\(name) is done", body: next)
+        } else {
+            TimerAlertScheduler.update(finishDate: progress.finishDate, title: "Time's up", body: "Your \(TimerText.words(timerViewModel.totalDuration)) timer has finished.")
         }
     }
+    private var inSession: Bool { gameViewModel.hasActiveGame }
 
-    private var quickTimerRegularContent: some View {
+    private var backdropColor: Color {
+        if isComplete, let first = gameViewModel.activeRounds.first {
+            return first.color.swiftUIColor
+        }
+        return timerViewModel.timerColor
+    }
+
+    // MARK: - Layouts
+
+    private var portraitContent: some View {
         VStack(spacing: 0) {
-            durationStepper
+            topRow
+                .padding(.top, Theme.Dimension.gearTopPadding)
 
-            Spacer()
+            Spacer(minLength: Theme.Dimension.sectionSpacingSmall)
 
-            timerCircleButton
+            dial
+                .frame(maxWidth: Theme.GamePlayback.dialMaxSize)
+                .layoutPriority(1)
 
-            TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
+            readout
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
-            Spacer()
+            controlRow
+                .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
-            resetButton
-                .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
+            Spacer(minLength: Theme.Dimension.sectionSpacingSmall)
+
+            progressFooter
+                .padding(.bottom, Theme.Dimension.sectionSpacingSmall)
         }
     }
 
-    private var quickTimerCompactContent: some View {
-        ScrollView {
+    private var landscapeContent: some View {
+        HStack(spacing: Theme.Dimension.sectionSpacingLarge) {
+            dial
+                .frame(maxWidth: Theme.Dimension.landscapeTimerCircleMaxSize)
             VStack(spacing: Theme.Dimension.sectionSpacingSmall) {
-                durationStepper
-
-                timerCircleButton
-                    .frame(maxWidth: Theme.Dimension.compactTimerCircleMaxSize)
-
-                TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
-
-                resetButton
+                topRow
+                readout
+                controlRow
+                progressFooter
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Dimension.compactContentVerticalPadding)
         }
-        .scrollIndicators(.hidden)
-    }
-
-    private var quickTimerLandscapeContent: some View {
-        HStack(spacing: Theme.Dimension.sectionSpacingLarge) {
-            VStack(spacing: Theme.Dimension.sectionSpacingSmall) {
-                durationStepper
-
-                TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
-
-                resetButton
-            }
-            .frame(maxWidth: Theme.Dimension.landscapeControlColumnWidth)
-
-            timerCircleButton
-                .frame(maxWidth: Theme.Dimension.landscapeTimerCircleMaxSize)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, Theme.Dimension.compactContentVerticalPadding)
     }
 
-    // MARK: - Game Playback
-
-    private var gamePlaybackContent: some View {
-        VStack(spacing: Theme.GamePlayback.playbackSpacing) {
-
-            if gameViewModel.gamePhase == .gameOver {
-                gameOverView
-            } else {
-                roundInfoHeader
-            }
-
-            // Game duration counter
-            if gameViewModel.gamePhase != .ready {
-                Text(formatElapsed(gameViewModel.gameElapsedTime))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-                    .padding(.top, 4)
-            }
-
-            Spacer()
-
-            timerCircleButton
-
-            TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
-                .padding(.top, Theme.Dimension.sectionSpacingSmall)
-
-            // Control buttons
-            if gameViewModel.gamePhase == .playing {
-                HStack(spacing: 24) {
-                    Button {
-                        gameViewModel.doOverToPrevious()
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: Theme.Symbol.doOver)
-                                .font(.title3)
-                            Text(Theme.Label.doOver)
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-                    .disabled(gameViewModel.currentRoundIndex == 0)
-
-                    Button {
-                        gameViewModel.skipCurrentRound()
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: Theme.Symbol.skip)
-                                .font(.title3)
-                            Text(Theme.Label.skip)
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-
-                    Button {
-                        gameViewModel.restartCurrentTimer()
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: Theme.Symbol.restart)
-                                .font(.title3)
-                            Text(Theme.Label.restart)
-                                .font(.caption2)
-                        }
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                    }
-                }
-                .padding(.top, 12)
-            }
-
-            Spacer()
-
-            if gameViewModel.gamePhase == .playing {
-                roundProgressFooter
-            }
-
-            if gameViewModel.gamePhase == .gameOver {
-                gameOverActions
-            }
-        }
-        .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-        .padding(.bottom, Theme.Dimension.sectionSpacingLarge)
-    }
-
-    // MARK: - Round Info Header
-
-    private var roundInfoHeader: some View {
-        HStack(alignment: .top, spacing: Theme.Dimension.durationStepperSpacing) {
-            currentRoundHeader
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            nextPlayerHeader
-        }
-        .padding(.top, 16)
-    }
+    // MARK: - Top row
 
     @ViewBuilder
-    private var currentRoundHeader: some View {
-        if let round = gameViewModel.currentRound {
-            HStack(spacing: 4) {
-                if !round.emoji.isEmpty {
-                    Text(round.emoji)
-                        .font(.system(size: 56))
+    private var topRow: some View {
+        if isComplete {
+            completeHeader
+        } else if inSession {
+            sessionHeader
+        } else {
+            HStack {
+                Spacer()
+                GlassIconButton(systemImage: Theme.Symbol.settings, label: Theme.Label.settings, size: 36) {
+                    showSettings = true
+                }
+            }
+        }
+    }
+
+    private var sessionHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center) {
+                if let title = gameViewModel.gameSequence?.title {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
                         .lineLimit(1)
                 }
-                Text(round.name)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(round.color.swiftUIColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .truncationMode(.tail)
+                Spacer()
+                GlassCapsuleButton(title: Theme.Label.endShort, systemImage: Theme.Symbol.stopSession) {
+                    confirmEnd = true
+                }
+                .accessibilityLabel(Theme.Label.endGame)
+            }
+
+            HStack(alignment: .lastTextBaseline, spacing: Theme.Dimension.durationStepperSpacing) {
+                if let round = gameViewModel.currentRound {
+                    HStack(alignment: .center, spacing: 8) {
+                        if !round.emoji.isEmpty {
+                            Text(round.emoji)
+                                .font(.system(size: Theme.GamePlayback.headerEmojiSize))
+                                .accessibilityHidden(true)
+                        }
+                        Text(round.name)
+                            .font(.system(size: Theme.GamePlayback.headerNameSize, weight: .bold))
+                            .foregroundStyle(round.color.swiftUIColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Now: \(round.name)")
+                }
+
+                Spacer(minLength: 8)
+
+                if let next = gameViewModel.nextRound {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(Theme.Label.nextPlayer)
+                            .font(.caption)
+                            .foregroundStyle(Theme.ColorValue.textTertiary)
+                        HStack(spacing: 5) {
+                            if next.emoji.isEmpty {
+                                Circle()
+                                    .fill(next.color.swiftUIColor)
+                                    .frame(width: 8, height: 8)
+                            }
+                            Text(next.emoji.isEmpty ? next.name : "\(next.emoji) \(next.name)")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(next.color.swiftUIColor.opacity(0.9))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                    }
+                    .frame(maxWidth: Theme.GamePlayback.nextPlayerMaxWidth, alignment: .trailing)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Next: \(next.name)")
+                }
             }
         }
     }
+
+    private var completeHeader: some View {
+        VStack(spacing: 6) {
+            Text("All done")
+                .font(.system(size: Theme.GamePlayback.gameOverFontSize, weight: .bold))
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+            Text(completionLine)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Theme.Dimension.sectionSpacingSmall)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Counts, not verdicts, and "saved" only once the record was written.
+    private var completionLine: String {
+        let skipped = gameViewModel.skippedCount
+        let done: String
+        if skipped > 0 {
+            done = "\(skipped) skipped"
+        } else {
+            done = gameViewModel.countingPlayerCount > 0 ? "Everyone had a turn" : "Every step done"
+        }
+        let receipt = gameViewModel.lastRecordSaved ? "saved to History" : "couldn't save to History"
+        return "\(done) · \(receipt)"
+    }
+
+    // MARK: - Dial
 
     @ViewBuilder
-    private var nextPlayerHeader: some View {
-        if let next = gameViewModel.nextPlayer {
-            HStack(spacing: 4) {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(Theme.Label.nextPlayer)
-                        .font(.caption2)
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                    HStack(spacing: 4) {
-                        if !next.emoji.isEmpty {
-                            Text(next.emoji)
-                                .lineLimit(1)
-                        }
-                        Text(next.name)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .truncationMode(.tail)
-                    }
+    private var dial: some View {
+        if isComplete, let game = gameViewModel.gameSequence {
+            ZStack {
+                SequencePie(segments: game.segments, glowColor: .white.opacity(0.6))
+                GlyphDisc {
+                    Image(systemName: Theme.Symbol.checkmark)
+                        .font(.system(size: Theme.TimerStyle.runningIconSize, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .frame(maxWidth: Theme.GamePlayback.nextPlayerMaxWidth, alignment: .trailing)
-
-                Image(systemName: Theme.Symbol.nextPlayer)
-                    .font(.caption)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
             }
+            .padding(.horizontal, Theme.Dimension.circleHorizontalPadding)
+            .accessibilityElement()
+            .accessibilityLabel(Theme.Label.gameOver)
+        } else {
+            timerCircleButton
         }
     }
-
-    // MARK: - Round Progress Footer
-
-    private var roundProgressFooter: some View {
-        VStack(spacing: 4) {
-            Text(gameViewModel.roundProgressText)
-                .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-
-            if gameViewModel.totalRoundCount > 1 {
-                Text("Sequence \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)")
-                    .font(.system(size: Theme.GamePlayback.roundProgressFontSize))
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-        }
-    }
-
-    // MARK: - Session Complete
-
-    private var gameOverView: some View {
-        VStack(spacing: 8) {
-            Text("Session Complete")
-                .font(.system(
-                    size: Theme.GamePlayback.gameOverFontSize,
-                    weight: .bold
-                ))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-                .padding(.top, 16)
-        }
-    }
-
-    private var gameOverActions: some View {
-        HStack(spacing: Theme.Dimension.controlButtonSpacing) {
-            Button {
-                gameViewModel.addRoundDuringGameOver()
-            } label: {
-                Label("Add Round", systemImage: Theme.Symbol.increment)
-                    .font(.body.weight(.medium))
-            }
-
-            Button {
-                gameViewModel.endGame()
-            } label: {
-                Label(Theme.Label.endGame, systemImage: Theme.Symbol.endGame)
-                    .font(.body.weight(.medium))
-            }
-        }
-    }
-
-    // MARK: - Shared Sub-Views
 
     private var timerCircleButton: some View {
         Button {
@@ -332,24 +280,74 @@ struct GamePlaybackView: View {
                     fillColor: timerViewModel.timerColor,
                     completionCount: timerViewModel.timerColorIndex
                 )
+                // Paused reads from across the room: the colour dims along a
+                // clean path (less saturation and light), not toward grey-pink.
+                .saturation(timerViewModel.state == .paused ? 0.7 : 1)
+                .brightness(timerViewModel.state == .paused ? -0.18 : 0)
 
                 if let icon = centerIcon {
-                    Image(systemName: icon)
-                        .font(.system(
-                            size: timerViewModel.state == .running ? Theme.TimerStyle.runningIconSize : Theme.TimerStyle.restingIconSize,
-                            weight: .medium
-                        ))
-                        .foregroundStyle(.white.opacity(Theme.TimerStyle.iconOpacity))
-                        .shadow(color: .black.opacity(Theme.TimerStyle.shadeOpacity), radius: Theme.TimerStyle.iconShadowRadius)
-                        .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
-                        .accessibilityHidden(true)
+                    GlyphDisc {
+                        Image(systemName: icon)
+                            .font(.system(size: Theme.TimerStyle.runningIconSize, weight: .semibold))
+                            .foregroundStyle(.white.opacity(Theme.TimerStyle.iconOpacity))
+                            .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                    }
+                    .accessibilityHidden(true)
                 }
             }
         }
         .buttonStyle(TimerPressStyle())
         .contentShape(Circle())
+        .overlay {
+            // While setting, a thin arc from twelve shows the time chosen, as a
+            // share of an hour, over the full pie.
+            if let rimDragFraction {
+                Circle()
+                    .trim(from: 0, to: rimDragFraction)
+                    .stroke(.white, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .rotationEffect(.degrees(Theme.Rotation.trimOriginOffset))
+                    .padding(Theme.Dimension.circleHorizontalPadding + 6)
+                    .allowsHitTesting(false)
+            }
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { dialSize = $0 }
+        // High priority: a drag that sets the time never also counts as the
+        // tap that starts it. Taps (under 12 pt of movement) still reach the button.
+        .highPriorityGesture(rimDrag, isEnabled: showsDurationControls)
+        .sensoryFeedback(.selection, trigger: timerViewModel.totalDuration)
         .disabled(!isTimerCircleEnabled)
         .accessibilityLabel(timerCircleAccessibilityLabel)
+    }
+
+    /// Drag around the rim of the idle quick timer to set its time: one turn
+    /// is an hour, in 15-second steps under five minutes and minutes above.
+    private var rimDrag: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                let center = CGPoint(x: dialSize.width / 2, y: dialSize.height / 2)
+                let radius = min(dialSize.width, dialSize.height) / 2
+                guard radius > 0 else { return }
+                if rimDragFraction == nil {
+                    // Only a drag that starts on the outer rim sets the time.
+                    let start = hypot(value.startLocation.x - center.x, value.startLocation.y - center.y)
+                    guard start > radius * 0.55 else { return }
+                }
+                let dx = value.location.x - center.x
+                let dy = value.location.y - center.y
+                var angle = atan2(dx, -dy)
+                if angle < 0 { angle += 2 * .pi }
+                let fraction = angle / (2 * .pi)
+                let raw = fraction * 3600
+                let step: Double = raw < 300 ? 15 : 60
+                let seconds = max(Double(Theme.TimerMechanic.minimumDuration), (raw / step).rounded() * step)
+                rimDragFraction = seconds / 3600
+                if Int(seconds) != timerViewModel.totalDuration {
+                    timerViewModel.setDuration(Int(seconds))
+                }
+            }
+            .onEnded { _ in
+                rimDragFraction = nil
+            }
     }
 
     private var centerIcon: String? {
@@ -406,99 +404,182 @@ struct GamePlaybackView: View {
         }
     }
 
-    // MARK: - Quick Timer Sub-Views
+    // MARK: - Readout: digits and one caption
 
-    private var durationStepper: some View {
-        TimerGlassGroup {
-            HStack(spacing: Theme.TimerStyle.controlSpacing) {
-                Button {
-                    timerViewModel.setDuration(
-                        max(Theme.TimerMechanic.minimumDuration,
-                            timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
-                    )
-                } label: {
-                    Image(systemName: Theme.Symbol.decrease)
-                        .font(.title3)
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
-                        .timerControlSurface(in: Circle())
+    private var readout: some View {
+        VStack(spacing: Theme.TimerStyle.captionSpacing) {
+            HStack(spacing: Theme.Dimension.durationStepperSpacing) {
+                if showsDurationControls {
+                    GlassIconButton(systemImage: Theme.Symbol.decrease, label: Theme.Label.decrementDuration) {
+                        timerViewModel.setDuration(
+                            max(Theme.TimerMechanic.minimumDuration,
+                                timerViewModel.totalDuration - Theme.TimerMechanic.durationStep)
+                        )
+                    }
+                    .disabled(timerViewModel.totalDuration <= Theme.TimerMechanic.minimumDuration)
                 }
-                .disabled(timerViewModel.state != .notStarted)
-                .accessibilityLabel(Theme.Label.decrementDuration)
 
-                Text("\(timerViewModel.totalDuration / 60)m \(timerViewModel.totalDuration % 60)s")
-                    .font(.title3.weight(.medium))
-                    .monospacedDigit()
-                    .foregroundStyle(Theme.ColorValue.textPrimary)
-
-                Button {
-                    timerViewModel.setDuration(
-                        timerViewModel.totalDuration + Theme.TimerMechanic.durationStep
-                    )
-                } label: {
-                    Image(systemName: Theme.Symbol.increase)
-                        .font(.title3)
+                if isComplete {
+                    Text(TimerText.length(Int(gameViewModel.sessionDurationSeconds)))
+                        .font(.system(size: Theme.TimerStyle.digitsSize, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
                         .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
-                        .timerControlSurface(in: Circle())
+                        .accessibilityLabel("Total time \(TimerText.words(Int(gameViewModel.sessionDurationSeconds)))")
+                } else {
+                    TimeDisplayView(timeRemaining: timerViewModel.timeRemaining)
                 }
-                .disabled(timerViewModel.state != .notStarted)
-                .accessibilityLabel(Theme.Label.incrementDuration)
+
+                if showsDurationControls {
+                    GlassIconButton(systemImage: Theme.Symbol.increase, label: Theme.Label.incrementDuration) {
+                        timerViewModel.setDuration(timerViewModel.totalDuration + Theme.TimerMechanic.durationStep)
+                    }
+                }
             }
-            .buttonStyle(TimerPressStyle())
+
+            Text(caption)
+                .font(.subheadline.weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .accessibilityIdentifier("timer.caption")
         }
-        .padding(.top, Theme.TimerStyle.controlSize + Theme.Dimension.gearTopPadding)
     }
 
-    private var resetButton: some View {
-        HStack {
-            Spacer()
-            if timerViewModel.state == .paused {
-                Button {
+    /// −/+ belong to the quick timer and only while it can be changed.
+    private var showsDurationControls: Bool {
+        !inSession && timerViewModel.state == .notStarted
+    }
+
+    private var caption: String {
+        if let note = gameViewModel.resumeNote, inSession, !isComplete {
+            return note
+        }
+        if isComplete {
+            // The same scope as the total time: this session's own rounds.
+            let steps = gameViewModel.stepsRunCount
+            let noun = gameViewModel.countingPlayerCount > 0 ? "turn" : "step"
+            return "Total time · \(TurnTimerCountText.label(for: steps, singular: noun))"
+        }
+        let remaining = timerViewModel.timeRemaining
+        if inSession {
+            let sessionLeft = gameViewModel.remainingSessionSeconds(currentRemaining: remaining)
+            switch timerViewModel.state {
+            case .running:
+                return "Session · \(TimerText.left(sessionLeft)) · \(TimerText.endsAt(sessionLeft).lowercasedFirst)"
+            case .paused:
+                return "\(Theme.Label.paused) · tap the dial to resume"
+            case .notStarted, .finished:
+                return Theme.Label.tapToStart
+            }
+        }
+        switch timerViewModel.state {
+        case .running:
+            return TimerText.endsAt(remaining)
+        case .paused:
+            return "\(Theme.Label.paused) · tap the dial to resume"
+        case .notStarted, .finished:
+            return "Tap to start · drag the rim to set"
+        }
+    }
+
+    // MARK: - Control row
+
+    @ViewBuilder
+    private var controlRow: some View {
+        Group {
+            if isComplete {
+                HStack(spacing: Theme.TimerStyle.controlSpacing * 2) {
+                    GlassCapsuleButton(title: Theme.Label.goAgain, systemImage: Theme.Symbol.restart, fillsWidth: true) {
+                        gameViewModel.addRoundDuringGameOver()
+                    }
+                    GlassCapsuleButton(title: Theme.Label.done, systemImage: nil, prominent: true, fillsWidth: true) {
+                        gameViewModel.endGame()
+                    }
+                }
+            } else if inSession {
+                TimerGlassGroup {
+                    HStack(spacing: Theme.TimerStyle.controlSpacing) {
+                        GlassCapsuleButton(title: Theme.Label.doOver, systemImage: Theme.Symbol.doOver, fillsWidth: true) {
+                            gameViewModel.doOverToPrevious()
+                        }
+                        .disabled(gameViewModel.currentRoundIndex == 0)
+                        GlassCapsuleButton(title: Theme.Label.restart, systemImage: Theme.Symbol.restart, fillsWidth: true) {
+                            gameViewModel.restartCurrentTimer()
+                        }
+                        GlassCapsuleButton(title: Theme.Label.skip, systemImage: Theme.Symbol.skip, fillsWidth: true) {
+                            gameViewModel.skipCurrentRound()
+                        }
+                    }
+                }
+            } else if timerViewModel.state == .paused {
+                GlassCapsuleButton(title: Theme.Label.reset, systemImage: Theme.Symbol.reset) {
                     timerViewModel.reset()
-                } label: {
-                    Image(systemName: Theme.Symbol.reset)
-                        .font(.title2.weight(.medium))
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .frame(width: Theme.Dimension.controlButtonSize, height: Theme.Dimension.controlButtonSize)
-                        .timerControlSurface(in: Circle())
                 }
-                .buttonStyle(TimerPressStyle())
                 .accessibilityLabel(Theme.Label.reset)
+            } else {
+                // A fixed-height slot, not a flexible one, so the dial sits in
+                // the same place idle, running and paused.
+                Color.clear.frame(height: Theme.TimerStyle.capsuleHeight)
             }
         }
-        .frame(height: Theme.Dimension.controlButtonSize)
+        .frame(minHeight: Theme.TimerStyle.capsuleHeight)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
-    // MARK: - Helpers
+    // MARK: - Progress
 
-    private func formatElapsed(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
+    @ViewBuilder
+    private var progressFooter: some View {
+        if inSession && !isComplete {
+            VStack(spacing: 8) {
+                progressDots
+                Text(progressText)
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(progressText)
+        } else {
+            Color.clear.frame(height: 1)
+        }
     }
 
-    private var settingsGear: some View {
-        VStack {
-            HStack {
-                Spacer()
-                Button {
-                    showSettings = true
-                } label: {
-                    Image(systemName: Theme.Symbol.settings)
-                        .font(.title3)
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .frame(width: Theme.TimerStyle.controlSize, height: Theme.TimerStyle.controlSize)
-                        .timerControlSurface(in: Circle())
+    private var progressText: String {
+        var text = gameViewModel.roundProgressText
+        if gameViewModel.totalRoundCount > 1 {
+            text += " · Repeat \(gameViewModel.currentOverallRound) of \(gameViewModel.totalRoundCount)"
+        }
+        return text
+    }
+
+    /// One dot per round in this pass, in its colour: done rounds filled,
+    /// the current one larger, later ones as outlines.
+    private var progressDots: some View {
+        HStack(spacing: Theme.GamePlayback.progressDotSpacing) {
+            ForEach(Array(gameViewModel.activeRounds.enumerated()), id: \.offset) { index, round in
+                let color = round.color.swiftUIColor
+                let isCurrent = index == gameViewModel.currentRoundIndex
+                let size = isCurrent ? Theme.GamePlayback.progressDotCurrentSize : Theme.GamePlayback.progressDotSize
+                // In a turn-based session, breaks are short bars so the dots
+                // count the same turns as the text beneath them.
+                let isBreak = gameViewModel.countingPlayerCount > 0 && !round.countsAsPlayer
+                let shape = Capsule()
+                Group {
+                    if index <= gameViewModel.currentRoundIndex {
+                        shape.fill(color)
+                    } else {
+                        shape.strokeBorder(color.opacity(0.7), lineWidth: 1.5)
+                    }
                 }
-                .buttonStyle(TimerPressStyle())
-                .accessibilityLabel(Theme.Label.settings)
+                .frame(width: isBreak ? size * 1.8 : size, height: isBreak ? 3 : size)
             }
-            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-            .padding(.top, Theme.Dimension.gearTopPadding)
-
-            Spacer()
         }
+    }
+}
+
+private extension String {
+    var lowercasedFirst: String {
+        prefix(1).lowercased() + dropFirst()
     }
 }
