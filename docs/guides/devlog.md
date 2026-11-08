@@ -32,13 +32,23 @@ Nothing is posted publicly without a human choosing to merge and reuse the copy.
 
 The generated weekly digest above is safe to refresh automatically. Hand-written launch notes can live below this section when there is a story worth telling in more detail.
 
+### November 8, 2026: public App Store 1.0 listing
+
+Turn Timer **1.0** is live on the
+[App Store](https://apps.apple.com/ca/app/turn-timer/id6771073144) and free.
+Confirmed 2026-11-08 via the iTunes lookup API (id 6771073144, bundleId
+`Dan.Visual-Timer`, version 1.0, `currentVersionReleaseDate`
+2026-10-29T10:09:42Z). Dated receipts remain in the
+[readiness ledger](../app-store/readiness.md).
+
 ### October 24, 2026: browser app and promoted Apple source
 
 The [browser app](https://dfakkeldy.github.io/VisualTimer/app/) is live with six
 starters, editable sequences, local history, and portable templates. The Apple
 source reached `main` in [PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114)
-on October 17, followed by App Store Connect upload 1.0 (77). Upload is separate
-from public availability; see the [readiness ledger](../app-store/readiness.md).
+on October 17, followed by App Store Connect upload 1.0 (77). That day's note
+recorded the upload without a public listing check; the listing is recorded
+above.
 
 ### July 2026: Pro sync and widgets validation
 

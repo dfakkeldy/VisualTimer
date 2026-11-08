@@ -1,7 +1,8 @@
 # Turn Timer architecture
 
 Last audited: 2026-10-24. Session restore, template drafts, and iPhone
-completion alerts (PR #138, merged 2026-11-08) are reflected below; other
+completion alerts (PR #138, merged 2026-11-08) are reflected below. The
+public App Store 1.0 listing sentence was updated 2026-11-08; other
 sections were not re-audited.
 
 Turn Timer has SwiftUI apps for iOS 18+ and watchOS 11+, a WidgetKit extension,
@@ -15,8 +16,10 @@ Ordinary changes branch from and target `nightly`, then follow
 `nightly` → `weekly` → `main`. `main` is the GitHub default branch and serves
 GitHub Pages from `docs/`. The October 17 promotion included the web app,
 history sync, widgets, and embedded Watch companion. These are implemented
-architecture, rather than future work. Implementation, a signed upload,
-physical-device behavior, and public availability are separate evidence.
+architecture, rather than future work. Implementation, a signed upload, and
+physical-device behavior remain separate evidence. Public App Store 1.0 listing
+is recorded in the [readiness ledger](docs/app-store/readiness.md) as of
+2026-11-08.
 
 The [readiness ledger](docs/app-store/readiness.md) holds dated delivery
 receipts and remaining release checks. [Website maintenance](docs/website.md)

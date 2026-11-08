@@ -1,6 +1,6 @@
 # Turn Timer roadmap
 
-Last audited: 2026-10-24
+Last audited: 2026-11-08
 
 Turn Timer is a visual countdown and sequence timer for everyday routines.
 This roadmap describes implemented source and remaining product work. Dated
@@ -31,15 +31,14 @@ The October 17 promotion to `main` included:
 - Timestamp-derived countdown reconciliation and accessibility fallbacks for
   the newer iOS timer visuals.
 
-Main upload **1.0 (77)** succeeded on October 17. This is an upload receipt,
-not evidence of current App Review status or public App Store availability.
-Physical Watch delivery, live CloudKit, and background sound are not established
-by source or simulator results.
+Main upload **1.0 (77)** succeeded on October 17. Public App Store version
+**1.0** was confirmed live and free on 2026-11-08 (iTunes lookup id 6771073144;
+[store page](https://apps.apple.com/ca/app/turn-timer/id6771073144)). Physical
+Watch delivery, live CloudKit, and background sound are not established by
+source or simulator results.
 
 ## Remaining release work
 
-- Reconcile the selected App Store build and current review/release state with
-  the dated delivery receipts before a release decision.
 - Resolve and record candidate-specific purchase/restore, production sync,
   widget, and paired-Watch evidence when those release checks are undertaken.
 - Keep store copy and screenshots tied to the chosen candidate and its observed
