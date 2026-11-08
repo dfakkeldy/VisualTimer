@@ -106,7 +106,7 @@ enum Theme {
         static let seam: CGFloat = 1
         /// The break between two turns, and between two passes ("Round 2").
         static let turnGap: CGFloat = 8
-        static let passGap: CGFloat = 26
+        static let passGap: CGFloat = 20
         static let passLabelBottomPadding: CGFloat = 8
         /// Space between the spine column and a round's label.
         static let labelInset: CGFloat = 10
@@ -119,11 +119,12 @@ enum Theme {
         static let pauseLabelHalfHeight: CGFloat = 8
         /// Pause labels never sit higher than this, clear of the name and start line.
         static let pauseLabelMinimumY: CGFloat = 46
-        /// The break that holds a "went back" glyph between two turns.
-        static let wentBackGapHeight: CGFloat = 24
         static let eventLineWidth: CGFloat = 2
         static let eventGlyphSize: CGFloat = 22
         static let finishDiscSize: CGFloat = 24
+        static let finishRingWidth: CGFloat = 1.5
+        /// Extra room at the foot of a turn that ends in "went back".
+        static let wentBackLabelHeight: CGFloat = 20
         static let legendSwatchHeight: CGFloat = 22
         static let deleteTopPadding: CGFloat = 32
         static let dimmedOpacity = 0.45
@@ -140,8 +141,8 @@ enum Theme {
 
     /// A session's totals per name: pie, ranked bars, or turn blocks.
     enum HistoryTotals {
-        static let pieSize: CGFloat = 112
-        static let ringWidth: CGFloat = 18
+        static let pieSize: CGFloat = 104
+        static let ringWidth: CGFloat = 12
         static let seamWidth: CGFloat = 1.5
         static let pieSpacing: CGFloat = 20
         static let dotSize: CGFloat = 9
@@ -156,12 +157,16 @@ enum Theme {
         static let percentWidth: CGFloat = 36
         /// One row of the tallest view (Turns: a block and its length beneath).
         static let rowHeight: CGFloat = 30
-        static let keyHeight: CGFloat = 22
+        static let keyHeight: CGFloat = 16
+        static let keySpacing: CGFloat = 10
+        /// The faint full-length track behind each bar.
+        static let track = ColorValue.surfaceStroke
 
         /// The same height for Pie, Bars and Turns, so the switch never moves
         /// anything below it.
         static func contentHeight(names: Int) -> CGFloat {
-            max(pieSize, CGFloat(names) * (rowHeight + rowSpacing) + keyHeight)
+            let rows = CGFloat(names) * rowHeight + CGFloat(max(names - 1, 0)) * rowSpacing
+            return max(pieSize, rows) + keySpacing + keyHeight
         }
     }
 

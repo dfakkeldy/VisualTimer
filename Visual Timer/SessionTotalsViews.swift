@@ -44,11 +44,22 @@ struct SessionTotalEntry: Identifiable, Equatable {
     }
 }
 
+/// The one-line key every totals view ends on, at the same baseline.
+struct SessionTotalsKey: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - Pie
 
 /// Each name's share as a ring, clockwise from twelve in the order they
-/// first ran. The total is already in the stats row, so the centre names the
-/// split instead.
+/// first ran. The centre stays empty: the ring is the whole session.
 struct SessionTotalsPie: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
@@ -56,8 +67,8 @@ struct SessionTotalsPie: View {
     private typealias Style = Theme.HistoryTotals
 
     var body: some View {
-        HStack(alignment: .center, spacing: Style.pieSpacing) {
-            ZStack {
+        VStack(alignment: .leading, spacing: Style.keySpacing) {
+            HStack(alignment: .center, spacing: Style.pieSpacing) {
                 Canvas { context, size in
                     let lineWidth: CGFloat = Style.ringWidth
                     let radius: CGFloat = (min(size.width, size.height) - lineWidth) / 2
@@ -80,41 +91,40 @@ struct SessionTotalsPie: View {
                         start += sweep
                     }
                 }
-                Text("by name")
-                    .font(.caption)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
-            .frame(width: Style.pieSize, height: Style.pieSize)
-            .accessibilityHidden(true)
+                .frame(width: Style.pieSize, height: Style.pieSize)
+                .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: Style.rowSpacing) {
-                ForEach(entries) { entry in
-                    HStack(spacing: 8) {
-                        Text(entry.label)
-                            .font(.subheadline)
-                            .foregroundStyle(Theme.ColorValue.textPrimary)
-                            .lineLimit(1)
-                        Spacer(minLength: 6)
-                        Text(TimerText.units(entry.seconds))
-                            .font(.subheadline.weight(.medium).monospacedDigit())
-                            .foregroundStyle(entry.color)
-                        Text("\(entry.percent(of: totalSeconds))%")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                            .frame(width: Style.percentWidth, alignment: .trailing)
+                VStack(alignment: .leading, spacing: Style.rowSpacing) {
+                    ForEach(entries) { entry in
+                        HStack(spacing: 8) {
+                            Text(entry.label)
+                                .font(.subheadline)
+                                .foregroundStyle(Theme.ColorValue.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: 6)
+                            Text(TimerText.units(entry.seconds))
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                            Text("\(entry.percent(of: totalSeconds))%")
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                                .frame(width: Style.percentWidth, alignment: .trailing)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(entry.label), \(TimerText.units(entry.seconds)), \(entry.percent(of: totalSeconds)) percent")
                     }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(entry.label), \(TimerText.units(entry.seconds)), \(entry.percent(of: totalSeconds)) percent")
                 }
             }
+            .frame(maxHeight: .infinity, alignment: .center)
+            SessionTotalsKey(text: "Each name's share of the session.")
         }
     }
 }
 
 // MARK: - Bars
 
-/// One line per name, in the order they first ran; each bar is as long as
-/// that name's share of the longest total, so length shows the ranking.
+/// One line per name, in the order they first ran, each bar on a faint
+/// full-width track scaled to the longest total, so length shows the ranking.
 struct SessionTotalsBars: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
@@ -123,30 +133,38 @@ struct SessionTotalsBars: View {
 
     var body: some View {
         let longest = max(entries.map { $0.seconds }.max() ?? 1, 1)
-        VStack(alignment: .leading, spacing: Style.rowSpacing) {
-            ForEach(entries) { entry in
-                HStack(alignment: .center, spacing: 10) {
-                    Text(entry.label)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .lineLimit(1)
-                        .frame(width: Style.labelWidth, alignment: .leading)
-                    GeometryReader { proxy in
-                        let width: CGFloat = proxy.size.width * CGFloat(entry.seconds) / CGFloat(longest)
-                        Capsule()
-                            .fill(entry.color)
-                            .frame(width: max(width, Style.barMinWidth), height: Style.barHeight)
+        VStack(alignment: .leading, spacing: Style.keySpacing) {
+            VStack(alignment: .leading, spacing: Style.rowSpacing) {
+                ForEach(entries) { entry in
+                    HStack(alignment: .center, spacing: 10) {
+                        Text(entry.label)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.ColorValue.textPrimary)
+                            .lineLimit(1)
+                            .frame(width: Style.labelWidth, alignment: .leading)
+                        GeometryReader { proxy in
+                            let width: CGFloat = proxy.size.width * CGFloat(entry.seconds) / CGFloat(longest)
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Style.track)
+                                Capsule()
+                                    .fill(entry.color)
+                                    .frame(width: max(width, Style.barMinWidth))
+                            }
+                            .frame(height: Style.barHeight)
                             .frame(maxHeight: .infinity, alignment: .center)
+                        }
+                        .frame(height: Style.rowHeight)
+                        Text(TimerText.units(entry.seconds))
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                            .frame(width: Style.valueWidth, alignment: .trailing)
                     }
-                    .frame(height: Style.barHeight)
-                    Text(TimerText.units(entry.seconds))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                        .frame(width: Style.valueWidth, alignment: .trailing)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(entry.label), \(entry.detail), \(entry.percent(of: totalSeconds)) percent")
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(entry.label), \(entry.detail), \(entry.percent(of: totalSeconds)) percent")
             }
+            .frame(maxHeight: .infinity, alignment: .top)
+            SessionTotalsKey(text: "Total time for each name.")
         }
     }
 }
@@ -164,44 +182,45 @@ struct SessionTotalsTurns: View {
     var body: some View {
         let widest = max(entries.map { $0.seconds }.max() ?? 1, 1)
         let hasDimmed = entries.contains { $0.turns.contains { $0.isDimmed } }
-        VStack(alignment: .leading, spacing: Style.rowSpacing) {
-            ForEach(entries) { entry in
-                HStack(alignment: .top, spacing: 10) {
-                    Text(entry.label)
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                        .lineLimit(1)
-                        .frame(width: Style.labelWidth, alignment: .leading)
-                    GeometryReader { proxy in
-                        let gaps: CGFloat = Style.turnGap * CGFloat(max(entry.turns.count - 1, 0))
-                        let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest)
-                        HStack(alignment: .top, spacing: Style.turnGap) {
-                            ForEach(Array(entry.turns.enumerated()), id: \.offset) { _, turn in
-                                let width: CGFloat = max(scale * CGFloat(turn.seconds), Style.barMinWidth)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Capsule()
-                                        .fill(entry.color.opacity(turn.isDimmed ? Theme.HistoryTimeline.dimmedOpacity : 1))
-                                        .frame(width: width, height: Style.barHeight)
-                                    Text(TimerText.units(turn.seconds))
-                                        .font(.caption2.monospacedDigit())
-                                        .foregroundStyle(Theme.ColorValue.textSecondary)
-                                        .lineLimit(1)
-                                        .fixedSize()
-                                        .frame(width: width, alignment: .leading)
+        VStack(alignment: .leading, spacing: Style.keySpacing) {
+            VStack(alignment: .leading, spacing: Style.rowSpacing) {
+                ForEach(entries) { entry in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(entry.label)
+                            .font(.subheadline)
+                            .foregroundStyle(Theme.ColorValue.textPrimary)
+                            .lineLimit(1)
+                            .frame(width: Style.labelWidth, alignment: .leading)
+                        GeometryReader { proxy in
+                            let gaps: CGFloat = Style.turnGap * CGFloat(max(entry.turns.count - 1, 0))
+                            let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest)
+                            HStack(alignment: .top, spacing: Style.turnGap) {
+                                ForEach(Array(entry.turns.enumerated()), id: \.offset) { _, turn in
+                                    let width: CGFloat = max(scale * CGFloat(turn.seconds), Style.barMinWidth)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Capsule()
+                                            .fill(entry.color.opacity(turn.isDimmed ? Theme.HistoryTimeline.dimmedOpacity : 1))
+                                            .frame(width: width, height: Style.barHeight)
+                                        Text(TimerText.units(turn.seconds))
+                                            .font(.caption2.monospacedDigit())
+                                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                                            .lineLimit(1)
+                                            .fixedSize()
+                                            .frame(width: width, alignment: .leading)
+                                    }
                                 }
                             }
                         }
+                        .frame(height: Style.rowHeight)
                     }
-                    .frame(height: Style.rowHeight)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(entry.label), turns of \(entry.turns.map { TimerText.units($0.seconds) }.joined(separator: ", "))")
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(entry.label), turns of \(entry.turns.map { TimerText.units($0.seconds) }.joined(separator: ", "))")
             }
-            Text(hasDimmed
-                 ? "One block per turn, in the order played. Faded turns were skipped or restarted."
-                 : "One block per turn, in the order played.")
-                .font(.caption)
-                .foregroundStyle(Theme.ColorValue.textSecondary)
+            .frame(maxHeight: .infinity, alignment: .top)
+            SessionTotalsKey(text: hasDimmed
+                ? "One block per turn, in the order played. Faded turns were skipped or restarted."
+                : "One block per turn, in the order played.")
         }
     }
 }

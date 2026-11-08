@@ -27,6 +27,8 @@ struct SessionDetailView: View {
     /// Which picture of the totals this person last chose.
     @AppStorage(SessionTotalsStyle.storageKey) private var totalsStyle = SessionTotalsStyle.pie
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Grows the fixed totals height with Dynamic Type, so larger text never clips.
+    @ScaledMetric(relativeTo: .subheadline) private var totalsScale: CGFloat = 1
 
     var body: some View {
         ScrollView {
@@ -166,7 +168,7 @@ struct SessionDetailView: View {
                 }
             }
             // One height for all three, so switching never moves the timeline.
-            .frame(minHeight: Theme.HistoryTotals.contentHeight(names: entries.count), alignment: .top)
+            .frame(height: Theme.HistoryTotals.contentHeight(names: entries.count) * totalsScale, alignment: .top)
         }
         .animation(.easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: totalsStyle)
     }
@@ -206,9 +208,6 @@ struct SessionDetailView: View {
                             wentBackTo: wentBackTarget(after: index, in: items)
                         )
                         .padding(.top, index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? 0 : Style.turnGap)
-                        if wentBackTarget(after: index, in: items) != nil {
-                            wentBackGap
-                        }
                     } else if item.outcome == .sessionEnd {
                         finishRow(item)
                     }
@@ -256,6 +255,9 @@ struct SessionDetailView: View {
 
     private var legend: some View {
         let hasPauses = sessionTimeline.items.contains { !$0.pauses.isEmpty }
+        let hasFaded = sessionTimeline.items.contains { $0.outcome.dimsRound }
+        var key = hasPauses ? "Height is time, pauses included. Hatched is paused." : "Height is time."
+        if hasFaded { key += " Faded was skipped or restarted." }
         return HStack(alignment: .center, spacing: 8) {
             TimelineSpineSegment(
                 color: Theme.ColorValue.textSecondary,
@@ -266,7 +268,7 @@ struct SessionDetailView: View {
                 roundsBottom: true
             )
             .frame(width: Style.spineColumnWidth, height: Style.legendSwatchHeight)
-            Text(hasPauses ? "Height is time, pauses included. Hatched is paused." : "Height is time.")
+            Text(key)
                 .font(.caption)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -278,7 +280,7 @@ struct SessionDetailView: View {
         let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
         let dimmed = item.outcome.dimsRound
         let pauses = sessionTimeline.pauseFractions(of: item)
-        let rowHeight = max(trueHeight, CGFloat(Style.minimumRowHeight))
+        let rowHeight = max(trueHeight, CGFloat(Style.minimumRowHeight) + (wentBackTo == nil ? 0 : Style.wentBackLabelHeight))
         return VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if !item.emoji.isEmpty {
@@ -301,6 +303,16 @@ struct SessionDetailView: View {
         .overlay(alignment: .topLeading) {
             pauseLabels(item, pauses: pauses, trueHeight: trueHeight)
         }
+        .overlay(alignment: .bottomLeading) {
+            // The moment it happened: the foot of this turn, beside the spine.
+            if let wentBackTo {
+                Label("back to \(wentBackTo)", systemImage: Style.wentBackSymbol)
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .padding(.leading, Style.labelInset)
+                    .accessibilityHidden(true)
+            }
+        }
         .padding(.leading, Style.spineColumnWidth)
         .background(alignment: .leading) {
             TimelineSpineSegment(
@@ -315,14 +327,7 @@ struct SessionDetailView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityValue(sessionTimeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
-    }
-
-    /// A moment between two turns: the ↩ glyph in the break, on the spine's
-    /// axis, never on a turn's coloured time.
-    private var wentBackGap: some View {
-        TimelineEventMark(symbol: Style.wentBackSymbol)
-            .frame(width: Style.spineColumnWidth, height: Style.wentBackGapHeight)
-            .padding(.top, Style.turnGap)
+        .accessibilityHint(wentBackTo.map { "Then went back to \($0)." } ?? "")
     }
 
     /// "paused 45s" beside each hatched band, never over the round's name.
@@ -343,9 +348,10 @@ struct SessionDetailView: View {
     /// The spine's end: one quiet mark, no louder than the turns before it.
     private func finishRow(_ item: SessionTimeline.Item) -> some View {
         let endedEarly = sessionTimeline.items.contains { $0.outcome == .endedEarly }
-        return Text("\(endedEarly ? "Ended" : "Finished") · \(clockText(offset: item.startOffset))")
-            .font(.body.weight(.medium))
-            .foregroundStyle(Theme.ColorValue.textPrimary)
+        let rest = "\(clockText(offset: item.startOffset)) · \(TimerText.units(sessionTimeline.span))"
+        return (Text(endedEarly ? "Ended" : "Finished").foregroundStyle(Theme.ColorValue.textPrimary)
+                + Text(" · \(rest)").foregroundStyle(Theme.ColorValue.textSecondary))
+            .font(.body)
             .frame(minHeight: Style.finishDiscSize)
             .padding(.leading, Style.labelInset)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -359,11 +365,10 @@ struct SessionDetailView: View {
             .padding(.top, Style.turnGap)
     }
 
-    /// "6:32 AM · Cut short · went back to Maya"
+    /// "6:32 AM · Cut short". A went-back is marked where it happened instead.
     private func detailLine(_ item: SessionTimeline.Item, wentBackTo: String?) -> String {
         var parts = [clockText(offset: item.startOffset)]
         if let note = item.outcomeNote { parts.append(note) }
-        if let wentBackTo { parts.append("went back to \(wentBackTo)") }
         return parts.joined(separator: " · ")
     }
 

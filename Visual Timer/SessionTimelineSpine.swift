@@ -74,33 +74,17 @@ private struct PauseHatch: View {
     }
 }
 
-/// The moment someone went back: one glyph on the spine, taking no time.
-struct TimelineEventMark: View {
-    let symbol: String
-
-    private typealias Style = Theme.HistoryTimeline
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Theme.ColorValue.textPrimary)
-            .frame(width: Style.eventGlyphSize, height: Style.eventGlyphSize)
-            .background(Theme.ColorValue.appBackground, in: Circle())
-            .accessibilityHidden(true)
-    }
-}
-
-/// The spine's end: one neutral disc with a check (or a stop for a session
+/// The spine's end: one outlined ring with a check (or a stop for a session
 /// ended early). The session's colours already have their circle in Totals.
 struct TimelineFinishMark: View {
     let endedEarly: Bool
 
     var body: some View {
         ZStack {
-            Circle().fill(Theme.ColorValue.buttonFill)
+            Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: Theme.HistoryTimeline.finishRingWidth)
             Image(systemName: endedEarly ? Theme.HistoryTimeline.endedSymbol : Theme.HistoryTimeline.finishedSymbol)
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.ColorValue.textSecondary)
         }
         .accessibilityHidden(true)
     }
