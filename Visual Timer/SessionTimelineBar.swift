@@ -55,6 +55,7 @@ struct SessionTimelineBar: View {
         .accessibilityLabel(accessibilitySummary)
         .accessibilityValue(accessibilitySelection)
         .accessibilityHint("Swipe up or down to step through the rounds.")
+        .accessibilityIdentifier(Style.barIdentifier)
         .accessibilityAdjustableAction { direction in
             step(direction == .increment ? 1 : -1)
         }

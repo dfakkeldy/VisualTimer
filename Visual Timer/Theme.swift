@@ -118,6 +118,7 @@ enum Theme {
         static let marker = ColorValue.textPrimary
         static let selectionHighlight = Color.white.opacity(0.06)
         static let selectionAnimation = 0.18
+        static let barIdentifier = "history.timeline"
     }
 
     // MARK: - Timer Mechanics
