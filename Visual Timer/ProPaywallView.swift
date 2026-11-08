@@ -11,14 +11,6 @@ struct ProPaywallView: View {
             GeometryReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack(spacing: 10) {
-                        ForEach(["game-night", "morning-routine", "recipe-steps"], id: \.self) { id in
-                            SequencePie(segments: StarterTemplateLibrary.template(id: id)?.game.segments ?? [])
-                                .frame(width: 60, height: 60)
-                        }
-                    }
-                    .accessibilityHidden(true)
-
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Turn Timer Pro")
                             .font(.largeTitle.weight(.bold))
@@ -73,7 +65,7 @@ struct ProPaywallView: View {
         .presentationBackground(Theme.ColorValue.appBackground)
         // A sheet sized close to its content, so no empty band sits between
         // the benefits and the purchase.
-        .presentationDetents([.fraction(0.86), .large])
+        .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
     }
 

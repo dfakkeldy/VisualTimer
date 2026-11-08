@@ -9,13 +9,46 @@ struct WatchTimerView: View {
     @ObservedObject var viewModel: WatchQuickTimerViewModel
 
     var body: some View {
+        GeometryReader { proxy in
+            content(dialSize: dialSize(forHeight: proxy.size.height))
+                .frame(width: proxy.size.width)
+        }
+        .focusable(true)
+        .digitalCrownRotation(
+            $viewModel.crownValue,
+            from: Double(WatchQuickTimerViewModel.componentRange.lowerBound),
+            through: Double(WatchQuickTimerViewModel.componentRange.upperBound),
+            by: 1,
+            sensitivity: .low,
+            isContinuous: false,
+            isHapticFeedbackEnabled: viewModel.selectedComponent != nil
+        )
+    }
+
+    /// Leaves room for the readout row and the crown cue, so the dial keeps
+    /// one size in every state on every Watch.
+    private func dialSize(forHeight height: CGFloat) -> CGFloat {
+        let dimension = Theme.Watch.Dimension.self
+        return min(dimension.quickPieSize, max(dimension.quickPieMinSize, height - dimension.quickBelowDialHeight))
+    }
+
+    private func content(dialSize: CGFloat) -> some View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
-                color: viewModel.timer.timerColor,
-                dialSize: Theme.Watch.Dimension.quickPieSize,
-                centerSymbol: viewModel.primaryControl?.symbol,
-                onTap: { viewModel.performPrimaryAction() }
+                // Dimmed while paused, so paused never reads as ready.
+                color: viewModel.showsReset
+                    ? viewModel.timer.timerColor.opacity(Theme.Watch.Dimension.pausedDialOpacity)
+                    : viewModel.timer.timerColor,
+                dialSize: dialSize,
+                button: viewModel.primaryControl.map { primary in
+                    WatchDialButton(
+                        title: primary.title,
+                        symbol: primary.symbol,
+                        accessibilityID: Theme.Watch.Identifier.quickPrimary,
+                        action: { viewModel.performPrimaryAction() }
+                    )
+                }
             ) { date in
                 if viewModel.canEditDuration {
                     VStack(spacing: 0) {
@@ -31,22 +64,40 @@ struct WatchTimerView: View {
                         }
                     }
                 } else {
+                    // One row for the digits and Reset: the digits stay centred
+                    // and the dial keeps its size when Reset appears.
                     remainingTime(at: date)
+                        .padding(.horizontal, Theme.Watch.Dimension.controlMinHeight)
+                        .frame(maxWidth: .infinity, minHeight: Theme.Watch.Dimension.controlMinHeight)
+                        .overlay(alignment: .trailing) {
+                            if viewModel.showsReset {
+                                resetButton
+                            }
+                        }
                 }
             }
-
-            controls
+            // The timeline would otherwise take spare height and re-centre
+            // the dial inside it.
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .focusable(true)
-        .digitalCrownRotation(
-            $viewModel.crownValue,
-            from: Double(WatchQuickTimerViewModel.componentRange.lowerBound),
-            through: Double(WatchQuickTimerViewModel.componentRange.upperBound),
-            by: 1,
-            sensitivity: .low,
-            isContinuous: false,
-            isHapticFeedbackEnabled: viewModel.selectedComponent != nil
-        )
+    }
+
+    private var resetButton: some View {
+        Button {
+            viewModel.reset()
+        } label: {
+            Image(systemName: Theme.Symbol.reset)
+                .font(.body.weight(.semibold))
+                .frame(
+                    width: Theme.Watch.Dimension.controlMinHeight,
+                    height: Theme.Watch.Dimension.controlMinHeight
+                )
+                .background(Circle().fill(Theme.Watch.ColorValue.editable))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Theme.Label.reset)
+        .accessibilityIdentifier(Theme.Watch.Identifier.quickReset)
     }
 
     // MARK: - Digits
@@ -109,38 +160,6 @@ struct WatchTimerView: View {
             }
         }
         .accessibilityIdentifier(id)
-    }
-
-    // MARK: - Controls
-
-    private var controls: some View {
-        HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
-            if let primary = viewModel.primaryControl {
-                WatchControlButton(
-                    title: primary.title,
-                    systemImage: primary.symbol,
-                    accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    // A quiet text control: the dial is the one visible door,
-                    // and this labelled button stays for VoiceOver and tests.
-                    isProminent: false,
-                    tint: nil,
-                    showsIcon: false
-                ) {
-                    viewModel.performPrimaryAction()
-                }
-            }
-            if viewModel.showsReset {
-                WatchControlButton(
-                    title: Theme.Label.reset,
-                    systemImage: Theme.Symbol.reset,
-                    accessibilityID: Theme.Watch.Identifier.quickReset,
-                    isProminent: false
-                ) {
-                    viewModel.reset()
-                }
-            }
-        }
-        .padding(.horizontal, viewModel.showsReset ? 0 : 40)
     }
 }
 
