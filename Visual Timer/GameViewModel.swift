@@ -141,6 +141,16 @@ final class GameViewModel: ObservableObject {
         return max(currentRemaining, 0) + laterThisPass + laterPasses
     }
 
+    /// Rounds this session ran to an end, finished or skipped.
+    var stepsRunCount: Int {
+        sessionEvents.reduce(0) { count, event in
+            switch event {
+            case .roundFinished, .skipped: return count + 1
+            default: return count
+            }
+        }
+    }
+
     /// Rounds skipped in the session so far.
     var skippedCount: Int {
         GameSession(events: sessionEvents).skipCount

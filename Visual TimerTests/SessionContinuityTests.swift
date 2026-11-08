@@ -176,6 +176,7 @@ final class SessionContinuityTests: XCTestCase {
         for _ in 0..<3 { game.handleTimerFinished() }
         XCTAssertTrue(game.lastRecordSaved)
         XCTAssertEqual(history.loadAll().count, 2)
+        XCTAssertEqual(game.stepsRunCount, 3, "The finish counts this pass's steps, like its time")
     }
 
     func testTimerTextReadsPlainly() {

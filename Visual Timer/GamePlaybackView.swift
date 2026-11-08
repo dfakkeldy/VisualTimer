@@ -456,7 +456,8 @@ struct GamePlaybackView: View {
             return note
         }
         if isComplete {
-            let steps = gameViewModel.activeRounds.count * max(gameViewModel.totalRoundCount, 1)
+            // The same scope as the total time: this session's own rounds.
+            let steps = gameViewModel.stepsRunCount
             let noun = gameViewModel.countingPlayerCount > 0 ? "turn" : "step"
             return "Total time · \(TurnTimerCountText.label(for: steps, singular: noun))"
         }

@@ -146,7 +146,8 @@ struct HistoryView: View {
         var groups: [DayGroup] = []
         for record in visibleRecords {
             let title: String
-            if calendar.isDateInToday(record.playedAt) {
+            // A record from a clock running ahead counts as today.
+            if calendar.isDateInToday(record.playedAt) || record.playedAt > Date() {
                 title = "Today"
             } else if calendar.isDateInYesterday(record.playedAt) {
                 title = "Yesterday"
