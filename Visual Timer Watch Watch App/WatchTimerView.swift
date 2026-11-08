@@ -36,7 +36,10 @@ struct WatchTimerView: View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
-                color: viewModel.timer.timerColor,
+                // Dimmed while paused, so paused never reads as ready.
+                color: viewModel.showsReset
+                    ? viewModel.timer.timerColor.opacity(Theme.Watch.Dimension.pausedDialOpacity)
+                    : viewModel.timer.timerColor,
                 dialSize: dialSize,
                 button: viewModel.primaryControl.map { primary in
                     WatchDialButton(
@@ -64,6 +67,7 @@ struct WatchTimerView: View {
                     // One row for the digits and Reset: the digits stay centred
                     // and the dial keeps its size when Reset appears.
                     remainingTime(at: date)
+                        .padding(.horizontal, Theme.Watch.Dimension.controlMinHeight)
                         .frame(maxWidth: .infinity, minHeight: Theme.Watch.Dimension.controlMinHeight)
                         .overlay(alignment: .trailing) {
                             if viewModel.showsReset {

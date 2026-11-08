@@ -45,7 +45,7 @@ enum ProFeature: Identifiable, Equatable {
         ("clock.arrow.circlepath", "Full history and export"),
         ("icloud", "iCloud sync of templates and history"),
         ("square.and.arrow.up", "Template sharing"),
-        ("square.grid.2x2", "Home Screen and Lock Screen widgets"),
+        ("square.grid.2x2", "Home and Lock Screen widgets"),
     ]
 
     /// The benefit that opened the sheet comes first.
