@@ -2,12 +2,17 @@ External beta candidate for Turn Timer 1.0.
 
 Please test:
 - Quick visual timer start, pause, resume, reset, and finish sound behavior.
-- Starter templates and custom saved template creation/editing.
+- Drag the idle quick timer's rim to set duration.
+- Close the app during a playing session or a started quick timer; reopen and confirm it restores (stale after ~4 hours).
+- Opt-in completion alert: Alerts capsule beside Start, and the Settings switch; denied permission should offer iOS Settings.
+- Visible End during a session, with confirmation that the partial session is saved.
+- Starter templates and custom saved template creation/editing; unsaved editor edits after an app close.
 - Sequence playback, repeat, skip, restart, and do-over behavior.
 - Template import/export without overwriting existing templates.
 - Recent history and Pro-gated history/export behavior.
 - Pro unlock and Restore Purchases in TestFlight sandbox if available.
 - iCloud template/history sync after the production CloudKit schema is deployed.
 - Home Screen/Lock Screen widgets and watch playback where installed.
+- Watch: tap the dial to start/pause; End confirmation.
 
 Report install, launch, sync, purchase, widget, and watch issues with screenshots when possible.

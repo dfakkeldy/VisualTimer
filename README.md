@@ -26,16 +26,29 @@ Useful docs:
 
 ## Current Scope
 
-- **Quick timer** - Start a standalone visual countdown with the existing timer
-  controls.
+- **Quick timer** - Start a standalone visual countdown. Drag the idle dial's
+  rim to set the duration, then tap the dial to start or pause. A started
+  (running or paused) quick timer is restored after an app close; snapshots
+  older than four hours, or malformed files, are discarded.
 - **Starter templates** - Begin from Game Night, Recipe Steps, Plant Watering,
   Classroom Stations, Meeting Agenda, or a 40-minute Morning Routine.
 - **Template editor** - Rename a template, edit rounds, set colors, choose
-  sounds, add emoji, and decide whether a round counts as a turn.
+  sounds, add emoji, and decide whether a round counts as a turn. Unsaved
+  edits survive an app close as a draft. Opening another template card while
+  edits are unsaved asks before replacing them.
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
-  restart, or do over a turn.
+  restart, or do over a turn. Captions show clock time ("Ends …"), session
+  time left, and "Step N of M"; "Next" previews the following round for
+  routines as well as turns. End is visible during a session and confirms
+  before saving the partial record. A playing session is restored after an
+  app close; after four hours it comes back paused where it was saved.
 - **History** - Review completed timer sessions, with recent sessions free and
-  full local history, export, and iCloud sync available with Pro.
+  full local history, export, and iCloud sync available with Pro. New records
+  may store each round's colour (`roundColors`); older records omit the field.
+- **Completion alerts (iPhone)** - Opt-in local notification when a countdown
+  ends off screen. An Alerts capsule sits beside Start; Settings has a matching
+  switch. The app reads the real notification permission and opens iOS Settings
+  when alerts are denied. This is not a background-alarm guarantee.
 - **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
   iCloud sync, sharing, widgets, and advanced customization with a one-time
   StoreKit purchase. The app shows StoreKit's localized price and has no
@@ -56,27 +69,41 @@ Useful docs:
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
   iPhone library. Signed TestFlight now includes the Watch companion; physical
   paired-Watch acceptance is not yet verified. Watch timers show live remaining
-  time and keep running while you move between screens. On screen, a finished
+  time and keep running while you move between screens. The Watch dial uses the
+  same emptying pie as the phone; tap it to start or pause. Template rows show
+  duration-weighted colour ribbons. A session screen shows Next, time left, and
+  End with confirmation. On screen, a finished
   timer plays the selected sound with a haptic.
   If you allow alerts, a local notification covers completion while the app
   is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
-  tested on a physical Watch.
+  tested on a physical Watch. Watch playback is not restored after the Watch
+  app is terminated.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
 These scope bullets describe implemented source, not signed-device acceptance
-or App Store live state. Production sync, saved Watch-template transfer and
-timer lock/background behavior still need the focused checks in the readiness
-ledger. No background-alarm guarantee is implied.
+or App Store live state. None of the iPhone alerts, rim drag, session restore,
+or Watch dial-tap behavior has been verified on a physical iPhone or Watch.
+Production sync, saved Watch-template transfer and timer lock/background
+behavior still need the focused checks in the readiness ledger. No
+background-alarm guarantee is implied.
 
 ## Core Features
 
 - **Visual pie countdown** - A circular timer depletes clockwise from the
   12 o'clock position using SwiftUI drawing and animation. The iOS dial adds
   glasslike lighting and a completion ripple while preserving the quick timer's
-  colour cycle and each round's chosen colour. Controls use Liquid Glass on
+  colour cycle and each round's chosen colour. On the idle quick timer, dragging
+  the rim sets duration. Controls use Liquid Glass on
   iOS 26+, with material fallbacks on iOS 18 and accessibility alternatives for
   reduced motion, reduced transparency, and increased contrast.
+- **On-device snapshots** - A playing session, a started quick timer, and
+  unsaved template edits are stored as small JSON files in Application Support
+  (`ActiveSession.json`, `QuickTimer.json`, `TemplateDraft.json`). Malformed
+  files are discarded rather than restored.
+- **Opt-in iPhone alerts** - `TimerAlertScheduler` schedules one local
+  notification for the running countdown's finish date when the user has
+  enabled alerts and iOS allows them. Pause, skip, end, and reset cancel it.
 - **Custom sounds** - Built-in tones are generated programmatically as 16-bit
   PCM WAV files. The chosen sound plays when a countdown reaches zero.
 - **Sleep prevention** - The screen stays awake while a timer is running and
