@@ -54,6 +54,23 @@ final class DesignCouncilWatchCaptureTests: XCTestCase {
         capture("15-watch-session", app: app)
     }
 
+    /// The fullest quick timer state: the dial, the digits and Reset together.
+    @MainActor
+    func test16WatchQuickTimerPaused() throws {
+        let app = launch()
+        let quickTimer = app.buttons["watch.root.quickTimer"]
+        XCTAssertTrue(quickTimer.waitForExistence(timeout: 10))
+        quickTimer.tap()
+        let primary = app.buttons["watch.quick.primary"]
+        XCTAssertTrue(primary.waitForExistence(timeout: 6))
+        primary.tap()
+        XCTAssertTrue(primary.waitForExistence(timeout: 6))
+        primary.tap()
+        XCTAssertTrue(app.buttons["watch.quick.reset"].waitForExistence(timeout: 6))
+        sleep(1)
+        capture("16-watch-quick-timer-paused", app: app)
+    }
+
     // MARK: - Helpers
 
     @MainActor

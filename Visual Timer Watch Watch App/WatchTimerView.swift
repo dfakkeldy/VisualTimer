@@ -14,8 +14,14 @@ struct WatchTimerView: View {
                 progress: viewModel.timer.visualProgress,
                 color: viewModel.timer.timerColor,
                 dialSize: Theme.Watch.Dimension.quickPieSize,
-                centerSymbol: viewModel.primaryControl?.symbol,
-                onTap: { viewModel.performPrimaryAction() }
+                button: viewModel.primaryControl.map { primary in
+                    WatchDialButton(
+                        title: primary.title,
+                        symbol: primary.symbol,
+                        accessibilityID: Theme.Watch.Identifier.quickPrimary,
+                        action: { viewModel.performPrimaryAction() }
+                    )
+                }
             ) { date in
                 if viewModel.canEditDuration {
                     VStack(spacing: 0) {
@@ -35,8 +41,20 @@ struct WatchTimerView: View {
                 }
             }
 
-            controls
+            if viewModel.showsReset {
+                WatchControlButton(
+                    title: Theme.Label.reset,
+                    systemImage: Theme.Symbol.reset,
+                    accessibilityID: Theme.Watch.Identifier.quickReset,
+                    isProminent: false
+                ) {
+                    viewModel.reset()
+                }
+                .padding(.horizontal, Theme.Watch.Dimension.quickResetInset)
+            }
         }
+        // Top-anchored, so the dial stays under the finger when Reset appears.
+        .frame(maxHeight: .infinity, alignment: .top)
         .focusable(true)
         .digitalCrownRotation(
             $viewModel.crownValue,
@@ -109,38 +127,6 @@ struct WatchTimerView: View {
             }
         }
         .accessibilityIdentifier(id)
-    }
-
-    // MARK: - Controls
-
-    private var controls: some View {
-        HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
-            if let primary = viewModel.primaryControl {
-                WatchControlButton(
-                    title: primary.title,
-                    systemImage: primary.symbol,
-                    accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    // A quiet text control: the dial is the one visible door,
-                    // and this labelled button stays for VoiceOver and tests.
-                    isProminent: false,
-                    tint: nil,
-                    showsIcon: false
-                ) {
-                    viewModel.performPrimaryAction()
-                }
-            }
-            if viewModel.showsReset {
-                WatchControlButton(
-                    title: Theme.Label.reset,
-                    systemImage: Theme.Symbol.reset,
-                    accessibilityID: Theme.Watch.Identifier.quickReset,
-                    isProminent: false
-                ) {
-                    viewModel.reset()
-                }
-            }
-        }
-        .padding(.horizontal, viewModel.showsReset ? 0 : 40)
     }
 }
 

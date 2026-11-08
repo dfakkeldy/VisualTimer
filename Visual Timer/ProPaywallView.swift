@@ -11,14 +11,6 @@ struct ProPaywallView: View {
             GeometryReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack(spacing: 10) {
-                        ForEach(["game-night", "morning-routine", "recipe-steps"], id: \.self) { id in
-                            SequencePie(segments: StarterTemplateLibrary.template(id: id)?.game.segments ?? [])
-                                .frame(width: 60, height: 60)
-                        }
-                    }
-                    .accessibilityHidden(true)
-
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Turn Timer Pro")
                             .font(.largeTitle.weight(.bold))

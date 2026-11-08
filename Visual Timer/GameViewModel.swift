@@ -178,8 +178,10 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - Game Lifecycle
 
+    /// Loading over a session in progress ends it the way End does, so it
+    /// reaches History rather than vanishing.
     func loadGame(_ game: GameSequence) {
-        resetSession(clearState: true, saveRecord: false)
+        endGame(clearState: true)
         guard !game.activeRounds.isEmpty else { return }
         gameSequence = game
         currentRoundIndex = 0

@@ -1255,7 +1255,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().count, 1)
     }
 
-    func testGameViewModelLoadGameAbandonsActiveSessionWithoutSavingHistory() throws {
+    func testGameViewModelLoadGameSavesActiveSessionToHistory() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -1267,14 +1267,41 @@ final class Visual_TimerTests: XCTestCase {
             onHistoryRecordSaved: { savedIDs.append($0.id) }
         )
 
-        gameViewModel.loadGame(makeSingleRoundGame(title: "Abandoned"))
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Interrupted"))
         gameViewModel.startGame()
         gameViewModel.loadGame(makeSingleRoundGame(title: "Replacement"))
 
-        XCTAssertTrue(store.loadAll().isEmpty)
-        XCTAssertTrue(savedIDs.isEmpty)
+        let records = store.loadAll()
+        XCTAssertEqual(records.map(\.gameTitle), ["Interrupted"])
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertTrue(records.first?.session.events.contains {
+            if case .gameEnded = $0 { return true }
+            return false
+        } ?? false)
         assertGamePhase(gameViewModel, is: .ready)
         XCTAssertEqual(gameViewModel.gameSequence?.title, "Replacement")
+    }
+
+    func testGameViewModelLoadGameRecordsNothingWhenNoSessionIsInProgress() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+
+        // Loaded but never started.
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Never Started"))
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Finished"))
+        XCTAssertTrue(store.loadAll().isEmpty)
+
+        // Finished: already saved once, so the next load must not save again.
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Next"))
+        XCTAssertEqual(store.loadAll().map(\.gameTitle), ["Finished"])
     }
 
     func testGameViewModelRejectsGameWithNoActiveRounds() {
