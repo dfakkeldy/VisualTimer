@@ -112,7 +112,8 @@ struct WatchTimerView: View {
                     title: primary.title,
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    isProminent: true,
+                    // Tinted glass: the pie stays the only solid red shape.
+                    isProminent: false,
                     tint: viewModel.timer.timerColor
                 ) {
                     viewModel.performPrimaryAction()
@@ -129,7 +130,7 @@ struct WatchTimerView: View {
                 }
             }
         }
-        .padding(.horizontal, viewModel.showsReset ? 0 : 34)
+        .padding(.horizontal, viewModel.showsReset ? 0 : 44)
     }
 }
 

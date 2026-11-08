@@ -16,7 +16,7 @@ struct WatchControlButton: View {
         if isProminent {
             button.buttonStyle(.borderedProminent).tint(tint)
         } else {
-            button.buttonStyle(.bordered)
+            button.buttonStyle(.bordered).tint(tint)
         }
     }
 

@@ -8,6 +8,7 @@ struct ProPaywallView: View {
 
     var body: some View {
         NavigationStack {
+            GeometryReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     HStack(spacing: 10) {
@@ -49,9 +50,14 @@ struct ProPaywallView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 16))
 
+                    Spacer(minLength: 8)
+
+                    // The decision sits at the bottom, where a thumb rests.
                     purchaseControls
                 }
                 .padding(20)
+                .frame(minHeight: proxy.size.height, alignment: .top)
+            }
             }
             .background(Theme.ColorValue.appBackground)
             .navigationBarTitleDisplayMode(.inline)

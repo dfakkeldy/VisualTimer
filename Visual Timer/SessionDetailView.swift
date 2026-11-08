@@ -131,13 +131,16 @@ struct SessionDetailView: View {
                         Group {
                             if let color = record.color(forRound: item.name) {
                                 Circle().fill(color)
+                            } else if item.outcome == .sessionEnd {
+                                // The finish, as the same pie the session ended on.
+                                SequencePie(segments: finishSegments)
                             } else {
                                 // Not a round: an event (back, end), shown as a hollow mark.
                                 Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: 1.5)
                             }
                         }
-                        .frame(width: 9, height: 9)
-                        .padding(.top, 6)
+                        .frame(width: item.outcome == .sessionEnd ? 14 : 9, height: item.outcome == .sessionEnd ? 14 : 9)
+                        .padding(.top, item.outcome == .sessionEnd ? 3 : 6)
                         if index < items.count - 1 {
                             Rectangle()
                                 .fill(Theme.ColorValue.surfaceStroke)
@@ -172,6 +175,13 @@ struct SessionDetailView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
+        }
+    }
+
+    private var finishSegments: [SequenceSegment] {
+        SessionTimeline(record: record).items.enumerated().compactMap { index, item in
+            guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
+            return SequenceSegment(id: index, color: color, seconds: max(length, 1))
         }
     }
 
@@ -270,7 +280,7 @@ struct SessionTimeline {
                 break
             case .gameEnded(let date):
                 close(at: date, .endedEarly, note: "Session ended here")
-                result.append(Item(name: "Finished · \(TimerText.length(offset(date)))", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
+                result.append(Item(name: "Finished", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
             }
         }
         items = result

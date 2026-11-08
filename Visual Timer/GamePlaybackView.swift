@@ -20,8 +20,6 @@ struct GamePlaybackView: View {
 
     @State private var showSettings = false
     @State private var confirmEnd = false
-    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
-    @AppStorage("timerAlertsOffered") private var alertsOffered = false
 
     var body: some View {
         ZStack {
@@ -107,19 +105,12 @@ struct GamePlaybackView: View {
             dial
                 .frame(maxWidth: Theme.GamePlayback.dialMaxSize)
                 .layoutPriority(1)
-                // The quick timer has no footer; centre its group optically.
-                .padding(.top, inSession ? 0 : Theme.Dimension.sectionSpacingLarge)
 
             readout
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
             controlRow
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
-
-            if showsAlertOffer {
-                alertOffer
-                    .padding(.top, Theme.Dimension.sectionSpacingSmall)
-            }
 
             Spacer(minLength: Theme.Dimension.sectionSpacingSmall)
 
@@ -474,43 +465,6 @@ struct GamePlaybackView: View {
             }
         }
         .frame(minHeight: Theme.TimerStyle.capsuleHeight)
-    }
-
-    // MARK: - Alert offer
-
-    /// Offered once, while a timer runs, because that is when an alert
-    /// would help: the hook by the door, with a plain "Not now".
-    private var showsAlertOffer: Bool {
-        !alertsEnabled && !alertsOffered && timerViewModel.state == .running
-    }
-
-    private var alertOffer: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "bell")
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-                .accessibilityHidden(true)
-            Text("Alert me when time's up, even outside the app?")
-                .font(.footnote)
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 4)
-            Button("Turn on") {
-                alertsOffered = true
-                Task {
-                    alertsEnabled = await TimerAlertScheduler.requestPermission()
-                    scheduleEndAlert(timerViewModel.visualProgress)
-                }
-            }
-            .font(.footnote.weight(.semibold))
-            Button("Not now") {
-                alertsOffered = true
-            }
-            .font(.footnote)
-            .foregroundStyle(Theme.ColorValue.textSecondary)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 14))
     }
 
     // MARK: - Progress

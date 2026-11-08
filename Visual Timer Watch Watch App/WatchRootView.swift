@@ -195,7 +195,8 @@ struct WatchRootView: View {
         case .running: return Theme.Watch.Label.running
         case .paused: return Theme.Watch.Label.paused
         case .notStarted, .finished:
-            return WatchTimeText.clock(model.quickTimer.timer.totalDuration)
+            let seconds = model.quickTimer.timer.totalDuration
+            return seconds < 60 ? "\(seconds) sec" : "\(Int((Double(seconds) / 60).rounded())) min"
         }
     }
 

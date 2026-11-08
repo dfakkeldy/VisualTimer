@@ -80,6 +80,27 @@ struct HistoryView: View {
 
     private var recordsList: some View {
         List {
+            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
+                // The free rule sits first, where it can't hide under the tab bar.
+                Section {
+                    Button {
+                        requestedProFeature = .fullHistory
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text(hiddenRecordsText)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                            Spacer(minLength: 8)
+                            Text("Unlock ›")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Theme.ColorValue.selectionAccent)
+                        }
+                    }
+                    .listRowBackground(Theme.ColorValue.surface)
+                    .accessibilityLabel("Unlock full history. \(hiddenRecordsText)")
+                }
+            }
+
             ForEach(dayGroups, id: \.title) { group in
                 Section {
                     ForEach(group.records) { record in
@@ -105,40 +126,16 @@ struct HistoryView: View {
                 }
             }
 
-            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
-                Section {
-                    Button {
-                        requestedProFeature = .fullHistory
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
-                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
-                                    .accessibilityHidden(true)
-                            }
-                            .font(.subheadline.weight(.semibold))
-                            Text(hiddenRecordsText)
-                                .font(.caption)
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .listRowBackground(Color.clear)
-                }
-            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .contentMargins(.bottom, 72, for: .scrollContent)
+        .contentMargins(.bottom, 24, for: .scrollContent)
     }
 
     private var hiddenRecordsText: String {
         let hidden = history.records.count - visibleRecords.count
-        let noun = hidden == 1 ? "older session is" : "older sessions are"
-        return "\(hidden) \(noun) kept on this iPhone. Free shows your \(HistoryAccessPolicy.freeRecordLimit) most recent."
+        let noun = hidden == 1 ? "older session" : "older sessions"
+        return "Showing your \(HistoryAccessPolicy.freeRecordLimit) most recent · \(hidden) \(noun) kept"
     }
 
     private struct DayGroup {
@@ -265,20 +262,28 @@ struct HistoryView: View {
 
 }
 
-/// The empty dial: a dashed rim with four hairline wedges in clean palette
-/// colours. A hint of what a session will look like, not a fake one.
+/// The empty dial: a closed hairline rim, three uneven seams from twelve,
+/// and one faint wedge of colour. A dial waiting to fill, never a spinner.
 private struct GhostDial: View {
     var body: some View {
         Canvas { context, size in
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let radius = min(size.width, size.height) / 2 - 2
-            let colors = [0, 2, 3, 7].map { Theme.ColorValue.timerPalette[$0] }
-            for (index, color) in colors.enumerated() {
-                let start = Theme.Rotation.trimOriginOffset + Double(index) * 90
-                var arc = Path()
-                arc.addArc(center: center, radius: radius, startAngle: .degrees(start + 6), endAngle: .degrees(start + 84), clockwise: false)
-                context.stroke(arc, with: .color(color.opacity(0.7)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+            let radius = min(size.width, size.height) / 2 - 1
+            let origin = Theme.Rotation.trimOriginOffset
+            var wedge = Path()
+            wedge.move(to: center)
+            wedge.addArc(center: center, radius: radius, startAngle: .degrees(origin), endAngle: .degrees(origin + 110), clockwise: false)
+            wedge.closeSubpath()
+            context.fill(wedge, with: .color(Theme.ColorValue.timerPalette[7].opacity(0.28)))
+            for angle in [0.0, 110, 250] {
+                var seam = Path()
+                seam.move(to: center)
+                let radians = (origin + angle) * .pi / 180
+                seam.addLine(to: CGPoint(x: center.x + radius * cos(radians), y: center.y + radius * sin(radians)))
+                context.stroke(seam, with: .color(Theme.ColorValue.textTertiary), lineWidth: 1)
             }
+            context.stroke(Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)),
+                           with: .color(Theme.ColorValue.textTertiary), lineWidth: 1)
         }
     }
 }

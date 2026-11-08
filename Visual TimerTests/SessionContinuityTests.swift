@@ -153,7 +153,7 @@ final class SessionContinuityTests: XCTestCase {
         let record = GameRecord(id: UUID(), gameTitle: "Night", session: GameSession(events: events), playerNames: ["Maya", "Theo"], playedAt: t0)
 
         let items = SessionTimeline(record: record).items
-        XCTAssertEqual(items.map(\.name), ["Maya", "Theo", "Finished · 1:40"])
+        XCTAssertEqual(items.map(\.name), ["Maya", "Theo", "Finished"])
         XCTAssertEqual(items[0].length, 90)
         XCTAssertEqual(items[0].note, "1 pause")
         XCTAssertEqual(items[1].length, 10)

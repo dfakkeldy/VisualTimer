@@ -12,7 +12,10 @@ struct WatchTimerDial<Content: View>: View {
     @ViewBuilder let content: (Date) -> Content
 
     var body: some View {
-        TimelineView(.animation(paused: !progress.isRunning)) { timeline in
+        // A pie that moves under a degree a second needs no 60 fps: eight
+        // frames a second keeps it smooth and leaves the main thread (and
+        // the battery) free.
+        TimelineView(.animation(minimumInterval: 1.0 / 8, paused: !progress.isRunning)) { timeline in
             VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
                 ZStack {
                     Circle()

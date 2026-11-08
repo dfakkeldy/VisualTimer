@@ -91,6 +91,7 @@ struct SettingsView: View {
                             .buttonStyle(.borderedProminent)
                             .disabled(!proAccess.canPurchase)
                             .listRowBackground(Theme.ColorValue.surface)
+                            .listRowSeparator(.hidden)
                         }
                     }
 

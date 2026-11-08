@@ -15,6 +15,8 @@ struct GameEditorView: View {
     @State private var showImportPicker = false
     @State private var shareItem: TemplateShareItem?
     @State private var pendingReplacement: PendingReplacement?
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
+    @State private var alertsDenied = false
 
     /// A template the person tapped while the current one has unsaved edits.
     private enum PendingReplacement: Identifiable {
@@ -328,18 +330,41 @@ struct GameEditorView: View {
 
     // MARK: - Start
 
-    private var startBar: some View {
-        GlassCapsuleButton(
-            title: Theme.Label.start,
-            systemImage: Theme.Symbol.play,
-            prominent: true
-        ) {
-            editor.autoSave()
-            onPlayGame(editor.buildGameSequence())
+    /// The alert switch sits where sessions begin: the hook by the door.
+    private var alertRow: some View {
+        Toggle(isOn: Binding(
+            get: { alertsEnabled },
+            set: { newValue in
+                guard newValue else {
+                    alertsEnabled = false
+                    return
+                }
+                Task {
+                    let granted = await TimerAlertScheduler.requestPermission()
+                    alertsEnabled = granted
+                    alertsDenied = !granted
+                }
+            }
+        )) {
+            Label {
+                Text(alertsDenied ? "Notifications are off in iOS Settings" : "Alert me when each round ends")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(alertsDenied ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
+            } icon: {
+                Image(systemName: alertsEnabled ? "bell.fill" : "bell")
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
         }
-        .disabled(!editor.canSaveOrStartTemplate)
-        .accessibilityIdentifier("templates.start")
-        .accessibilityLabel("Start \(editor.gameTitle)")
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+        .accessibilityHint("A notification when a round ends while Turn Timer isn't on screen")
+    }
+
+    private var startBar: some View {
+        VStack(spacing: 10) {
+            alertRow
+            startButton
+        }
         .padding(.horizontal, 20)
         .padding(.top, 10)
         .padding(.bottom, 8)
@@ -353,6 +378,20 @@ struct GameEditorView: View {
                 }
                 .ignoresSafeArea(edges: .bottom)
         }
+    }
+
+    private var startButton: some View {
+        GlassCapsuleButton(
+            title: Theme.Label.start,
+            systemImage: Theme.Symbol.play,
+            prominent: true
+        ) {
+            editor.autoSave()
+            onPlayGame(editor.buildGameSequence())
+        }
+        .disabled(!editor.canSaveOrStartTemplate)
+        .accessibilityIdentifier("templates.start")
+        .accessibilityLabel("Start \(editor.gameTitle)")
     }
 
     // MARK: - Helpers
@@ -440,6 +479,7 @@ private struct PlayerEditSheet: View {
     @State private var countsAsPlayer: Bool
     @State private var selectedColorIndex: Int
     @State private var localDuration: Int
+    @FocusState private var emojiFocused: Bool
 
     init(
         round: Round,
@@ -547,11 +587,12 @@ private struct PlayerEditSheet: View {
                                     RoundedRectangle(cornerRadius: 16)
                                         .strokeBorder(selectedColor.opacity(0.8), lineWidth: 1.5)
                                 }
+                                .focused($emojiFocused)
                                 .onChange(of: emojiText) { _, newValue in
                                     onUpdateEmoji(newValue)
                                 }
                                 .accessibilityLabel("Emoji")
-                            Text("Tap the tile to type or pick an emoji.")
+                            Text("Tap the tile, or the dial above, to change it.")
                                 .font(.caption)
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
                         }
@@ -611,7 +652,9 @@ private struct PlayerEditSheet: View {
 
     /// The round as it will look on the dial, updated with every change.
     private var preview: some View {
-        HStack(spacing: 16) {
+        Button {
+            emojiFocused = true
+        } label: {
             ZStack {
                 SequencePie(segments: [SequenceSegment(id: 0, color: selectedColor, seconds: 1)], glowColor: selectedColor)
                 if !emojiText.isEmpty {
@@ -619,16 +662,13 @@ private struct PlayerEditSheet: View {
                         .shadow(color: .black.opacity(Theme.TimerStyle.shadeOpacity), radius: 3)
                 }
             }
-            .frame(width: 84, height: 84)
+            .frame(width: 104, height: 104)
             .animation(.easeInOut(duration: Theme.TimerStyle.colourDuration), value: selectedColorIndex)
-            .accessibilityHidden(true)
-
-            Text(nameText.isEmpty ? "Untitled round" : nameText)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(selectedColor)
-                .lineLimit(2)
         }
+        .buttonStyle(TimerPressStyle())
+        .frame(maxWidth: .infinity)
         .padding(.bottom, 4)
+        .accessibilityLabel("Round preview. Tap to change the emoji.")
     }
 
     private func groupHeader(_ title: String) -> some View {
