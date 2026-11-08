@@ -91,20 +91,6 @@ final class DesignCouncilCaptureTests: XCTestCase {
     }
 
     @MainActor
-    func test10bSessionDetailSelected() throws {
-        let app = launch("history")
-        let row = historyRow(in: app)
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
-        row.tap()
-        let bar = app.descendants(matching: .any)["history.timeline"]
-        XCTAssertTrue(bar.waitForExistence(timeout: 5))
-        // The third round (Grandpa), a little past the bar's middle.
-        bar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        sleep(1)
-        capture("10b-session-detail-selected")
-    }
-
-    @MainActor
     func test10cSessionDetailRows() throws {
         let app = launch("history")
         let row = historyRow(in: app)
@@ -114,6 +100,19 @@ final class DesignCouncilCaptureTests: XCTestCase {
         app.swipeUp()
         sleep(1)
         capture("10c-session-detail-rows")
+    }
+
+    @MainActor
+    func test10dSessionDetailEnd() throws {
+        let app = launch("history")
+        let row = historyRow(in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        sleep(1)
+        app.swipeUp()
+        app.swipeUp()
+        sleep(1)
+        capture("10d-session-detail-end")
     }
 
     @MainActor

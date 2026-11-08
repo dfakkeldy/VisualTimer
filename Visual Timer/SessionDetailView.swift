@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One past session: the short answer first (when, how long, what happened),
-/// then the session as a horizontal timeline, then one row per round.
+/// then the session as one vertical timeline, each round as tall as its share.
 struct SessionDetailView: View {
 
     let record: GameRecord
@@ -22,16 +22,11 @@ struct SessionDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showExporter = false
     @State private var requestedProFeature: ProFeature?
-    /// The round picked on the timeline, by its index in the session's items.
-    @State private var selectedIndex: Int?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 summary
-                if sessionTimeline.hasRounds {
-                    overview
-                }
                 timeline
                 deleteButton
             }
@@ -80,21 +75,19 @@ struct SessionDetailView: View {
 
     private var summary: some View {
         let session = record.session
-        return VStack(alignment: .leading, spacing: 12) {
+        let paused = sessionTimeline.items.reduce(0) { $0 + $1.pausedSeconds }
+        return VStack(alignment: .leading, spacing: 14) {
             Text("Started \(record.playedAt.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
-            HStack(spacing: 8) {
+            HStack(alignment: .top, spacing: 28) {
                 stat(TimerText.words(Int(session.totalElapsedSeconds)), "total")
                 if session.pauseCount > 0 {
-                    stat("\(session.pauseCount)", session.pauseCount == 1 ? "pause" : "pauses")
+                    stat(TimerText.length(paused), session.pauseCount == 1 ? "paused once" : "paused \(session.pauseCount) times")
                 }
                 if session.skipCount > 0 {
-                    stat("\(session.skipCount)", session.skipCount == 1 ? "skip" : "skips")
-                }
-                if session.doOverCount > 0 {
-                    stat("\(session.doOverCount)", session.doOverCount == 1 ? "went back" : "went back")
+                    stat("\(session.skipCount)", session.skipCount == 1 ? "skipped" : "skipped")
                 }
             }
         }
@@ -103,88 +96,151 @@ struct SessionDetailView: View {
     private func stat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font(.title3.weight(.semibold).monospacedDigit())
                 .foregroundStyle(Theme.ColorValue.textPrimary)
             Text(label)
                 .font(.caption)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 12))
         .accessibilityElement(children: .combine)
     }
 
     // MARK: - Timeline
 
-    /// The whole session left to right, each round as wide as its share.
-    private var overview: some View {
+    private typealias Style = Theme.HistoryTimeline
+
+    /// The session top to bottom on one spine, each round as tall as its share.
+    private var timeline: some View {
         let timeline = sessionTimeline
         let items = timeline.items
-        let segments: [SessionTimelineBar.Segment] = items.enumerated().compactMap { index, item in
-            guard let placement = timeline.placement(of: item),
-                  let color = timeline.color(for: item, in: record) else { return nil }
-            return SessionTimelineBar.Segment(
-                id: index,
-                color: color,
-                start: placement.start,
-                width: placement.width,
-                emoji: item.emoji,
-                isException: item.outcome.isException,
-                pauses: item.pauses.map { timeline.fraction(at: $0.lowerBound)...timeline.fraction(at: $0.upperBound) }
-            )
-        }
-        let markers = items.filter { $0.outcome == .wentBack }.map { timeline.fraction(at: $0.startOffset) }
-        let selected = selectedIndex.flatMap { items.indices.contains($0) ? items[$0] : nil }
-
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("Timeline")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-
-            SessionTimelineBar(
-                segments: segments,
-                markers: markers,
-                selectedID: selectedIndex,
-                accessibilitySummary: "Timeline, \(segments.count) \(segments.count == 1 ? "round" : "rounds") over \(TimerText.words(timeline.span))",
-                accessibilitySelection: selected.map { selectionText($0, in: timeline) } ?? "No round selected",
-                onSelect: { selectedIndex = $0 }
-            )
-
-            HStack {
-                Text(clockText(offset: 0))
-                Spacer(minLength: 8)
-                Text(clockText(offset: timeline.span))
-            }
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(Theme.ColorValue.textTertiary)
-            .accessibilityHidden(true)
-
-            Group {
-                if let selected {
-                    Text(selectionText(selected, in: timeline))
-                        .foregroundStyle(Theme.ColorValue.textPrimary)
-                } else {
-                    Text("Tap a round to see where it fell.")
+        let roundIndices = items.indices.filter { items[$0].length != nil }
+        let total = max(Double(roundIndices.count) * Style.heightPerRound, Style.minimumTotalHeight)
+        let heights = timeline.heights(total: total, minimum: Style.minimumRowHeight)
+        return VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Timeline")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                if timeline.hasRounds {
+                    Text(legend)
+                        .font(.caption)
                         .foregroundStyle(Theme.ColorValue.textTertiary)
                 }
             }
-            .font(.subheadline)
-            .lineLimit(2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityHidden(true)
+            .padding(.bottom, 14)
+
+            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                timelineRow(
+                    item,
+                    height: CGFloat(heights[index] ?? Style.minimumRowHeight),
+                    isFirst: index == roundIndices.first,
+                    isLast: index == roundIndices.last
+                )
+            }
         }
-        .padding(14)
-        .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 16))
     }
 
-    /// "🦊 Maya · 1:25 · 18% of the session · from 0:00"
-    private func selectionText(_ item: SessionTimeline.Item, in timeline: SessionTimeline) -> String {
-        var parts: [String] = [[item.emoji, item.name].filter { !$0.isEmpty }.joined(separator: " ")]
-        if let length = item.length { parts.append(TimerText.length(length)) }
-        if let percent = timeline.percent(of: item) { parts.append("\(percent)% of the session") }
-        parts.append("from \(TimerText.length(item.startOffset))")
-        if let note = item.note { parts.append(note) }
+    private var legend: String {
+        let hasPauses = sessionTimeline.items.contains { !$0.pauses.isEmpty }
+        return hasPauses
+            ? "Each round is as tall as its share of the session. Darker stretches are pauses."
+            : "Each round is as tall as its share of the session."
+    }
+
+    @ViewBuilder
+    private func timelineRow(_ item: SessionTimeline.Item, height: CGFloat, isFirst: Bool, isLast: Bool) -> some View {
+        switch item.outcome {
+        case .sessionEnd:
+            finishRow(item)
+        case .wentBack:
+            eventRow(item)
+        default:
+            roundRow(item, height: height, isFirst: isFirst, isLast: isLast)
+        }
+    }
+
+    private func roundRow(_ item: SessionTimeline.Item, height: CGFloat, isFirst: Bool, isLast: Bool) -> some View {
+        let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
+        let dimmed = item.outcome.dimsRound
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if !item.emoji.isEmpty {
+                    Text(item.emoji).accessibilityHidden(true)
+                }
+                Text(item.name)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(dimmed ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
+                Spacer(minLength: 8)
+                Text(TimerText.length(item.length ?? 0))
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            Text(detailLine(item))
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+        }
+        .padding(.bottom, Style.rowBottomPadding)
+        .frame(maxWidth: .infinity, minHeight: height, alignment: .topLeading)
+        .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
+        .background(alignment: .leading) {
+            TimelineSpineSegment(
+                color: color,
+                pauses: sessionTimeline.pauseFractions(of: item),
+                isDimmed: dimmed,
+                roundsTop: isFirst,
+                roundsBottom: isLast
+            )
+            .frame(width: Style.spineColumnWidth)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(sessionTimeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
+    }
+
+    /// A moment, not a stretch: the spine continues as a hairline past one glyph.
+    private func eventRow(_ item: SessionTimeline.Item) -> some View {
+        Text("\(item.name) · \(clockText(offset: item.startOffset))")
+            .font(.subheadline)
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .padding(.vertical, Style.eventVerticalPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
+            .background(alignment: .leading) {
+                TimelineEventMark(symbol: Style.wentBackSymbol)
+                    .frame(width: Style.spineColumnWidth)
+            }
+            .accessibilityElement(children: .combine)
+    }
+
+    /// The spine's end: the whole session as the pie it finished on.
+    private func finishRow(_ item: SessionTimeline.Item) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Finished")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+            Text("\(clockText(offset: item.startOffset)) · \(TimerText.words(sessionTimeline.span)) in all")
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+        }
+        .padding(.top, Style.finishTopPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
+        .background(alignment: .topLeading) {
+            SequencePie(segments: finishSegments)
+                .frame(width: Style.finishPieSize, height: Style.finishPieSize)
+                .padding(.top, Style.finishTopPadding)
+                .frame(width: Style.spineColumnWidth)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// "6:34 AM · Cut short · paused 0:45"
+    private func detailLine(_ item: SessionTimeline.Item) -> String {
+        var parts = [clockText(offset: item.startOffset)]
+        if let note = item.outcomeNote { parts.append(note) }
+        if item.pauseCount > 0 {
+            let time = TimerText.length(item.pausedSeconds)
+            parts.append(item.pauseCount == 1 ? "paused \(time)" : "paused \(item.pauseCount)× · \(time)")
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -193,97 +249,9 @@ struct SessionDetailView: View {
         return start.addingTimeInterval(TimeInterval(offset)).formatted(date: .omitted, time: .shortened)
     }
 
-    private var timeline: some View {
-        let timeline = sessionTimeline
-        let items = timeline.items
-        return VStack(alignment: .leading, spacing: 0) {
-            Text("Rounds")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-                .padding(.bottom, 10)
-
-            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                let color = timeline.color(for: item, in: record)
-                let placement = timeline.placement(of: item)
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(spacing: 0) {
-                        Group {
-                            if let color {
-                                Circle().fill(color)
-                            } else if item.outcome == .sessionEnd {
-                                // The finish, as the same pie the session ended on.
-                                SequencePie(segments: finishSegments)
-                            } else {
-                                // Not a round: an event (back, end), shown as a hollow mark.
-                                Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: 1.5)
-                            }
-                        }
-                        .frame(width: item.outcome == .sessionEnd ? 14 : 9, height: item.outcome == .sessionEnd ? 14 : 9)
-                        .padding(.top, item.outcome == .sessionEnd ? 3 : 6)
-                        if index < items.count - 1 {
-                            Rectangle()
-                                .fill(Theme.ColorValue.surfaceStroke)
-                                .frame(width: 2)
-                                .frame(maxHeight: .infinity)
-                        }
-                    }
-                    .frame(width: 12)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            if !item.emoji.isEmpty {
-                                Text(item.emoji).accessibilityHidden(true)
-                            }
-                            Text(item.name)
-                                .font(item.length == nil ? .subheadline : .body.weight(.medium))
-                                .foregroundStyle(item.length == nil ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
-                            Spacer(minLength: 8)
-                            if let length = item.length {
-                                Text(TimerText.length(length))
-                                    .font(.body.monospacedDigit())
-                                    .foregroundStyle(Theme.ColorValue.textSecondary)
-                            }
-                        }
-                        if let color, let placement {
-                            SessionTimelineTrack(
-                                color: color,
-                                start: placement.start,
-                                width: placement.width,
-                                isException: item.outcome.isException
-                            )
-                        }
-                        if let note = item.note {
-                            Text(note)
-                                .font(.caption)
-                                .foregroundStyle(Theme.ColorValue.textTertiary)
-                        }
-                    }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 8)
-                    .background(
-                        selectedIndex == index ? Theme.HistoryTimeline.selectionHighlight : .clear,
-                        in: .rect(cornerRadius: Theme.HistoryTimeline.rowCornerRadius)
-                    )
-                    .padding(.bottom, 6)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    guard placement != nil else { return }
-                    selectedIndex = selectedIndex == index ? nil : index
-                }
-                .animation(.easeOut(duration: Theme.HistoryTimeline.selectionAnimation), value: selectedIndex)
-                .accessibilityElement(children: .combine)
-                .accessibilityValue(timeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
-                .accessibilityAddTraits(placement != nil ? .isButton : [])
-                .accessibilityAddTraits(selectedIndex == index ? .isSelected : [])
-            }
-        }
-    }
-
     private var finishSegments: [SequenceSegment] {
-        let timeline = sessionTimeline
-        return timeline.items.enumerated().compactMap { index, item in
-            guard let length = item.length, let color = timeline.color(for: item, in: record) else { return nil }
+        sessionTimeline.items.enumerated().compactMap { index, item in
+            guard let length = item.length, let color = sessionTimeline.color(for: item, in: record) else { return nil }
             return SequenceSegment(id: index, color: color, seconds: max(length, 1))
         }
     }
@@ -295,7 +263,7 @@ struct SessionDetailView: View {
             Label("Delete session", systemImage: Theme.Symbol.delete)
                 .font(.body.weight(.medium))
         }
-        .padding(.top, 8)
+        .padding(.top, Style.deleteTopPadding)
         .accessibilityLabel(Theme.Label.delete)
     }
 }
@@ -306,6 +274,9 @@ struct SessionDetailView: View {
 struct SessionTimeline {
     enum Outcome {
         case finished, skipped, wentBack, restarted, endedEarly, sessionEnd
+
+        /// Rounds that didn't run their course are drawn quieter.
+        var dimsRound: Bool { self == .skipped || self == .restarted }
 
         var isException: Bool {
             switch self {
@@ -334,6 +305,12 @@ struct SessionTimeline {
         let note: String?
         /// Paused stretches inside this round, in seconds from the session start.
         var pauses: [Range<Int>] = []
+        /// What happened to the round, without its pauses: "Skipped", "Cut short".
+        var outcomeNote: String? = nil
+        /// Every pause pressed in this round, even a repeated one.
+        var pauseCount = 0
+
+        var pausedSeconds: Int { pauses.reduce(0) { $0 + $1.count } }
     }
 
     let items: [Item]
@@ -378,7 +355,9 @@ struct SessionTimeline {
                 length: Int(max(date.timeIntervalSince(round.start), 0)),
                 outcome: outcome,
                 note: parts.isEmpty ? nil : parts.joined(separator: " · "),
-                pauses: round.pauses
+                pauses: round.pauses,
+                outcomeNote: note,
+                pauseCount: round.pauseCount
             ))
             open = nil
         }
@@ -394,7 +373,7 @@ struct SessionTimeline {
                 close(at: date, .skipped, note: "Skipped")
             case .doOver(let previous, let date):
                 close(at: date, .finished, note: "Cut short")
-                result.append(Item(name: "↩︎ Back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
+                result.append(Item(name: "Went back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
             case .restartTimer(_, let date):
                 close(at: date, .restarted, note: "Restarted")
             case .paused(let date):
@@ -449,6 +428,28 @@ struct SessionTimeline {
     func fraction(at offset: Int) -> Double {
         guard span > 0 else { return 0 }
         return min(max(Double(offset) / Double(span), 0), 1)
+    }
+
+    /// Each round's height on a vertical timeline, by item index: its share
+    /// of `total`, never below `minimum`.
+    func heights(total: Double, minimum: Double) -> [Int: Double] {
+        var result: [Int: Double] = [:]
+        for (index, item) in items.enumerated() {
+            guard let placement = placement(of: item) else { continue }
+            result[index] = max(placement.width * total, minimum)
+        }
+        return result
+    }
+
+    /// Paused stretches as fractions of the round itself, 0 at its start.
+    func pauseFractions(of item: Item) -> [ClosedRange<Double>] {
+        guard let length = item.length, length > 0 else { return [] }
+        let total = Double(length)
+        return item.pauses.map { pause in
+            let lower = min(max(Double(pause.lowerBound - item.startOffset) / total, 0), 1)
+            let upper = min(max(Double(pause.upperBound - item.startOffset) / total, lower), 1)
+            return lower...upper
+        }
     }
 
     /// A round's share of the session as a whole percent, e.g. 18.

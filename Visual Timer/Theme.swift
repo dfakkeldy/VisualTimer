@@ -96,29 +96,30 @@ enum Theme {
 
     // MARK: - History timeline
 
-    /// The past session drawn as one horizontal bar, each round as wide as
-    /// its share of the session.
+    /// A past session drawn as one vertical spine, each round as tall as its
+    /// share of the session.
     enum HistoryTimeline {
-        static let barHeight: CGFloat = 40
-        static let segmentGap: CGFloat = 2
-        static let segmentCornerRadius: CGFloat = 6
-        static let segmentMinWidth: CGFloat = 3
-        /// Each round answers taps across at least this width.
-        static let minimumHitWidth: CGFloat = 22
-        /// Below this width a segment drops its emoji.
-        static let emojiMinWidth: CGFloat = 26
-        static let markerWidth: CGFloat = 2
-        static let markerOverhang: CGFloat = 5
-        static let rowTrackHeight: CGFloat = 3
-        static let rowCornerRadius: CGFloat = 10
-        static let exceptionOpacity = 0.45
-        static let dimmedOpacity = 0.35
-        static let selectionStroke: CGFloat = 2
+        static let spineWidth: CGFloat = 12
+        static let spineColumnWidth: CGFloat = 28
+        static let spineSpacing: CGFloat = 14
+        static let spineRadius: CGFloat = 6
+        /// The ink seam between two rounds on the spine.
+        static let seam: CGFloat = 1
+        /// Rounds get their share of this height, at least this much per round.
+        static let heightPerRound: Double = 72
+        static let minimumTotalHeight: Double = 480
+        static let minimumRowHeight: Double = 56
+        static let rowBottomPadding: CGFloat = 10
+        static let eventVerticalPadding: CGFloat = 10
+        static let eventLineWidth: CGFloat = 2
+        static let eventGlyphSize: CGFloat = 22
+        static let finishPieSize: CGFloat = 28
+        static let finishTopPadding: CGFloat = 8
+        static let deleteTopPadding: CGFloat = 24
+        static let dimmedOpacity = 0.45
         static let pauseShade = TimerStyle.ink.opacity(0.55)
-        static let marker = ColorValue.textPrimary
-        static let selectionHighlight = Color.white.opacity(0.06)
-        static let selectionAnimation = 0.18
-        static let barIdentifier = "history.timeline"
+        static let eventLine = ColorValue.surfaceStroke
+        static let wentBackSymbol = "arrow.uturn.backward"
     }
 
     // MARK: - Timer Mechanics

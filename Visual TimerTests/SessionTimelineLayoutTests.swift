@@ -47,6 +47,35 @@ final class SessionTimelineLayoutTests: XCTestCase {
         XCTAssertEqual(timeline.fraction(at: 25), 0.5)
     }
 
+    func testRoundsGetHeightByShareWithAFloor() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(95)),
+            .gameEnded(timestamp: at(100)),
+        ]))
+        let heights = timeline.heights(total: 400, minimum: 56)
+        XCTAssertEqual(heights[0], 380)
+        XCTAssertEqual(heights[1], 56, "A short round still gets room for its label")
+        XCTAssertNil(heights[2], "The finish is a moment, not a stretch")
+    }
+
+    func testPauseFractionsAreRelativeToTheRound() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(100)),
+            .paused(timestamp: at(150)),
+            .resumed(timestamp: at(175)),
+            .gameEnded(timestamp: at(200)),
+        ]))
+        let theo = timeline.items[1]
+        XCTAssertEqual(timeline.pauseFractions(of: theo), [0.5...0.75])
+        XCTAssertEqual(theo.pausedSeconds, 25)
+        XCTAssertEqual(theo.pauseCount, 1)
+        XCTAssertEqual(theo.outcomeNote, "Session ended here")
+    }
+
     func testWentBackSitsAtItsMomentOnTheTimeline() {
         let timeline = SessionTimeline(record: record([
             .gameStarted(timestamp: at(0)),
