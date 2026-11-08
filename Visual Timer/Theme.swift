@@ -138,6 +138,21 @@ enum Theme {
         static let wentBackSymbol = "arrow.uturn.backward"
     }
 
+    /// A session's totals per name: pie, ranked bars, or turn blocks.
+    enum HistoryTotals {
+        static let pieSize: CGFloat = 112
+        static let ringWidth: CGFloat = 18
+        static let seamWidth: CGFloat = 1.5
+        static let pieSpacing: CGFloat = 20
+        static let dotSize: CGFloat = 9
+        static let rowSpacing: CGFloat = 10
+        static let labelWidth: CGFloat = 96
+        static let barHeight: CGFloat = 14
+        static let barRadius: CGFloat = 4
+        static let barMinWidth: CGFloat = 3
+        static let turnGap: CGFloat = 3
+    }
+
     // MARK: - Timer Mechanics
 
     enum TimerMechanic {

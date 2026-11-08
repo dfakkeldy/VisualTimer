@@ -24,12 +24,17 @@ struct SessionDetailView: View {
     @State private var requestedProFeature: ProFeature?
     /// The timeline draws itself downward once, on first appearance.
     @State private var revealed = false
+    /// Which picture of the totals this person last chose.
+    @AppStorage(SessionTotalsStyle.storageKey) private var totalsStyle = SessionTotalsStyle.pie
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 summary
+                if sessionTimeline.totals.count > 1 {
+                    totalsSection
+                }
                 timeline
                 deleteButton
             }
@@ -115,6 +120,52 @@ struct SessionDetailView: View {
                 .foregroundStyle(Theme.ColorValue.textSecondary)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Totals
+
+    private var totalsSection: some View {
+        let timeline = sessionTimeline
+        let entries = timeline.totals.map { total in
+            SessionTotalEntry(
+                id: total.name,
+                label: [total.emoji, total.name].filter { !$0.isEmpty }.joined(separator: " "),
+                color: total.turns.first.flatMap { timeline.color(for: timeline.items[$0], in: record) }
+                    ?? Theme.ColorValue.textTertiary,
+                seconds: total.seconds,
+                turnCount: total.turns.count,
+                averageSeconds: total.averageSeconds,
+                turns: total.turns.map { index in
+                    SessionTotalEntry.Turn(seconds: timeline.items[index].length ?? 0, isDimmed: timeline.items[index].outcome.dimsRound)
+                }
+            )
+        }
+        let ranked = timeline.totalsByTime.compactMap { total in entries.first { $0.id == total.name } }
+        let sum = max(entries.reduce(0) { $0 + $1.seconds }, 1)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Totals")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                Spacer(minLength: 12)
+                Picker("Show totals as", selection: $totalsStyle) {
+                    ForEach(SessionTotalsStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+            switch totalsStyle {
+            case .pie:
+                SessionTotalsPie(entries: entries, totalSeconds: sum)
+            case .bars:
+                SessionTotalsBars(entries: ranked, totalSeconds: sum)
+            case .turns:
+                SessionTotalsTurns(entries: entries)
+            }
+        }
+        .animation(.easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: totalsStyle)
     }
 
     // MARK: - Timeline
@@ -502,6 +553,44 @@ struct SessionTimeline {
             }
         }
         passStarts = starts
+    }
+
+    // MARK: Totals
+
+    /// One name's share of the session: every turn it took, added up.
+    struct Total: Identifiable, Equatable {
+        let name: String
+        let emoji: String
+        let seconds: Int
+        /// Indices into `items`, in the order the turns ran.
+        let turns: [Int]
+        var id: String { name }
+        var averageSeconds: Int { turns.isEmpty ? 0 : seconds / turns.count }
+    }
+
+    /// Each name once, in the order it first ran.
+    var totals: [Total] {
+        var order: [String] = []
+        var byName: [String: (emoji: String, seconds: Int, turns: [Int])] = [:]
+        for (index, item) in items.enumerated() {
+            guard let length = item.length else { continue }
+            if byName[item.name] == nil {
+                order.append(item.name)
+                byName[item.name] = (item.emoji, 0, [])
+            }
+            byName[item.name]?.seconds += length
+            byName[item.name]?.turns.append(index)
+        }
+        return order.compactMap { name in
+            byName[name].map { Total(name: name, emoji: $0.emoji, seconds: $0.seconds, turns: $0.turns) }
+        }
+    }
+
+    /// Longest total first; ties keep the order they ran.
+    var totalsByTime: [Total] {
+        totals.enumerated()
+            .sorted { $0.element.seconds != $1.element.seconds ? $0.element.seconds > $1.element.seconds : $0.offset < $1.offset }
+            .map(\.element)
     }
 
     // MARK: Layout

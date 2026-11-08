@@ -142,6 +142,23 @@ final class SessionTimelineLayoutTests: XCTestCase {
         XCTAssertEqual(timeline.passStarts, [5], "Going back to Maya is a redo, not a new pass")
     }
 
+    func testTotalsAddUpEachNamesTurns() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "🦊", timestamp: at(0)),
+            .roundStarted(playerName: "Theo", emoji: "🐢", timestamp: at(30)),
+            .roundStarted(playerName: "Maya", emoji: "🦊", timestamp: at(110)),
+            .gameEnded(timestamp: at(140)),
+        ]))
+        let totals = timeline.totals
+        XCTAssertEqual(totals.map(\.name), ["Maya", "Theo"], "In the order they first ran")
+        XCTAssertEqual(totals[0].seconds, 60)
+        XCTAssertEqual(totals[0].turns, [0, 2])
+        XCTAssertEqual(totals[0].averageSeconds, 30)
+        XCTAssertEqual(totals[1].seconds, 80)
+        XCTAssertEqual(timeline.totalsByTime.map(\.name), ["Theo", "Maya"], "Longest first")
+    }
+
     func testLengthsCarryTheirUnits() {
         XCTAssertEqual(TimerText.units(130), "2m 10s")
         XCTAssertEqual(TimerText.units(45), "45s")
