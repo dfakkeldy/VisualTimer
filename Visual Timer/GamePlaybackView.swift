@@ -461,10 +461,13 @@ struct GamePlaybackView: View {
                 }
                 .accessibilityLabel(Theme.Label.reset)
             } else {
-                Color.clear
+                // A fixed-height slot, not a flexible one, so the dial sits in
+                // the same place idle, running and paused.
+                Color.clear.frame(height: Theme.TimerStyle.capsuleHeight)
             }
         }
         .frame(minHeight: Theme.TimerStyle.capsuleHeight)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Progress

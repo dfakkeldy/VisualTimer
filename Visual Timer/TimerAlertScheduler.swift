@@ -12,6 +12,18 @@ enum TimerAlertScheduler {
         UserDefaults.standard.bool(forKey: enabledKey)
     }
 
+    /// Whether iOS currently allows Turn Timer's notifications. Read on
+    /// appear, so a switch never shows a state that isn't true.
+    static func isAuthorized() async -> Bool? {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral: return true
+        case .denied: return false
+        case .notDetermined: return nil
+        @unknown default: return nil
+        }
+    }
+
     /// Asks for permission. Returns whether alerts can now be shown.
     static func requestPermission() async -> Bool {
         let center = UNUserNotificationCenter.current()

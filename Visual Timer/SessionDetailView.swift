@@ -76,17 +76,8 @@ struct SessionDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
-            let segments = SessionTimeline(record: record).items.enumerated().compactMap { index, item -> SequenceSegment? in
-                guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
-                return SequenceSegment(id: index, color: color, seconds: max(length, 1))
-            }
-            if !segments.isEmpty {
-                SequenceRibbon(segments: segments, height: 8)
-            }
-
             HStack(spacing: 8) {
                 stat(TimerText.words(Int(session.totalElapsedSeconds)), "total")
-                stat("\(session.roundCount)", session.roundCount == 1 ? "round" : "rounds")
                 if session.pauseCount > 0 {
                     stat("\(session.pauseCount)", session.pauseCount == 1 ? "pause" : "pauses")
                 }
@@ -94,7 +85,7 @@ struct SessionDetailView: View {
                     stat("\(session.skipCount)", session.skipCount == 1 ? "skip" : "skips")
                 }
                 if session.doOverCount > 0 {
-                    stat("\(session.doOverCount)", "back")
+                    stat("\(session.doOverCount)", session.doOverCount == 1 ? "went back" : "went back")
                 }
             }
         }

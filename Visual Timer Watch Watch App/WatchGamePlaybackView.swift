@@ -57,7 +57,9 @@ struct WatchGamePlaybackView: View {
         WatchTimerDial(
             progress: timerViewModel.visualProgress,
             color: timerViewModel.timerColor,
-            dialSize: Theme.Watch.Dimension.sessionDialSize
+            dialSize: Theme.Watch.Dimension.sessionDialSize,
+            centerSymbol: WatchPrimaryControl(state: timerViewModel.state)?.symbol,
+            onTap: onPrimary
         ) { date in
             remainingTime(at: date)
         }
@@ -68,7 +70,7 @@ struct WatchGamePlaybackView: View {
                 .foregroundStyle(next.color.swiftUIColor)
                 .lineLimit(1)
         }
-        Text("Session: \(sessionLeftText) left")
+        Text("\(gameViewModel.roundProgressText) · \(sessionLeftText) left")
             .font(.caption2)
             .foregroundStyle(.secondary)
 
@@ -134,7 +136,7 @@ struct WatchGamePlaybackView: View {
     private func remainingTime(at date: Date) -> some View {
         let seconds = timerViewModel.visualProgress.remainingSeconds(at: date)
         return Text(WatchTimeText.clock(seconds))
-            .font(.system(.title3, design: .rounded).monospacedDigit())
+            .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
             .lineLimit(1)
             .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
             .accessibilityLabel(Theme.Watch.Label.timeRemaining)

@@ -86,7 +86,6 @@ struct SettingsView: View {
                             } label: {
                                 Label(proAccess.purchaseButtonTitle, systemImage: Theme.Symbol.proUnlock)
                                     .font(.body.weight(.semibold))
-                                    .frame(maxWidth: .infinity, minHeight: 30)
                             }
                             .buttonStyle(.borderedProminent)
                             .disabled(!proAccess.canPurchase)

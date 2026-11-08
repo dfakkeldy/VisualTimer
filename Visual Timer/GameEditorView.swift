@@ -330,39 +330,42 @@ struct GameEditorView: View {
 
     // MARK: - Start
 
-    /// The alert switch sits where sessions begin: the hook by the door.
-    private var alertRow: some View {
-        Toggle(isOn: Binding(
-            get: { alertsEnabled },
-            set: { newValue in
-                guard newValue else {
-                    alertsEnabled = false
-                    return
+    /// The alert choice sits where sessions begin (the hook by the door), as
+    /// one small capsule beside Start, so the band stays a single doorway.
+    private var alertButton: some View {
+        GlassCapsuleButton(
+            title: alertsDenied ? "Alerts off in Settings" : (alertsEnabled ? "Alerts on" : "Alerts off"),
+            systemImage: alertsEnabled ? "bell.fill" : "bell.slash"
+        ) {
+            if alertsDenied {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
                 }
-                Task {
-                    let granted = await TimerAlertScheduler.requestPermission()
-                    alertsEnabled = granted
-                    alertsDenied = !granted
-                }
+                return
             }
-        )) {
-            Label {
-                Text(alertsDenied ? "Notifications are off in iOS Settings" : "Alert me when each round ends")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(alertsDenied ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
-            } icon: {
-                Image(systemName: alertsEnabled ? "bell.fill" : "bell")
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            if alertsEnabled {
+                alertsEnabled = false
+                return
+            }
+            Task {
+                let granted = await TimerAlertScheduler.requestPermission()
+                alertsEnabled = granted
+                alertsDenied = !granted
             }
         }
-        .toggleStyle(.switch)
-        .controlSize(.mini)
         .accessibilityHint("A notification when a round ends while Turn Timer isn't on screen")
+        .task {
+            // Reflect what iOS allows now, not what was true last time.
+            if let authorized = await TimerAlertScheduler.isAuthorized() {
+                alertsDenied = !authorized && alertsEnabled
+                if !authorized { alertsEnabled = false }
+            }
+        }
     }
 
     private var startBar: some View {
-        VStack(spacing: 10) {
-            alertRow
+        HStack(spacing: 10) {
+            alertButton
             startButton
         }
         .padding(.horizontal, 20)

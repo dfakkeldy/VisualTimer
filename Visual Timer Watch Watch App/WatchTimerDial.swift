@@ -9,6 +9,9 @@ struct WatchTimerDial<Content: View>: View {
     let progress: TimerVisualProgress
     let color: Color
     var dialSize: CGFloat = Theme.Watch.Dimension.quickDialMaxSize
+    /// The phone's model: a tap on the dial starts, pauses or resumes.
+    var centerSymbol: String? = nil
+    var onTap: (() -> Void)? = nil
     @ViewBuilder let content: (Date) -> Content
 
     var body: some View {
@@ -18,8 +21,9 @@ struct WatchTimerDial<Content: View>: View {
         TimelineView(.animation(minimumInterval: 1.0 / 8, paused: !progress.isRunning)) { timeline in
             VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
                 ZStack {
+                    // The empty sector is the phone's ink, with a hairline rim.
                     Circle()
-                        .fill(Theme.Watch.ColorValue.ringTrack)
+                        .fill(Theme.TimerStyle.ink)
                     RemainingTimerWedge(elapsedFraction: progress.elapsedFraction(at: timeline.date))
                         .fill(color)
                         .overlay {
@@ -37,9 +41,20 @@ struct WatchTimerDial<Content: View>: View {
                         }
                     Circle()
                         .strokeBorder(.white.opacity(0.25), lineWidth: 1)
+                    if let centerSymbol {
+                        Circle()
+                            .fill(Theme.TimerStyle.ink)
+                            .frame(width: dialSize * 0.34, height: dialSize * 0.34)
+                        Image(systemName: centerSymbol)
+                            .font(.system(size: dialSize * 0.15, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
                 .shadow(color: color.opacity(0.35), radius: 8)
                 .frame(width: dialSize, height: dialSize)
+                .contentShape(Circle())
+                .onTapGesture { onTap?() }
+                // VoiceOver and UI tests use the labelled button below instead.
                 .accessibilityHidden(true)
 
                 content(timeline.date)

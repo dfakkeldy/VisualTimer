@@ -27,7 +27,9 @@ struct WatchControlButton: View {
                     .font(.title3)
                     .accessibilityHidden(true)
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption2.weight(.semibold))
+                    // On tinted glass the label stays white, so it reads as live.
+                    .foregroundStyle(isProminent || tint == nil ? AnyShapeStyle(.primary) : AnyShapeStyle(.white))
                     .lineLimit(1)
                     .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
             }

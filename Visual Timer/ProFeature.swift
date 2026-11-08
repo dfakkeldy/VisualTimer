@@ -35,7 +35,7 @@ enum ProFeature: Identifiable, Equatable {
         case .historyExport:
             return "Pro exports any finished session as a file you can share or keep."
         case .fullHistory:
-            return "Free shows your \(HistoryAccessPolicy.freeRecordLimit) most recent sessions. Older ones are kept on this iPhone and appear when you unlock."
+            return "Free shows your \(HistoryAccessPolicy.freeRecordLimit) most recent sessions; older ones are kept and appear when you unlock."
         }
     }
 

@@ -13,7 +13,9 @@ struct WatchTimerView: View {
             WatchTimerDial(
                 progress: viewModel.timer.visualProgress,
                 color: viewModel.timer.timerColor,
-                dialSize: Theme.Watch.Dimension.quickPieSize
+                dialSize: Theme.Watch.Dimension.quickPieSize,
+                centerSymbol: viewModel.primaryControl?.symbol,
+                onTap: { viewModel.performPrimaryAction() }
             ) { date in
                 if viewModel.canEditDuration {
                     VStack(spacing: 0) {

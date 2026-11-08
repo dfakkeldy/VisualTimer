@@ -80,27 +80,6 @@ struct HistoryView: View {
 
     private var recordsList: some View {
         List {
-            if HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
-                // The free rule sits first, where it can't hide under the tab bar.
-                Section {
-                    Button {
-                        requestedProFeature = .fullHistory
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text(hiddenRecordsText)
-                                .font(.footnote)
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
-                            Spacer(minLength: 8)
-                            Text("Unlock ›")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(Theme.ColorValue.selectionAccent)
-                        }
-                    }
-                    .listRowBackground(Theme.ColorValue.surface)
-                    .accessibilityLabel("Unlock full history. \(hiddenRecordsText)")
-                }
-            }
-
             ForEach(dayGroups, id: \.title) { group in
                 Section {
                     ForEach(group.records) { record in
@@ -123,6 +102,25 @@ struct HistoryView: View {
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Theme.ColorValue.textSecondary)
                         .textCase(nil)
+                } footer: {
+                    // The free rule, quietly, right after your first sessions:
+                    // readable at rest, never ahead of your own history.
+                    if group.title == dayGroups.first?.title,
+                       HistoryAccessPolicy.isLimited(records: history.records, isProUnlocked: proAccess.isProUnlocked) {
+                        Button {
+                            requestedProFeature = .fullHistory
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(hiddenRecordsText)
+                                    .foregroundStyle(Theme.ColorValue.textTertiary)
+                                Text("Unlock ›")
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+                            }
+                            .font(.footnote)
+                        }
+                        .accessibilityLabel("Unlock full history. \(hiddenRecordsText)")
+                    }
                 }
             }
 
@@ -135,7 +133,7 @@ struct HistoryView: View {
     private var hiddenRecordsText: String {
         let hidden = history.records.count - visibleRecords.count
         let noun = hidden == 1 ? "older session" : "older sessions"
-        return "Showing your \(HistoryAccessPolicy.freeRecordLimit) most recent · \(hidden) \(noun) kept"
+        return "\(HistoryAccessPolicy.freeRecordLimit) most recent shown · \(hidden) \(noun) kept"
     }
 
     private struct DayGroup {
@@ -219,7 +217,7 @@ struct HistoryView: View {
         var parts: [String] = [TimerText.words(Int(session.totalElapsedSeconds))]
         parts.append(TurnTimerCountText.label(for: session.roundCount, singular: "round"))
         if session.skipCount > 0 { parts.append(TurnTimerCountText.label(for: session.skipCount, singular: "skip")) }
-        if session.doOverCount > 0 { parts.append("\(session.doOverCount) back") }
+        if session.doOverCount > 0 { parts.append(session.doOverCount == 1 ? "went back once" : "went back \(session.doOverCount)×") }
         return parts.joined(separator: " · ")
     }
 
