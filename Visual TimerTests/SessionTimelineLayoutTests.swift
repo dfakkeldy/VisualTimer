@@ -156,7 +156,6 @@ final class SessionTimelineLayoutTests: XCTestCase {
         XCTAssertEqual(totals[0].turns, [0, 2])
         XCTAssertEqual(totals[0].averageSeconds, 30)
         XCTAssertEqual(totals[1].seconds, 80)
-        XCTAssertEqual(timeline.totalsByTime.map(\.name), ["Theo", "Maya"], "Longest first")
     }
 
     func testLengthsCarryTheirUnits() {

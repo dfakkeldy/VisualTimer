@@ -90,31 +90,18 @@ struct TimelineEventMark: View {
     }
 }
 
-/// The spine's end: the session's rounds as one flat disc, clockwise from
-/// twelve in the order they ran, seamed in ink like the spine.
-struct TimelineFinishDisc: View {
-    let segments: [SequenceSegment]
+/// The spine's end: one neutral disc with a check (or a stop for a session
+/// ended early). The session's colours already have their circle in Totals.
+struct TimelineFinishMark: View {
+    let endedEarly: Bool
 
     var body: some View {
-        Canvas { context, size in
-            let center = CGPoint(x: size.width / 2, y: size.height / 2)
-            let radius: CGFloat = min(size.width, size.height) / 2
-            let total = Double(max(segments.reduce(0) { $0 + $1.seconds }, 1))
-            var start = Theme.Rotation.trimOriginOffset
-            for segment in segments {
-                let sweep = Double(segment.seconds) / total * 360
-                var wedge = Path()
-                wedge.move(to: center)
-                wedge.addArc(center: center, radius: radius, startAngle: .degrees(start), endAngle: .degrees(start + sweep), clockwise: false)
-                wedge.closeSubpath()
-                context.fill(wedge, with: .color(segment.color))
-                if segments.count > 1 {
-                    context.stroke(wedge, with: .color(Theme.TimerStyle.ink), lineWidth: Theme.HistoryTimeline.seam)
-                }
-                start += sweep
-            }
+        ZStack {
+            Circle().fill(Theme.ColorValue.buttonFill)
+            Image(systemName: endedEarly ? Theme.HistoryTimeline.endedSymbol : Theme.HistoryTimeline.finishedSymbol)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.ColorValue.textPrimary)
         }
-        .aspectRatio(1, contentMode: .fit)
         .accessibilityHidden(true)
     }
 }
