@@ -329,3 +329,117 @@ enum Theme {
         }
     }
 }
+
+// MARK: - Stopwatch routines (kept separate from countdown/history styling)
+extension Theme {
+    enum Stopwatch {
+        static let spacing: CGFloat = 16
+        static let smallSpacing: CGFloat = 8
+        static let cornerRadius: CGFloat = 18
+        static let chartHeight: CGFloat = 220
+        static let chartRowHeight: CGFloat = 52
+        static let chartMinimumHeight: CGFloat = 140
+        static let chartLineWidth: CGFloat = 2
+        static let targetDash: [CGFloat] = [5, 4]
+        static let contentWidth: CGFloat = 720
+        static let actualColor = Color.cyan
+        static let targetColor = ColorValue.textSecondary
+        static let symbol = "stopwatch"
+        static let planSymbol = "list.bullet.rectangle"
+        static let nextSymbol = "forward.end.fill"
+        static let pauseSymbol = "pause.fill"
+        static let resumeSymbol = "play.fill"
+        static let emptySymbol = "chart.xyaxis.line"
+        static let addSymbol = "plus"
+        static let localSymbol = "iphone"
+        static let title = "Learn a routine"
+        static let timeTemplate = "Time this template"
+        static let planRoutine = "Plan a new routine"
+        static let editorHint = "Name your steps first, then learn their durations with a stopwatch."
+        static let newRoutine = "New routine"
+        static let completed = "Completed"
+        static let currentStep = "Current step"
+        static let upcoming = "Upcoming"
+        static let retryLoading = "Retry loading"
+        static let allRecordings = "All local recordings"
+        static func progress(position: Int, count: Int, isPaused: Bool) -> String {
+            "Step \(position) of \(count) · \(isPaused ? paused : recording)"
+        }
+        static func elapsed(_ formatted: String) -> String {
+            "Elapsed, \(formatted)"
+        }
+        static func recordingSummary(measured: Int, total: Int, duration: String) -> String {
+            "\(measured)/\(total) steps · \(duration)"
+        }
+        static func unreadableFiles(_ count: Int) -> String {
+            "\(count) local recording file(s) couldn't be read. The files were kept for recovery."
+        }
+        static let recordingsEntry = "Local stopwatch recordings"
+        static let openSourceHint = "Open this recording's saved template in Templates to apply its measurements."
+        static let navigationTitle = "Routine stopwatch"
+        static let planTitle = "Plan your routine"
+        static let routineName = "Routine name"
+        static let stepName = "Step name"
+        static let addStep = "Add step"
+        static let planHint = "Give each step a name. You don't need durations yet. Touch and hold to reorder."
+        static let existingHint = "One pass through enabled steps. Repeat count and start-paused settings don't apply here."
+        static let newHint = "Your first recording has no targets. Apply a complete recording to create an editable template."
+        static let localHint = "Recordings stay on this device. They don't sync to iCloud or Apple Watch."
+        static let sourceHint = "Save the template to return to this routine's recordings from the template picker."
+        static let start = "Start recording"
+        static let ready = "Ready to record"
+        static let recording = "Recording"
+        static let paused = "Paused"
+        static let pausedHint = "Paused time is excluded. Next starts the next step immediately."
+        static let backgroundHint = "Time keeps counting while the app is in the background. Save or apply before closing; unfinished recordings won't survive an app restart."
+        static let limitHint = "24-hour step limit reached. Choose Next or Finish to review."
+        static let next = "Next step"
+        static let finish = "Finish & review"
+        static let pause = "Pause"
+        static let resume = "Resume"
+        static let review = "Review measurements"
+        static let actual = "Actual"
+        static let target = "Target"
+        static let seconds = "Seconds"
+        static let noTarget = "No target"
+        static let saveRecording = "Save recording"
+        static let apply = "Apply durations"
+        static let applyNew = "Apply as new template"
+        static let applyHint = "Applying saves this recording and edits the template. Use Save in the editor to keep the template changes. Durations round to whole seconds, with a 5-second minimum."
+        static let partialNewHint = "This recording ended early. Record every step to create a template. You can still save these measurements."
+        static let partialHint = "Only measured steps will change. Other template durations stay as they are."
+        static let neutralHint = "More or less time is information, not a score."
+        static let notSaved = "Not saved yet"
+        static let saved = "Saved on this device"
+        static let recordAgain = "Back to routine"
+        static let history = "Local recordings"
+        static let trend = "Step over time"
+        static let chooseStep = "Step"
+        static let emptyTitle = "No recordings yet"
+        static let noRecentRecordings = "No recent recordings for this routine"
+        static let emptyHint = "Finish and save a recording to compare this routine over time."
+        static let trendEmpty = "No saved measurements for this step yet."
+        static let onePointHint = "One recording so far. Record again to see how time changes."
+        static let trendHint = "Circles show actual time. The dashed target line uses each recording's original target. Dates and values are listed below."
+        static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
+        static let unlockHistory = "See full history"
+        static let close = "Close"
+        static let discardTitle = "Discard this recording?"
+        static let discardHint = "Unkept measurements will be lost. Saved recordings stay on this device."
+        static let discard = "Discard recording"
+        static let keepRecording = "Keep recording"
+        static let errorTitle = "Stopwatch"
+        static let ok = "OK"
+        static let deleteTitle = "Delete this recording?"
+        static let deleteHint = "This removes its local measurements. It doesn't change the template."
+        static let deleteRecording = "Delete recording"
+        static let cancel = "Cancel"
+        static let replaceTitle = "Replace your unsaved template edits?"
+        static let replaceHint = "Applying this new routine replaces the edits currently in the template editor. Your saved templates stay as they are."
+        static let applyIdentifier = "stopwatch.apply"
+        static let startIdentifier = "stopwatch.start"
+        static let nextIdentifier = "stopwatch.next"
+        static let finishIdentifier = "stopwatch.finish"
+        static let elapsedIdentifier = "stopwatch.elapsed"
+    }
+}
