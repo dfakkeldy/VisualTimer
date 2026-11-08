@@ -157,8 +157,10 @@ struct DesignCouncilFixture {
             guard let template = StarterTemplateLibrary.template(id: "recipe-steps") else { return }
             game.loadGame(template.game)
             game.startGame()
+            // Finish each round the normal way, so the finish reads as it
+            // does after a real session.
             for _ in template.game.activeRounds {
-                game.skipCurrentRound()
+                game.handleTimerFinished()
             }
             // Date the start as if the rounds ran their full time.
             if !game.sessionEvents.isEmpty {

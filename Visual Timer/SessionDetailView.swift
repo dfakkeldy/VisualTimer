@@ -94,7 +94,7 @@ struct SessionDetailView: View {
                     stat("\(session.skipCount)", session.skipCount == 1 ? "skip" : "skips")
                 }
                 if session.doOverCount > 0 {
-                    stat("\(session.doOverCount)", session.doOverCount == 1 ? "do-over" : "do-overs")
+                    stat("\(session.doOverCount)", "back")
                 }
             }
         }
@@ -128,10 +128,16 @@ struct SessionDetailView: View {
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .top, spacing: 12) {
                     VStack(spacing: 0) {
-                        Circle()
-                            .fill(record.color(forRound: item.name) ?? (item.outcome.isException ? item.outcome.color : Theme.ColorValue.textSecondary))
-                            .frame(width: 9, height: 9)
-                            .padding(.top, 6)
+                        Group {
+                            if let color = record.color(forRound: item.name) {
+                                Circle().fill(color)
+                            } else {
+                                // Not a round: an event (back, end), shown as a hollow mark.
+                                Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: 1.5)
+                            }
+                        }
+                        .frame(width: 9, height: 9)
+                        .padding(.top, 6)
                         if index < items.count - 1 {
                             Rectangle()
                                 .fill(Theme.ColorValue.surfaceStroke)
@@ -148,7 +154,7 @@ struct SessionDetailView: View {
                             }
                             Text(item.name)
                                 .font(item.length == nil ? .subheadline : .body.weight(.medium))
-                                .foregroundStyle(item.outcome == .wentBack ? item.outcome.color : (item.length == nil ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary))
+                                .foregroundStyle(item.length == nil ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
                             Spacer(minLength: 8)
                             if let length = item.length {
                                 Text(TimerText.length(length))
@@ -159,7 +165,7 @@ struct SessionDetailView: View {
                         if let note = item.note {
                             Text(note)
                                 .font(.caption)
-                                .foregroundStyle(item.outcome.isException ? item.outcome.color : Theme.ColorValue.textTertiary)
+                                .foregroundStyle(Theme.ColorValue.textTertiary)
                         }
                     }
                     .padding(.bottom, 16)
@@ -255,7 +261,7 @@ struct SessionTimeline {
                 close(at: date, .skipped, note: "Skipped")
             case .doOver(let previous, let date):
                 close(at: date, .finished, note: "Cut short")
-                result.append(Item(name: "Back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
+                result.append(Item(name: "↩︎ Back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
             case .restartTimer(_, let date):
                 close(at: date, .restarted, note: "Restarted")
             case .paused:
@@ -264,7 +270,7 @@ struct SessionTimeline {
                 break
             case .gameEnded(let date):
                 close(at: date, .endedEarly, note: "Session ended here")
-                result.append(Item(name: "End", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
+                result.append(Item(name: "Finished · \(TimerText.length(offset(date)))", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
             }
         }
         items = result

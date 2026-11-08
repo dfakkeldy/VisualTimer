@@ -62,6 +62,16 @@ struct WatchGamePlaybackView: View {
             remainingTime(at: date)
         }
 
+        if let next = gameViewModel.nextRound {
+            Text("Next: \(next.emoji.isEmpty ? "" : next.emoji + " ")\(next.name)")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(next.color.swiftUIColor)
+                .lineLimit(1)
+        }
+        Text("Session: \(sessionLeftText) left")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             if let primary = WatchPrimaryControl(state: timerViewModel.state) {
                 WatchControlButton(
@@ -86,12 +96,6 @@ struct WatchGamePlaybackView: View {
             .font(.caption2)
             .foregroundStyle(.secondary)
 
-        if let next = gameViewModel.nextRound {
-            Text("Next: \(next.emoji.isEmpty ? "" : next.emoji + " ")\(next.name)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
 
         HStack(spacing: Theme.Watch.Dimension.controlSpacing) {
             WatchControlButton(
@@ -120,6 +124,11 @@ struct WatchGamePlaybackView: View {
         ) {
             confirmEnd = true
         }
+    }
+
+    private var sessionLeftText: String {
+        let seconds = gameViewModel.remainingSessionSeconds(currentRemaining: timerViewModel.timeRemaining)
+        return seconds < 60 ? "under a minute" : "\(Int((Double(seconds) / 60).rounded())) min"
     }
 
     private func remainingTime(at date: Date) -> some View {

@@ -153,11 +153,16 @@ struct WatchRootView: View {
                 Text(title)
                     .lineLimit(1)
             }
-            HStack(spacing: 3) {
-                ForEach(Array(game.activeRounds.prefix(8).enumerated()), id: \.offset) { _, round in
-                    Circle()
-                        .fill(round.color.swiftUIColor)
-                        .frame(width: 6, height: 6)
+            HStack(spacing: 6) {
+                // The phone's colour ribbon at wrist scale: one segment per
+                // round, as long as its time.
+                HStack(spacing: 1.5) {
+                    let total = max(game.activeRounds.reduce(0) { $0 + $1.durationSeconds }, 1)
+                    ForEach(Array(game.activeRounds.enumerated()), id: \.offset) { _, round in
+                        Capsule()
+                            .fill(round.color.swiftUIColor)
+                            .frame(width: max(54 * CGFloat(round.durationSeconds) / CGFloat(total), 3), height: 5)
+                    }
                 }
                 Text(durationText(for: game))
                     .font(.caption2)

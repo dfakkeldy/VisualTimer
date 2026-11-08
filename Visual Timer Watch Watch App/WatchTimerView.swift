@@ -18,12 +18,15 @@ struct WatchTimerView: View {
                 if viewModel.canEditDuration {
                     VStack(spacing: 0) {
                         durationEditor
-                        Text(Theme.Watch.Label.crownCue)
+                        // The cue teaches once; it goes once a number is chosen.
+                        if viewModel.selectedComponent == nil {
+                            Text(Theme.Watch.Label.crownCue)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                             .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
                             .accessibilityHidden(true)
+                        }
                     }
                 } else {
                     remainingTime(at: date)
@@ -126,7 +129,7 @@ struct WatchTimerView: View {
                 }
             }
         }
-        .padding(.horizontal, viewModel.showsReset ? 0 : 18)
+        .padding(.horizontal, viewModel.showsReset ? 0 : 34)
     }
 }
 

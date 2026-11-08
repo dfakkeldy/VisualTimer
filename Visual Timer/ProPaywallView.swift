@@ -10,11 +10,10 @@ struct ProPaywallView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    HStack(spacing: -10) {
+                    HStack(spacing: 10) {
                         ForEach(["game-night", "morning-routine", "recipe-steps"], id: \.self) { id in
                             SequencePie(segments: StarterTemplateLibrary.template(id: id)?.game.segments ?? [])
-                                .frame(width: 52, height: 52)
-                                .overlay { Circle().strokeBorder(Theme.ColorValue.appBackground, lineWidth: 3) }
+                                .frame(width: 48, height: 48)
                         }
                     }
                     .accessibilityHidden(true)

@@ -32,7 +32,7 @@ final class DesignCouncilCaptureTests: XCTestCase {
 
     @MainActor
     func test03SessionTurns() throws {
-        _ = launch("sessionTurns")
+        _ = launch("sessionTurns", showAlertOffer: true)
         capture("03-session-turns")
     }
 
@@ -123,10 +123,12 @@ final class DesignCouncilCaptureTests: XCTestCase {
     }
 
     @MainActor
-    private func launch(_ scene: String) -> XCUIApplication {
+    private func launch(_ scene: String, showAlertOffer: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-designCouncilFixture", scene,
+            "-timerAlertsOffered", showAlertOffer ? "NO" : "YES",
+            "-timerAlertsEnabled", "NO",
             "-savedTimerDuration", "300",
             "-lastTemplateID", "",
             "-lastGameFileName", "",

@@ -91,6 +91,7 @@ struct GameEditorView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.ColorValue.appBackground)
+            .contentMargins(.bottom, 16, for: .scrollContent)
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 startBar
             }
@@ -344,15 +345,11 @@ struct GameEditorView: View {
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
         .background {
+            // A solid band with a hairline edge: rows scroll cleanly under it
+            // and never look faded or disabled.
             Theme.ColorValue.appBackground
                 .overlay(alignment: .top) {
-                    LinearGradient(
-                        colors: [Theme.ColorValue.appBackground.opacity(0), Theme.ColorValue.appBackground],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 24)
-                    .offset(y: -24)
+                    Rectangle().fill(Theme.ColorValue.surfaceStroke).frame(height: 1)
                 }
                 .ignoresSafeArea(edges: .bottom)
         }
@@ -488,6 +485,8 @@ private struct PlayerEditSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     preview
+
+                    groupHeader("Round")
 
                     field("Name") {
                         TextField("Round name", text: $nameText)
@@ -633,10 +632,14 @@ private struct PlayerEditSheet: View {
     }
 
     private func groupHeader(_ title: String) -> some View {
-        Text(title)
-            .font(.title3.weight(.semibold))
-            .foregroundStyle(Theme.ColorValue.textPrimary)
-            .padding(.top, 10)
+        VStack(alignment: .leading, spacing: 6) {
+            Rectangle().fill(Theme.ColorValue.surfaceStroke).frame(height: 1)
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+        }
+        .padding(.top, 6)
     }
 
     private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

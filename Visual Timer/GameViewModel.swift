@@ -31,6 +31,8 @@ final class GameViewModel: ObservableObject {
     /// Shown once after a session is restored, until the next action:
     /// where the person stopped, in plain words.
     @Published var resumeNote: String?
+    /// Whether the last finished or ended session reached History.
+    @Published private(set) var lastRecordSaved = false
 
     /// The timer view model that does the actual countdown.
     let timerViewModel: TimerViewModel
@@ -137,6 +139,11 @@ final class GameViewModel: ObservableObject {
         let perPass = rounds.reduce(0) { $0 + $1.durationSeconds }
         let laterPasses = max(totalRoundCount - currentOverallRound, 0) * perPass
         return max(currentRemaining, 0) + laterThisPass + laterPasses
+    }
+
+    /// Rounds skipped in the session so far.
+    var skippedCount: Int {
+        GameSession(events: sessionEvents).skipCount
     }
 
     /// Wall-clock length of the session that just finished or is running,
@@ -429,8 +436,10 @@ final class GameViewModel: ObservableObject {
             playedAt: gameStartDate ?? Date(),
             roundColors: Dictionary(activeRounds.map { ($0.name, $0.color) }, uniquingKeysWith: { first, _ in first })
         )
-        historyStore.save(record)
-        onHistoryRecordSaved?(record)
+        lastRecordSaved = historyStore.save(record)
+        if lastRecordSaved {
+            onHistoryRecordSaved?(record)
+        }
     }
 }
 

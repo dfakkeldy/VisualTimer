@@ -84,9 +84,11 @@ struct SettingsView: View {
                             Button {
                                 Task { await proAccess.purchasePro() }
                             } label: {
-                                Text(proAccess.purchaseButtonTitle)
+                                Label(proAccess.purchaseButtonTitle, systemImage: Theme.Symbol.proUnlock)
                                     .font(.body.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: 30)
                             }
+                            .buttonStyle(.borderedProminent)
                             .disabled(!proAccess.canPurchase)
                             .listRowBackground(Theme.ColorValue.surface)
                         }

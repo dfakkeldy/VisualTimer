@@ -55,12 +55,8 @@ struct HistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            SequencePie(segments: (StarterTemplateLibrary.template(id: "morning-routine")?.game.segments) ?? [])
+            GhostDial()
                 .frame(width: 96, height: 96)
-                .opacity(0.3)
-                .overlay {
-                    Circle().strokeBorder(Theme.ColorValue.textTertiary, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
-                }
                 .accessibilityHidden(true)
             Text("Your finished sessions appear here")
                 .font(.title3.weight(.semibold))
@@ -76,7 +72,7 @@ struct HistoryView: View {
             .padding(.top, 6)
         }
         .padding(.horizontal, 40)
-        .padding(.bottom, 60)
+        .padding(.bottom, 140)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -115,14 +111,15 @@ struct HistoryView: View {
                         requestedProFeature = .fullHistory
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Label {
-                                Text("Unlock full history")
-                                    .foregroundStyle(Theme.ColorValue.textPrimary)
-                            } icon: {
-                                Image(systemName: Theme.Symbol.proUnlock)
+                            HStack {
+                                Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
                                     .foregroundStyle(Theme.ColorValue.selectionAccent)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+                                    .accessibilityHidden(true)
                             }
-                            .font(.subheadline.weight(.medium))
+                            .font(.subheadline.weight(.semibold))
                             Text(hiddenRecordsText)
                                 .font(.caption)
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
@@ -135,6 +132,7 @@ struct HistoryView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
+        .contentMargins(.bottom, 72, for: .scrollContent)
     }
 
     private var hiddenRecordsText: String {
@@ -190,18 +188,10 @@ struct HistoryView: View {
                     .padding(.vertical, 2)
             }
 
-            HStack(spacing: 8) {
-                let emoji = emojiStrip(record)
-                if !emoji.isEmpty {
-                    Text(emoji)
-                        .font(.caption)
-                        .accessibilityHidden(true)
-                }
-                Text(summaryLine(record))
-                    .font(.caption)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-                    .lineLimit(1)
-            }
+            Text(summaryLine(record))
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .lineLimit(1)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
@@ -232,7 +222,7 @@ struct HistoryView: View {
         var parts: [String] = [TimerText.words(Int(session.totalElapsedSeconds))]
         parts.append(TurnTimerCountText.label(for: session.roundCount, singular: "round"))
         if session.skipCount > 0 { parts.append(TurnTimerCountText.label(for: session.skipCount, singular: "skip")) }
-        if session.doOverCount > 0 { parts.append(TurnTimerCountText.label(for: session.doOverCount, singular: "do-over")) }
+        if session.doOverCount > 0 { parts.append("\(session.doOverCount) back") }
         return parts.joined(separator: " · ")
     }
 
@@ -273,4 +263,22 @@ struct HistoryView: View {
     }
 
 
+}
+
+/// The empty dial: a dashed rim with four hairline wedges in clean palette
+/// colours. A hint of what a session will look like, not a fake one.
+private struct GhostDial: View {
+    var body: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            let radius = min(size.width, size.height) / 2 - 2
+            let colors = [0, 2, 3, 7].map { Theme.ColorValue.timerPalette[$0] }
+            for (index, color) in colors.enumerated() {
+                let start = Theme.Rotation.trimOriginOffset + Double(index) * 90
+                var arc = Path()
+                arc.addArc(center: center, radius: radius, startAngle: .degrees(start + 6), endAngle: .degrees(start + 84), clockwise: false)
+                context.stroke(arc, with: .color(color.opacity(0.7)), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+            }
+        }
+    }
 }

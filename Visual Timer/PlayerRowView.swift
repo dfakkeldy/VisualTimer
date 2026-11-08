@@ -44,7 +44,7 @@ struct PlayerRowView: View {
             Button(action: onToggleActive) {
                 Image(systemName: round.isActive ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(round.isActive ? Theme.ColorValue.textPrimary : Theme.ColorValue.textTertiary)
+                    .foregroundStyle(round.isActive ? Theme.ColorValue.textPrimary.opacity(0.7) : Theme.ColorValue.textTertiary)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
@@ -76,11 +76,7 @@ struct RoundTile: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(round.color.swiftUIColor.opacity(0.28))
-            .overlay {
-                RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-                    .strokeBorder(round.color.swiftUIColor.opacity(0.9), lineWidth: 1.5)
-            }
+            .fill(round.color.swiftUIColor.opacity(0.4))
             .overlay {
                 if round.emoji.isEmpty {
                     Circle().fill(round.color.swiftUIColor).frame(width: size * 0.32)

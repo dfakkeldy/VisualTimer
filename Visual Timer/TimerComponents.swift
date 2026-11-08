@@ -32,6 +32,8 @@ struct GlassCapsuleButton: View {
     let systemImage: String?
     var prominent: Bool = false
     var tint: Color = Theme.ColorValue.selectionAccent
+    /// Share a row's width equally with its neighbours.
+    var fillsWidth: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -48,7 +50,7 @@ struct GlassCapsuleButton: View {
             }
             .foregroundStyle(Theme.ColorValue.textPrimary)
             .padding(.horizontal, Theme.TimerStyle.capsuleHorizontalPadding)
-            .frame(minHeight: Theme.TimerStyle.capsuleHeight)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: Theme.TimerStyle.capsuleHeight)
             .background {
                 if prominent {
                     Capsule().fill(tint)
@@ -260,6 +262,11 @@ enum TimerText {
     /// "about 18 min left", for whole-session estimates.
     static func approximateLeft(_ seconds: Int) -> String {
         seconds < 60 ? "under a minute left" : "about \(words(seconds)) left"
+    }
+
+    /// "18 min left", the short form for a running caption.
+    static func left(_ seconds: Int) -> String {
+        seconds < 60 ? "under a minute left" : "\(words(seconds)) left"
     }
 
     /// "Ends 9:46", a clock time `seconds` from `now`.

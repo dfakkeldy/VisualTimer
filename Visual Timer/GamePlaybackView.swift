@@ -20,6 +20,8 @@ struct GamePlaybackView: View {
 
     @State private var showSettings = false
     @State private var confirmEnd = false
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
+    @AppStorage("timerAlertsOffered") private var alertsOffered = false
 
     var body: some View {
         ZStack {
@@ -105,12 +107,19 @@ struct GamePlaybackView: View {
             dial
                 .frame(maxWidth: Theme.GamePlayback.dialMaxSize)
                 .layoutPriority(1)
+                // The quick timer has no footer; centre its group optically.
+                .padding(.top, inSession ? 0 : Theme.Dimension.sectionSpacingLarge)
 
             readout
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
             controlRow
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
+
+            if showsAlertOffer {
+                alertOffer
+                    .padding(.top, Theme.Dimension.sectionSpacingSmall)
+            }
 
             Spacer(minLength: Theme.Dimension.sectionSpacingSmall)
 
@@ -145,7 +154,7 @@ struct GamePlaybackView: View {
         } else {
             HStack {
                 Spacer()
-                GlassIconButton(systemImage: Theme.Symbol.settings, label: Theme.Label.settings) {
+                GlassIconButton(systemImage: Theme.Symbol.settings, label: Theme.Label.settings, size: 36) {
                     showSettings = true
                 }
             }
@@ -201,7 +210,7 @@ struct GamePlaybackView: View {
                             }
                             Text(next.emoji.isEmpty ? next.name : "\(next.emoji) \(next.name)")
                                 .font(.body.weight(.medium))
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                                .foregroundStyle(next.color.swiftUIColor.opacity(0.9))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
                         }
@@ -228,13 +237,17 @@ struct GamePlaybackView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Counts, not verdicts, and "saved" only once the record was written.
     private var completionLine: String {
-        let done = gameViewModel.countingPlayerCount > 0 ? "Everyone had a turn" : "Every step done"
-        return "\(done) · saved to History"
-    }
-
-    private var finishTint: Color {
-        gameViewModel.activeRounds.last?.color.swiftUIColor ?? Theme.ColorValue.selectionAccent
+        let skipped = gameViewModel.skippedCount
+        let done: String
+        if skipped > 0 {
+            done = "\(skipped) skipped"
+        } else {
+            done = gameViewModel.countingPlayerCount > 0 ? "Everyone had a turn" : "Every step done"
+        }
+        let receipt = gameViewModel.lastRecordSaved ? "saved to History" : "couldn't save to History"
+        return "\(done) · \(receipt)"
     }
 
     // MARK: - Dial
@@ -243,7 +256,7 @@ struct GamePlaybackView: View {
     private var dial: some View {
         if isComplete, let game = gameViewModel.gameSequence {
             ZStack {
-                SequencePie(segments: game.segments, glowColor: game.activeRounds.first?.color.swiftUIColor)
+                SequencePie(segments: game.segments, glowColor: .white.opacity(0.6))
                 GlyphDisc {
                     Image(systemName: Theme.Symbol.checkmark)
                         .font(.system(size: Theme.TimerStyle.runningIconSize, weight: .bold))
@@ -268,8 +281,10 @@ struct GamePlaybackView: View {
                     fillColor: timerViewModel.timerColor,
                     completionCount: timerViewModel.timerColorIndex
                 )
-                // Paused reads from across the room: the colour drains a little.
-                .saturation(timerViewModel.state == .paused ? 0.45 : 1)
+                // Paused reads from across the room: the colour dims along a
+                // clean path (less saturation and light), not toward grey-pink.
+                .saturation(timerViewModel.state == .paused ? 0.7 : 1)
+                .brightness(timerViewModel.state == .paused ? -0.18 : 0)
 
                 if let icon = centerIcon {
                     GlyphDisc {
@@ -403,7 +418,7 @@ struct GamePlaybackView: View {
             let sessionLeft = gameViewModel.remainingSessionSeconds(currentRemaining: remaining)
             switch timerViewModel.state {
             case .running:
-                return "Session · \(TimerText.approximateLeft(sessionLeft)) · \(TimerText.endsAt(sessionLeft).lowercasedFirst)"
+                return "Session · \(TimerText.left(sessionLeft)) · \(TimerText.endsAt(sessionLeft).lowercasedFirst)"
             case .paused:
                 return "\(Theme.Label.paused) · tap the dial to resume"
             case .notStarted, .finished:
@@ -427,24 +442,24 @@ struct GamePlaybackView: View {
         Group {
             if isComplete {
                 HStack(spacing: Theme.TimerStyle.controlSpacing * 2) {
-                    GlassCapsuleButton(title: Theme.Label.goAgain, systemImage: Theme.Symbol.restart) {
+                    GlassCapsuleButton(title: Theme.Label.goAgain, systemImage: Theme.Symbol.restart, fillsWidth: true) {
                         gameViewModel.addRoundDuringGameOver()
                     }
-                    GlassCapsuleButton(title: Theme.Label.done, systemImage: nil, prominent: true, tint: finishTint) {
+                    GlassCapsuleButton(title: Theme.Label.done, systemImage: nil, prominent: true, fillsWidth: true) {
                         gameViewModel.endGame()
                     }
                 }
             } else if inSession {
                 TimerGlassGroup {
                     HStack(spacing: Theme.TimerStyle.controlSpacing) {
-                        GlassCapsuleButton(title: Theme.Label.doOver, systemImage: Theme.Symbol.doOver) {
+                        GlassCapsuleButton(title: Theme.Label.doOver, systemImage: Theme.Symbol.doOver, fillsWidth: true) {
                             gameViewModel.doOverToPrevious()
                         }
                         .disabled(gameViewModel.currentRoundIndex == 0)
-                        GlassCapsuleButton(title: Theme.Label.restart, systemImage: Theme.Symbol.restart) {
+                        GlassCapsuleButton(title: Theme.Label.restart, systemImage: Theme.Symbol.restart, fillsWidth: true) {
                             gameViewModel.restartCurrentTimer()
                         }
-                        GlassCapsuleButton(title: Theme.Label.skip, systemImage: Theme.Symbol.skip) {
+                        GlassCapsuleButton(title: Theme.Label.skip, systemImage: Theme.Symbol.skip, fillsWidth: true) {
                             gameViewModel.skipCurrentRound()
                         }
                     }
@@ -459,6 +474,43 @@ struct GamePlaybackView: View {
             }
         }
         .frame(minHeight: Theme.TimerStyle.capsuleHeight)
+    }
+
+    // MARK: - Alert offer
+
+    /// Offered once, while a timer runs, because that is when an alert
+    /// would help: the hook by the door, with a plain "Not now".
+    private var showsAlertOffer: Bool {
+        !alertsEnabled && !alertsOffered && timerViewModel.state == .running
+    }
+
+    private var alertOffer: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "bell")
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .accessibilityHidden(true)
+            Text("Alert me when time's up, even outside the app?")
+                .font(.footnote)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            Button("Turn on") {
+                alertsOffered = true
+                Task {
+                    alertsEnabled = await TimerAlertScheduler.requestPermission()
+                    scheduleEndAlert(timerViewModel.visualProgress)
+                }
+            }
+            .font(.footnote.weight(.semibold))
+            Button("Not now") {
+                alertsOffered = true
+            }
+            .font(.footnote)
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 14))
     }
 
     // MARK: - Progress
