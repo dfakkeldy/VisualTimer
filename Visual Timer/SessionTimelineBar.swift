@@ -35,11 +35,7 @@ struct SessionTimelineBar: View {
                     segmentView(segment, totalWidth: width)
                 }
                 ForEach(Array(markers.enumerated()), id: \.offset) { _, position in
-                    Capsule()
-                        .fill(Style.marker)
-                        .frame(width: Style.markerWidth, height: Style.barHeight + Style.markerOverhang * 2)
-                        .offset(x: min(max(width * position - Style.markerWidth / 2, 0), width - Style.markerWidth),
-                                y: -Style.markerOverhang)
+                    markerView(atX: markerX(position, totalWidth: width))
                 }
             }
             .frame(width: width, height: Style.barHeight, alignment: .topLeading)
@@ -71,11 +67,7 @@ struct SessionTimelineBar: View {
             .fill(segment.color.opacity(segment.isException ? Style.exceptionOpacity : 1))
             .overlay(alignment: .topLeading) {
                 ForEach(Array(segment.pauses.enumerated()), id: \.offset) { _, pause in
-                    Rectangle()
-                        .fill(Style.pauseShade)
-                        .frame(width: max(totalWidth * (pause.upperBound - pause.lowerBound), 1),
-                               height: Style.barHeight)
-                        .offset(x: totalWidth * pause.lowerBound - x)
+                    pauseShade(pause, totalWidth: totalWidth, segmentX: x)
                 }
             }
             .clipShape(shape)
@@ -96,12 +88,39 @@ struct SessionTimelineBar: View {
             .offset(x: x)
     }
 
+    /// A paused stretch, placed relative to its segment's leading edge.
+    private func pauseShade(_ pause: ClosedRange<Double>, totalWidth: CGFloat, segmentX: CGFloat) -> some View {
+        let lower: CGFloat = totalWidth * CGFloat(pause.lowerBound)
+        let length: CGFloat = totalWidth * CGFloat(pause.upperBound - pause.lowerBound)
+        return Rectangle()
+            .fill(Style.pauseShade)
+            .frame(width: max(length, 1), height: Style.barHeight)
+            .offset(x: lower - segmentX)
+    }
+
+    private func markerView(atX x: CGFloat) -> some View {
+        let height: CGFloat = Style.barHeight + Style.markerOverhang * 2
+        return Capsule()
+            .fill(Style.marker)
+            .frame(width: Style.markerWidth, height: height)
+            .offset(x: x, y: -Style.markerOverhang)
+    }
+
+    /// A marker's leading edge, centred on its moment and kept inside the bar.
+    private func markerX(_ position: Double, totalWidth: CGFloat) -> CGFloat {
+        let centred: CGFloat = totalWidth * CGFloat(position) - Style.markerWidth / 2
+        let upper: CGFloat = max(totalWidth - Style.markerWidth, 0)
+        return min(max(centred, 0), upper)
+    }
+
     /// Where a segment is drawn, in points: never thinner than the minimum,
     /// never past the bar's end.
     private func drawnSpan(_ segment: Segment, totalWidth: CGFloat) -> (x: CGFloat, width: CGFloat) {
         let gap = segment.id == segments.last?.id ? 0 : Style.segmentGap
-        let x = min(totalWidth * segment.start, max(totalWidth - Style.segmentMinWidth, 0))
-        let width = max(totalWidth * segment.width - gap, Style.segmentMinWidth)
+        let start: CGFloat = totalWidth * CGFloat(segment.start)
+        let x: CGFloat = min(start, max(totalWidth - Style.segmentMinWidth, 0))
+        let drawn: CGFloat = totalWidth * CGFloat(segment.width) - gap
+        let width: CGFloat = max(drawn, Style.segmentMinWidth)
         return (x, min(width, totalWidth - x))
     }
 
@@ -151,13 +170,16 @@ struct SessionTimelineTrack: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let total = proxy.size.width
+            let total: CGFloat = proxy.size.width
+            let minWidth: CGFloat = Theme.HistoryTimeline.segmentMinWidth
+            let length: CGFloat = max(total * CGFloat(width), minWidth)
+            let x: CGFloat = min(total * CGFloat(start), total - minWidth)
             ZStack(alignment: .leading) {
                 Capsule().fill(Theme.ColorValue.surfaceStroke)
                 Capsule()
                     .fill(color.opacity(isException ? Theme.HistoryTimeline.exceptionOpacity : 1))
-                    .frame(width: max(total * width, Theme.HistoryTimeline.segmentMinWidth))
-                    .offset(x: min(total * start, total - Theme.HistoryTimeline.segmentMinWidth))
+                    .frame(width: length)
+                    .offset(x: x)
             }
         }
         .frame(height: Theme.HistoryTimeline.rowTrackHeight)

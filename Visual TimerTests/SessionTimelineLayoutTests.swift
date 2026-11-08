@@ -2,6 +2,7 @@ import XCTest
 import SwiftUI
 @testable import Visual_Timer
 
+@MainActor
 final class SessionTimelineLayoutTests: XCTestCase {
 
     private let t0 = Date(timeIntervalSince1970: 1_000)
