@@ -80,25 +80,42 @@ struct SettingsView: View {
                                 Task { await proAccess.loadProducts() }
                             }
                             .listRowBackground(Theme.ColorValue.surface)
-                        } else {
-                            Button {
-                                Task { await proAccess.purchasePro() }
-                            } label: {
-                                Label(proAccess.purchaseButtonTitle, systemImage: Theme.Symbol.proUnlock)
-                                    .font(.body.weight(.semibold))
+                            Button("Restore purchases") {
+                                Task { await proAccess.restorePurchases() }
                             }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(!proAccess.canPurchase)
+                            .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
                             .listRowBackground(Theme.ColorValue.surface)
-                            .listRowSeparator(.hidden)
-                        }
-                    }
+                        } else {
+                            // One door, with Restore as a quiet line under it.
+                            VStack(spacing: 10) {
+                                Button {
+                                    Task { await proAccess.purchasePro() }
+                                } label: {
+                                    Text(proAccess.purchaseButtonTitle)
+                                        .font(.body.weight(.semibold))
+                                        .padding(.horizontal, 8)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(!proAccess.canPurchase)
 
-                    Button("Restore purchases") {
-                        Task { await proAccess.restorePurchases() }
+                                Button("Restore purchases") {
+                                    Task { await proAccess.restorePurchases() }
+                                }
+                                .font(.subheadline)
+                                .buttonStyle(.borderless)
+                                .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .listRowBackground(Theme.ColorValue.surface)
+                        }
+                    } else {
+                        Button("Restore purchases") {
+                            Task { await proAccess.restorePurchases() }
+                        }
+                        .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
+                        .listRowBackground(Theme.ColorValue.surface)
                     }
-                    .disabled(proAccess.purchaseState == .loading || proAccess.purchaseState == .purchasing)
-                    .listRowBackground(Theme.ColorValue.surface)
 
                     if let statusMessage {
                         Text(statusMessage)
@@ -121,10 +138,6 @@ struct SettingsView: View {
                     }
                 } header: {
                     header("iCloud sync")
-                } footer: {
-                    if !proAccess.isProUnlocked {
-                        Text("Sync keeps templates and history on all your devices. It comes with Pro.")
-                    }
                 }
 
                 Section {

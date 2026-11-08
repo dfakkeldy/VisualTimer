@@ -44,13 +44,13 @@ struct WatchTimerDial<Content: View>: View {
                     if let centerSymbol {
                         Circle()
                             .fill(Theme.TimerStyle.ink)
-                            .frame(width: dialSize * 0.34, height: dialSize * 0.34)
+                            .frame(width: dialSize * 0.42, height: dialSize * 0.42)
                         Image(systemName: centerSymbol)
-                            .font(.system(size: dialSize * 0.15, weight: .semibold))
+                            .font(.system(size: dialSize * 0.18, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
-                .shadow(color: color.opacity(0.35), radius: 8)
+                .shadow(color: color.opacity(0.25), radius: 6)
                 .frame(width: dialSize, height: dialSize)
                 .contentShape(Circle())
                 .onTapGesture { onTap?() }

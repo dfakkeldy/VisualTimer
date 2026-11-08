@@ -43,6 +43,12 @@ struct WatchRootView: View {
                     .accessibilityIdentifier(Theme.Watch.Identifier.rootQuickTimer)
                 }
 
+                // While something runs, the alert offer sits right beside it:
+                // in context, when it would help. Otherwise it waits at the end.
+                if somethingIsRunning {
+                    alertsSection
+                }
+
                 if !model.savedTemplates.isEmpty {
                     Section(Theme.Watch.Label.savedTemplates) {
                         ForEach(model.savedTemplates) { template in
@@ -66,7 +72,9 @@ struct WatchRootView: View {
                     }
                 }
 
-                alertsSection
+                if !somethingIsRunning {
+                    alertsSection
+                }
             }
             .navigationDestination(isPresented: $presentingSession) {
                 WatchGamePlaybackView(
@@ -190,10 +198,16 @@ struct WatchRootView: View {
         }
     }
 
+    private var somethingIsRunning: Bool {
+        model.activeSession != nil || model.quickTimerState == .running || model.quickTimerState == .paused
+    }
+
+    /// Live state on the row, so a return from the wrist shows where things are.
     private var quickTimerStatus: String? {
+        let left = WatchTimeText.clock(model.quickTimer.timer.timeRemaining)
         switch model.quickTimerState {
-        case .running: return Theme.Watch.Label.running
-        case .paused: return Theme.Watch.Label.paused
+        case .running: return "\(left) left"
+        case .paused: return "\(Theme.Watch.Label.paused) · \(left)"
         case .notStarted, .finished:
             let seconds = model.quickTimer.timer.totalDuration
             return seconds < 60 ? "\(seconds) sec" : "\(Int((Double(seconds) / 60).rounded())) min"

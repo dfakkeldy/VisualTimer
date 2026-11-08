@@ -20,6 +20,9 @@ struct GamePlaybackView: View {
 
     @State private var showSettings = false
     @State private var confirmEnd = false
+    @State private var dialSize: CGSize = .zero
+    /// While someone drags the rim: the set time as a fraction of an hour.
+    @State private var rimDragFraction: Double?
 
     var body: some View {
         ZStack {
@@ -290,8 +293,54 @@ struct GamePlaybackView: View {
         }
         .buttonStyle(TimerPressStyle())
         .contentShape(Circle())
+        .overlay {
+            // While setting, a thin arc from twelve shows the time chosen, as a
+            // share of an hour, over the full pie.
+            if let rimDragFraction {
+                Circle()
+                    .trim(from: 0, to: rimDragFraction)
+                    .stroke(.white, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .rotationEffect(.degrees(Theme.Rotation.trimOriginOffset))
+                    .padding(Theme.Dimension.circleHorizontalPadding + 6)
+                    .allowsHitTesting(false)
+            }
+        }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { dialSize = $0 }
+        .simultaneousGesture(rimDrag, isEnabled: showsDurationControls)
+        .sensoryFeedback(.selection, trigger: timerViewModel.totalDuration)
         .disabled(!isTimerCircleEnabled)
         .accessibilityLabel(timerCircleAccessibilityLabel)
+    }
+
+    /// Drag around the rim of the idle quick timer to set its time: one turn
+    /// is an hour, in 15-second steps under five minutes and minutes above.
+    private var rimDrag: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                let center = CGPoint(x: dialSize.width / 2, y: dialSize.height / 2)
+                let radius = min(dialSize.width, dialSize.height) / 2
+                guard radius > 0 else { return }
+                if rimDragFraction == nil {
+                    // Only a drag that starts on the outer rim sets the time.
+                    let start = hypot(value.startLocation.x - center.x, value.startLocation.y - center.y)
+                    guard start > radius * 0.55 else { return }
+                }
+                let dx = value.location.x - center.x
+                let dy = value.location.y - center.y
+                var angle = atan2(dx, -dy)
+                if angle < 0 { angle += 2 * .pi }
+                let fraction = angle / (2 * .pi)
+                let raw = fraction * 3600
+                let step: Double = raw < 300 ? 15 : 60
+                let seconds = max(Double(Theme.TimerMechanic.minimumDuration), (raw / step).rounded() * step)
+                rimDragFraction = seconds / 3600
+                if Int(seconds) != timerViewModel.totalDuration {
+                    timerViewModel.setDuration(Int(seconds))
+                }
+            }
+            .onEnded { _ in
+                rimDragFraction = nil
+            }
     }
 
     private var centerIcon: String? {
@@ -422,7 +471,7 @@ struct GamePlaybackView: View {
         case .paused:
             return "\(Theme.Label.paused) · tap the dial to resume"
         case .notStarted, .finished:
-            return Theme.Label.tapToStart
+            return "Tap to start · drag the rim to set"
         }
     }
 

@@ -72,6 +72,12 @@ struct WatchTimerView: View {
         .font(.system(.title2, design: .rounded).monospacedDigit())
         .lineLimit(1)
         .minimumScaleFactor(Theme.Watch.Dimension.digitMinimumScale)
+        .padding(.horizontal, 4)
+        // One well for the one readout; the selected number lights up inside it.
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Watch.Dimension.selectionCornerRadius)
+                .fill(Theme.Watch.ColorValue.editable)
+        )
     }
 
     private func componentButton(_ component: WatchTimeComponent, label: String, id: String) -> some View {
@@ -87,7 +93,7 @@ struct WatchTimerView: View {
                 )
                 .background(
                     RoundedRectangle(cornerRadius: Theme.Watch.Dimension.selectionCornerRadius)
-                        .fill(isSelected ? Theme.Watch.ColorValue.selection : Theme.Watch.ColorValue.editable)
+                        .fill(isSelected ? Theme.Watch.ColorValue.selection : Color.clear)
                 )
         }
         .buttonStyle(.plain)
@@ -114,9 +120,11 @@ struct WatchTimerView: View {
                     title: primary.title,
                     systemImage: primary.symbol,
                     accessibilityID: Theme.Watch.Identifier.quickPrimary,
-                    // Tinted glass: the pie stays the only solid red shape.
+                    // A quiet text control: the dial is the one visible door,
+                    // and this labelled button stays for VoiceOver and tests.
                     isProminent: false,
-                    tint: viewModel.timer.timerColor
+                    tint: nil,
+                    showsIcon: false
                 ) {
                     viewModel.performPrimaryAction()
                 }
@@ -132,7 +140,7 @@ struct WatchTimerView: View {
                 }
             }
         }
-        .padding(.horizontal, viewModel.showsReset ? 0 : 44)
+        .padding(.horizontal, viewModel.showsReset ? 0 : 40)
     }
 }
 

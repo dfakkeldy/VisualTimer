@@ -10,6 +10,8 @@ struct WatchControlButton: View {
     let accessibilityID: String
     let isProminent: Bool
     var tint: Color? = nil
+    /// Off when another control (the dial) already shows this symbol.
+    var showsIcon: Bool = true
     let action: () -> Void
 
     var body: some View {
@@ -23,9 +25,11 @@ struct WatchControlButton: View {
     private var button: some View {
         Button(action: action) {
             VStack(spacing: Theme.Watch.Dimension.controlIconSpacing) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                    .accessibilityHidden(true)
+                if showsIcon {
+                    Image(systemName: systemImage)
+                        .font(.title3)
+                        .accessibilityHidden(true)
+                }
                 Text(title)
                     .font(.caption2.weight(.semibold))
                     // On tinted glass the label stays white, so it reads as live.
