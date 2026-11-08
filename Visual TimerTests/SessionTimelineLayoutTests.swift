@@ -127,6 +127,29 @@ final class SessionTimelineLayoutTests: XCTestCase {
                           timeline.color(for: timeline.items[1], in: partly))
     }
 
+    func testANewPassStartsWhenTheFirstRoundComesUpAgain() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(10)),
+            .doOver(previousPlayer: "Maya", timestamp: at(20)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(20)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(30)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(40)),
+            .gameEnded(timestamp: at(50)),
+        ]))
+        // Items: Maya, Theo, went back, Maya (redo), Theo, Maya (pass 2), Finished.
+        XCTAssertEqual(timeline.passStarts, [5], "Going back to Maya is a redo, not a new pass")
+    }
+
+    func testLengthsCarryTheirUnits() {
+        XCTAssertEqual(TimerText.units(130), "2m 10s")
+        XCTAssertEqual(TimerText.units(45), "45s")
+        XCTAssertEqual(TimerText.units(540), "9m")
+        XCTAssertEqual(TimerText.units(0), "0s")
+        XCTAssertEqual(TimerText.units(3_605), "1h 5s")
+    }
+
     func testEmptySessionHasNoTimeline() {
         let timeline = SessionTimeline(record: record([]))
         XCTAssertTrue(timeline.items.isEmpty)

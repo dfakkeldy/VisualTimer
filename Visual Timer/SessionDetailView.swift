@@ -22,6 +22,9 @@ struct SessionDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showExporter = false
     @State private var requestedProFeature: ProFeature?
+    /// The timeline draws itself downward once, on first appearance.
+    @State private var revealed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
@@ -76,21 +79,30 @@ struct SessionDetailView: View {
     private var summary: some View {
         let session = record.session
         let paused = sessionTimeline.items.reduce(0) { $0 + $1.pausedSeconds }
-        return VStack(alignment: .leading, spacing: 14) {
-            Text("Started \(record.playedAt.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().hour().minute()))")
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(whenText)
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
             HStack(alignment: .top, spacing: 28) {
-                stat(TimerText.words(Int(session.totalElapsedSeconds)), "total")
+                stat(TimerText.units(Int(session.totalElapsedSeconds)), "total")
                 if session.pauseCount > 0 {
-                    stat(TimerText.length(paused), session.pauseCount == 1 ? "paused once" : "paused \(session.pauseCount) times")
+                    stat(TimerText.units(paused), session.pauseCount == 1 ? "paused once" : "paused \(session.pauseCount) times")
                 }
                 if session.skipCount > 0 {
-                    stat("\(session.skipCount)", session.skipCount == 1 ? "skipped" : "skipped")
+                    stat("\(session.skipCount)", "skipped")
                 }
             }
         }
+    }
+
+    /// "Saturday, Nov 7 · 6:30 – 6:39 AM"
+    private var whenText: String {
+        let start = record.session.events.first?.timestamp ?? record.playedAt
+        let end = start.addingTimeInterval(TimeInterval(sessionTimeline.span))
+        let day = start.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        let times = (start..<max(end, start)).formatted(.interval.hour().minute())
+        return "\(day) · \(times)"
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
@@ -115,132 +127,198 @@ struct SessionDetailView: View {
         let items = timeline.items
         let roundIndices = items.indices.filter { items[$0].length != nil }
         let total = max(Double(roundIndices.count) * Style.heightPerRound, Style.minimumTotalHeight)
-        let heights = timeline.heights(total: total, minimum: Style.minimumRowHeight)
+        let trueHeights = timeline.heights(total: total, minimum: 0)
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Timeline")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
                 if timeline.hasRounds {
-                    Text(legend)
-                        .font(.caption)
-                        .foregroundStyle(Theme.ColorValue.textTertiary)
+                    legend
                 }
             }
             .padding(.bottom, 14)
 
-            ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                timelineRow(
-                    item,
-                    height: CGFloat(heights[index] ?? Style.minimumRowHeight),
-                    isFirst: index == roundIndices.first,
-                    isLast: index == roundIndices.last
-                )
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    if item.length != nil {
+                        if let pass = passNumber(at: index, firstRound: roundIndices.first) {
+                            passHeader(pass, isFirst: index == roundIndices.first)
+                        }
+                        roundRow(
+                            item,
+                            trueHeight: CGFloat(trueHeights[index] ?? 0),
+                            isFirst: index == roundIndices.first,
+                            wentBackTo: wentBackTarget(after: index, in: items)
+                        )
+                        .padding(.top, index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? 0 : Style.turnGap)
+                    } else if item.outcome == .sessionEnd {
+                        finishRow(item)
+                    }
+                }
+            }
+            .mask(alignment: .top) {
+                Rectangle().scaleEffect(x: 1, y: revealed ? 1 : 0, anchor: .top)
+            }
+        }
+        .onAppear {
+            guard !revealed else { return }
+            if reduceMotion {
+                revealed = true
+            } else {
+                withAnimation(.easeOut(duration: Style.revealDuration)) { revealed = true }
             }
         }
     }
 
-    private var legend: String {
+    /// "Round 2" when a new pass through the sequence starts at this item;
+    /// nil when the sequence ran only once.
+    private func passNumber(at index: Int, firstRound: Int?) -> Int? {
+        let starts = sessionTimeline.passStarts
+        guard !starts.isEmpty else { return nil }
+        if index == firstRound { return 1 }
+        return starts.firstIndex(of: index).map { $0 + 2 }
+    }
+
+    private func passHeader(_ pass: Int, isFirst: Bool) -> some View {
+        Text("Round \(pass)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .textCase(.uppercase)
+            .padding(.top, isFirst ? 0 : Style.passGap)
+            .padding(.bottom, Style.passLabelBottomPadding)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The name of the round someone went back to, when that happened right
+    /// after this round.
+    private func wentBackTarget(after index: Int, in items: [SessionTimeline.Item]) -> String? {
+        let next = index + 1
+        guard items.indices.contains(next), items[next].outcome == .wentBack else { return nil }
+        return items[next].wentBackTo
+    }
+
+    private var legend: some View {
         let hasPauses = sessionTimeline.items.contains { !$0.pauses.isEmpty }
-        return hasPauses
-            ? "Each round is as tall as its share of the session. Darker stretches are pauses."
-            : "Each round is as tall as its share of the session."
-    }
-
-    @ViewBuilder
-    private func timelineRow(_ item: SessionTimeline.Item, height: CGFloat, isFirst: Bool, isLast: Bool) -> some View {
-        switch item.outcome {
-        case .sessionEnd:
-            finishRow(item)
-        case .wentBack:
-            eventRow(item)
-        default:
-            roundRow(item, height: height, isFirst: isFirst, isLast: isLast)
+        return HStack(alignment: .center, spacing: 8) {
+            TimelineSpineSegment(
+                color: Theme.ColorValue.textSecondary,
+                trueHeight: Style.legendSwatchHeight,
+                pauses: hasPauses ? [0.35...0.7] : [],
+                isDimmed: false,
+                roundsTop: true,
+                roundsBottom: true
+            )
+            .frame(width: Style.spineColumnWidth, height: Style.legendSwatchHeight)
+            Text(hasPauses ? "Height is time, pauses included. Darker is paused." : "Height is time.")
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
     }
 
-    private func roundRow(_ item: SessionTimeline.Item, height: CGFloat, isFirst: Bool, isLast: Bool) -> some View {
+    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, isFirst: Bool, wentBackTo: String?) -> some View {
         let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
         let dimmed = item.outcome.dimsRound
+        let pauses = sessionTimeline.pauseFractions(of: item)
+        let rowHeight = max(trueHeight, CGFloat(Style.minimumRowHeight) + (wentBackTo == nil ? 0 : Style.wentBackLineHeight))
         return VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if !item.emoji.isEmpty {
                     Text(item.emoji).accessibilityHidden(true)
                 }
                 Text(item.name)
                     .font(.body.weight(.medium))
                     .foregroundStyle(dimmed ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
-                Spacer(minLength: 8)
-                Text(TimerText.length(item.length ?? 0))
+                Text(TimerText.units(item.length ?? 0))
                     .font(.body.monospacedDigit())
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
             Text(detailLine(item))
                 .font(.caption)
-                .foregroundStyle(Theme.ColorValue.textTertiary)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
         }
-        .padding(.bottom, Style.rowBottomPadding)
-        .frame(maxWidth: .infinity, minHeight: height, alignment: .topLeading)
-        .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
+        .padding(.top, Style.rowTopPadding)
+        .padding(.leading, Style.labelInset)
+        .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .topLeading)
+        .overlay(alignment: .topLeading) {
+            pauseLabels(item, pauses: pauses, trueHeight: trueHeight)
+        }
+        .overlay(alignment: .bottomLeading) {
+            if let wentBackTo {
+                Text("Went back to \(wentBackTo)")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .padding(.leading, Style.labelInset)
+                    .padding(.bottom, Style.wentBackBottomPadding)
+            }
+        }
+        .background(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: Style.washCornerRadius, style: .continuous)
+                .fill(color.opacity(Style.washOpacity))
+                .frame(height: max(trueHeight, CGFloat(Style.minimumRowHeight)))
+        }
+        .padding(.leading, Style.spineColumnWidth)
         .background(alignment: .leading) {
-            TimelineSpineSegment(
-                color: color,
-                pauses: sessionTimeline.pauseFractions(of: item),
-                isDimmed: dimmed,
-                roundsTop: isFirst,
-                roundsBottom: isLast
-            )
+            ZStack(alignment: .bottom) {
+                TimelineSpineSegment(
+                    color: color,
+                    trueHeight: trueHeight,
+                    pauses: pauses,
+                    isDimmed: dimmed,
+                    roundsTop: true,
+                    roundsBottom: true
+                )
+                if wentBackTo != nil {
+                    TimelineEventMark(symbol: Style.wentBackSymbol)
+                        .padding(.bottom, Style.wentBackBottomPadding)
+                }
+            }
             .frame(width: Style.spineColumnWidth)
         }
         .accessibilityElement(children: .combine)
         .accessibilityValue(sessionTimeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
     }
 
-    /// A moment, not a stretch: the spine continues as a hairline past one glyph.
-    private func eventRow(_ item: SessionTimeline.Item) -> some View {
-        Text("\(item.name) · \(clockText(offset: item.startOffset))")
-            .font(.subheadline)
-            .foregroundStyle(Theme.ColorValue.textSecondary)
-            .padding(.vertical, Style.eventVerticalPadding)
+    /// "paused 45s" beside each darker band, never over the round's name.
+    private func pauseLabels(_ item: SessionTimeline.Item, pauses: [ClosedRange<Double>], trueHeight: CGFloat) -> some View {
+        let durations = item.pauses.map { $0.count }
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(pauses.enumerated()), id: \.offset) { index, pause in
+                let middle: CGFloat = trueHeight * CGFloat((pause.lowerBound + pause.upperBound) / 2)
+                Text("paused \(TimerText.units(durations[index]))")
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .offset(x: Style.labelInset, y: max(middle - Style.pauseLabelHalfHeight, Style.pauseLabelMinimumY))
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    /// The spine's end: the whole session as one disc of its rounds.
+    private func finishRow(_ item: SessionTimeline.Item) -> some View {
+        let endedEarly = sessionTimeline.items.contains { $0.outcome == .endedEarly }
+        return Text("\(endedEarly ? "Ended" : "Finished") · \(clockText(offset: item.startOffset))")
+            .font(.body.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textPrimary)
+            .frame(minHeight: Style.finishDiscSize)
+            .padding(.leading, Style.labelInset)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
-            .background(alignment: .leading) {
-                TimelineEventMark(symbol: Style.wentBackSymbol)
+            .padding(.leading, Style.spineColumnWidth)
+            .background(alignment: .topLeading) {
+                TimelineFinishDisc(segments: finishSegments)
+                    .frame(width: Style.finishDiscSize, height: Style.finishDiscSize)
                     .frame(width: Style.spineColumnWidth)
             }
             .accessibilityElement(children: .combine)
+            .padding(.top, Style.turnGap)
     }
 
-    /// The spine's end: the whole session as the pie it finished on.
-    private func finishRow(_ item: SessionTimeline.Item) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Finished")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-            Text("\(clockText(offset: item.startOffset)) · \(TimerText.words(sessionTimeline.span)) in all")
-                .font(.caption)
-                .foregroundStyle(Theme.ColorValue.textTertiary)
-        }
-        .padding(.top, Style.finishTopPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, Style.spineColumnWidth + Style.spineSpacing)
-        .background(alignment: .topLeading) {
-            SequencePie(segments: finishSegments)
-                .frame(width: Style.finishPieSize, height: Style.finishPieSize)
-                .padding(.top, Style.finishTopPadding)
-                .frame(width: Style.spineColumnWidth)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    /// "6:34 AM · Cut short · paused 0:45"
+    /// "6:34 AM · Cut short"
     private func detailLine(_ item: SessionTimeline.Item) -> String {
         var parts = [clockText(offset: item.startOffset)]
         if let note = item.outcomeNote { parts.append(note) }
-        if item.pauseCount > 0 {
-            let time = TimerText.length(item.pausedSeconds)
-            parts.append(item.pauseCount == 1 ? "paused \(time)" : "paused \(item.pauseCount)× · \(time)")
-        }
         return parts.joined(separator: " · ")
     }
 
@@ -261,7 +339,7 @@ struct SessionDetailView: View {
             showDeleteConfirmation = true
         } label: {
             Label("Delete session", systemImage: Theme.Symbol.delete)
-                .font(.body.weight(.medium))
+                .font(.subheadline)
         }
         .padding(.top, Style.deleteTopPadding)
         .accessibilityLabel(Theme.Label.delete)
@@ -310,12 +388,20 @@ struct SessionTimeline {
         /// Every pause pressed in this round, even a repeated one.
         var pauseCount = 0
 
+        /// For a "went back" moment, the round gone back to.
+        var wentBackTo: String? = nil
+
         var pausedSeconds: Int { pauses.reduce(0) { $0 + $1.count } }
     }
 
     let items: [Item]
     /// Seconds from the first event to the last: the timeline's full width.
     let span: Int
+    /// Item indices where a new pass through the sequence begins: the first
+    /// round's name comes up again (not as a "went back" redo). Empty when
+    /// the sequence ran once.
+    let passStarts: [Int]
+
     /// Palette slots for rounds saved without a colour, skipping saved ones.
     private let fallbackColorIndex: [String: Int]
 
@@ -328,6 +414,7 @@ struct SessionTimeline {
             items = []
             span = 0
             fallbackColorIndex = [:]
+            passStarts = []
             return
         }
         func offset(_ date: Date) -> Int { Int(max(date.timeIntervalSince(origin), 0)) }
@@ -373,7 +460,7 @@ struct SessionTimeline {
                 close(at: date, .skipped, note: "Skipped")
             case .doOver(let previous, let date):
                 close(at: date, .finished, note: "Cut short")
-                result.append(Item(name: "Went back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
+                result.append(Item(name: "Went back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil, wentBackTo: previous))
             case .restartTimer(_, let date):
                 close(at: date, .restarted, note: "Restarted")
             case .paused(let date):
@@ -405,6 +492,16 @@ struct SessionTimeline {
             fallback[item.name] = free[fallback.count % free.count]
         }
         fallbackColorIndex = fallback
+
+        var starts: [Int] = []
+        let roundIndices = result.indices.filter { result[$0].length != nil }
+        if let first = roundIndices.first {
+            for index in roundIndices.dropFirst()
+            where result[index].name == result[first].name && result[index - 1].outcome != .wentBack {
+                starts.append(index)
+            }
+        }
+        passStarts = starts
     }
 
     // MARK: Layout

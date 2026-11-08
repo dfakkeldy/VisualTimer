@@ -100,24 +100,40 @@ enum Theme {
     /// share of the session.
     enum HistoryTimeline {
         static let spineWidth: CGFloat = 12
-        static let spineColumnWidth: CGFloat = 28
-        static let spineSpacing: CGFloat = 14
+        static let spineColumnWidth: CGFloat = 32
         static let spineRadius: CGFloat = 6
         /// The ink seam between two rounds on the spine.
         static let seam: CGFloat = 1
-        /// Rounds get their share of this height, at least this much per round.
+        /// The break between two turns, and between two passes ("Round 2").
+        static let turnGap: CGFloat = 8
+        static let passGap: CGFloat = 26
+        static let passLabelBottomPadding: CGFloat = 8
+        static let washCornerRadius: CGFloat = 10
+        /// Space between the spine column and a round's label.
+        static let labelInset: CGFloat = 10
+        /// Rounds share this height, at least this much per round.
         static let heightPerRound: Double = 72
         static let minimumTotalHeight: Double = 480
-        static let minimumRowHeight: Double = 56
-        static let rowBottomPadding: CGFloat = 10
-        static let eventVerticalPadding: CGFloat = 10
+        /// Room a round's label needs; extra height beyond its colour is hairline.
+        static let minimumRowHeight: Double = 52
+        static let rowTopPadding: CGFloat = 2
+        static let pauseLabelHalfHeight: CGFloat = 8
+        /// Pause labels never sit higher than this, clear of the name and start line.
+        static let pauseLabelMinimumY: CGFloat = 46
+        static let wentBackLineHeight: CGFloat = 26
+        static let wentBackBottomPadding: CGFloat = 6
         static let eventLineWidth: CGFloat = 2
         static let eventGlyphSize: CGFloat = 22
-        static let finishPieSize: CGFloat = 28
-        static let finishTopPadding: CGFloat = 8
-        static let deleteTopPadding: CGFloat = 24
+        static let finishDiscSize: CGFloat = 32
+        static let legendSwatchHeight: CGFloat = 22
+        static let deleteTopPadding: CGFloat = 32
+        static let washOpacity = 0.06
         static let dimmedOpacity = 0.45
-        static let pauseShade = TimerStyle.ink.opacity(0.55)
+        static let pauseShade = TimerStyle.ink.opacity(0.4)
+        static let hatchLine = Color.white.opacity(0.22)
+        static let hatchLineWidth: CGFloat = 1
+        static let hatchSpacing: CGFloat = 5
+        static let revealDuration = 0.7
         static let eventLine = ColorValue.surfaceStroke
         static let wentBackSymbol = "arrow.uturn.backward"
     }
