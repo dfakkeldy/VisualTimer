@@ -121,10 +121,15 @@ enum Theme {
         static let pauseLabelMinimumY: CGFloat = 46
         static let eventLineWidth: CGFloat = 2
         static let eventGlyphSize: CGFloat = 22
-        static let finishDiscSize: CGFloat = 24
+        static let finishDiscSize: CGFloat = 20
         static let finishRingWidth: CGFloat = 1.5
         /// Extra room at the foot of a turn that ends in "went back".
-        static let wentBackLabelHeight: CGFloat = 20
+        static let wentBackLabelHeight: CGFloat = 26
+        /// Room under the went-back line, so it reads as the end of its own turn.
+        static let wentBackBottomSpace: CGFloat = 8
+        /// Turns at least this tall also show their end time at their foot.
+        static let endTimeMinHeight: CGFloat = 100
+        static let endTimeBottomSpace: CGFloat = 8
         static let legendSwatchHeight: CGFloat = 22
         static let deleteTopPadding: CGFloat = 32
         static let dimmedOpacity = 0.45
@@ -159,6 +164,9 @@ enum Theme {
         static let rowHeight: CGFloat = 30
         static let keyHeight: CGFloat = 16
         static let keySpacing: CGFloat = 10
+        /// The short colour mark that ties a Pie legend row to its arc.
+        static let legendMarkWidth: CGFloat = 4
+        static let sweepDuration = 0.6
         /// The faint full-length track behind each bar.
         static let track = ColorValue.surfaceStroke
 

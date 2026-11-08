@@ -74,17 +74,32 @@ private struct PauseHatch: View {
     }
 }
 
-/// The spine's end: one outlined ring with a check (or a stop for a session
-/// ended early). The session's colours already have their circle in Totals.
+/// The spine's end: a small outlined dial run down to zero, one hand at
+/// twelve (a stop square if the session was ended early). Neutral, so the
+/// session's colours keep their one circle in Totals, and not a checkbox.
 struct TimelineFinishMark: View {
     let endedEarly: Bool
 
+    private typealias Style = Theme.HistoryTimeline
+
     var body: some View {
-        ZStack {
-            Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: Theme.HistoryTimeline.finishRingWidth)
-            Image(systemName: endedEarly ? Theme.HistoryTimeline.endedSymbol : Theme.HistoryTimeline.finishedSymbol)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Theme.ColorValue.textSecondary)
+        GeometryReader { proxy in
+            let size: CGFloat = min(proxy.size.width, proxy.size.height)
+            let mark: CGFloat = size * 0.32
+            ZStack {
+                Circle().strokeBorder(Theme.ColorValue.textSecondary, lineWidth: Style.finishRingWidth)
+                if endedEarly {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Theme.ColorValue.textSecondary)
+                        .frame(width: mark, height: mark)
+                } else {
+                    Capsule()
+                        .fill(Theme.ColorValue.textSecondary)
+                        .frame(width: Style.finishRingWidth, height: mark)
+                        .offset(y: -mark / 2)
+                }
+            }
+            .frame(width: size, height: size)
         }
         .accessibilityHidden(true)
     }

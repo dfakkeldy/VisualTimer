@@ -306,10 +306,23 @@ struct SessionDetailView: View {
         .overlay(alignment: .bottomLeading) {
             // The moment it happened: the foot of this turn, beside the spine.
             if let wentBackTo {
-                Label("back to \(wentBackTo)", systemImage: Style.wentBackSymbol)
+                HStack(spacing: 6) {
+                    Image(systemName: Style.wentBackSymbol)
+                        .foregroundStyle(color)
+                    Text("went back to \(wentBackTo)")
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                }
+                .font(.caption)
+                .padding(.leading, Style.labelInset)
+                .padding(.bottom, Style.wentBackBottomSpace)
+                .accessibilityHidden(true)
+            } else if trueHeight >= Style.endTimeMinHeight, let length = item.length {
+                // A tall turn shows both its ends, so its height reads as time.
+                Text("until \(clockText(offset: item.startOffset + length))")
                     .font(.caption)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .foregroundStyle(Theme.ColorValue.textTertiary)
                     .padding(.leading, Style.labelInset)
+                    .padding(.bottom, Style.endTimeBottomSpace)
                     .accessibilityHidden(true)
             }
         }
@@ -348,7 +361,7 @@ struct SessionDetailView: View {
     /// The spine's end: one quiet mark, no louder than the turns before it.
     private func finishRow(_ item: SessionTimeline.Item) -> some View {
         let endedEarly = sessionTimeline.items.contains { $0.outcome == .endedEarly }
-        let rest = "\(clockText(offset: item.startOffset)) · \(TimerText.units(sessionTimeline.span))"
+        let rest = "\(clockText(offset: item.startOffset)) · \(TimerText.units(Int(record.session.totalElapsedSeconds)))"
         return (Text(endedEarly ? "Ended" : "Finished").foregroundStyle(Theme.ColorValue.textPrimary)
                 + Text(" · \(rest)").foregroundStyle(Theme.ColorValue.textSecondary))
             .font(.body)

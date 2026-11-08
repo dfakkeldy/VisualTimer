@@ -64,6 +64,10 @@ struct SessionTotalsPie: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
 
+    /// The ring sweeps once from twelve, as the dial does.
+    @State private var swept = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private typealias Style = Theme.HistoryTotals
 
     var body: some View {
@@ -92,11 +96,29 @@ struct SessionTotalsPie: View {
                     }
                 }
                 .frame(width: Style.pieSize, height: Style.pieSize)
+                .mask {
+                    Circle()
+                        .trim(from: 0, to: swept ? 1 : 0)
+                        .stroke(lineWidth: Style.ringWidth * 2)
+                        .rotationEffect(.degrees(Theme.Rotation.trimOriginOffset))
+                }
+                .onAppear {
+                    guard !swept else { return }
+                    if reduceMotion {
+                        swept = true
+                    } else {
+                        withAnimation(.easeOut(duration: Style.sweepDuration)) { swept = true }
+                    }
+                }
                 .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: Style.rowSpacing) {
                     ForEach(entries) { entry in
                         HStack(spacing: 8) {
+                            Capsule()
+                                .fill(entry.color)
+                                .frame(width: Style.legendMarkWidth, height: Style.barHeight)
+                                .accessibilityHidden(true)
                             Text(entry.label)
                                 .font(.subheadline)
                                 .foregroundStyle(Theme.ColorValue.textPrimary)
@@ -123,8 +145,10 @@ struct SessionTotalsPie: View {
 
 // MARK: - Bars
 
-/// One line per name, in the order they first ran, each bar on a faint
-/// full-width track scaled to the longest total, so length shows the ranking.
+/// The typical turn: one line per name, in the order they first ran, each
+/// bar its average turn on a faint track whose full width is the longest
+/// average. Pie answers "who took the most time"; this answers "whose turns
+/// run long".
 struct SessionTotalsBars: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
@@ -132,7 +156,7 @@ struct SessionTotalsBars: View {
     private typealias Style = Theme.HistoryTotals
 
     var body: some View {
-        let longest = max(entries.map { $0.seconds }.max() ?? 1, 1)
+        let longest = max(entries.map { $0.averageSeconds }.max() ?? 1, 1)
         VStack(alignment: .leading, spacing: Style.keySpacing) {
             VStack(alignment: .leading, spacing: Style.rowSpacing) {
                 ForEach(entries) { entry in
@@ -143,7 +167,7 @@ struct SessionTotalsBars: View {
                             .lineLimit(1)
                             .frame(width: Style.labelWidth, alignment: .leading)
                         GeometryReader { proxy in
-                            let width: CGFloat = proxy.size.width * CGFloat(entry.seconds) / CGFloat(longest)
+                            let width: CGFloat = proxy.size.width * CGFloat(entry.averageSeconds) / CGFloat(longest)
                             ZStack(alignment: .leading) {
                                 Capsule().fill(Style.track)
                                 Capsule()
@@ -154,17 +178,22 @@ struct SessionTotalsBars: View {
                             .frame(maxHeight: .infinity, alignment: .center)
                         }
                         .frame(height: Style.rowHeight)
-                        Text(TimerText.units(entry.seconds))
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                            .frame(width: Style.valueWidth, alignment: .trailing)
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text(TimerText.units(entry.averageSeconds))
+                                .font(.subheadline.monospacedDigit())
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                            Text(entry.turnCount == 1 ? "1 turn" : "\(entry.turnCount) turns")
+                                .font(.caption2)
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                        }
+                        .frame(width: Style.valueWidth, alignment: .trailing)
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(entry.label), \(entry.detail), \(entry.percent(of: totalSeconds)) percent")
+                    .accessibilityLabel("\(entry.label), average turn \(TimerText.units(entry.averageSeconds)), \(entry.turnCount == 1 ? "1 turn" : "\(entry.turnCount) turns")")
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            SessionTotalsKey(text: "Total time for each name.")
+            SessionTotalsKey(text: "Average turn for each name. Full width is the longest.")
         }
     }
 }
@@ -194,6 +223,9 @@ struct SessionTotalsTurns: View {
                         GeometryReader { proxy in
                             let gaps: CGFloat = Style.turnGap * CGFloat(max(entry.turns.count - 1, 0))
                             let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest)
+                            Capsule()
+                                .fill(Style.track)
+                                .frame(width: proxy.size.width, height: Style.barHeight)
                             HStack(alignment: .top, spacing: Style.turnGap) {
                                 ForEach(Array(entry.turns.enumerated()), id: \.offset) { _, turn in
                                     let width: CGFloat = max(scale * CGFloat(turn.seconds), Style.barMinWidth)
