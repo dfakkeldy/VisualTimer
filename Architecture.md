@@ -1,6 +1,8 @@
 # Turn Timer architecture
 
-Last audited: 2026-10-24
+Last audited: 2026-10-24. Session restore, template drafts, and iPhone
+completion alerts (PR #138, merged 2026-11-08) are reflected below; other
+sections were not re-audited.
 
 Turn Timer has SwiftUI apps for iOS 18+ and watchOS 11+, a WidgetKit extension,
 and a local-first React web app. The Xcode project uses Swift 5 language mode
@@ -36,16 +38,16 @@ portability boundary.
 
 | Layer | Main types | Responsibility |
 |---|---|---|
-| Timer | `TimerViewModel`, `TimerState`, `TimerVisualProgress` | Guarded countdown transitions, timestamp-derived remaining time and pie progress, sleep prevention |
+| Timer | `TimerViewModel`, `TimerState`, `TimerVisualProgress`, `QuickTimerStore`, `TimerAlertScheduler` | Guarded countdown transitions, timestamp-derived remaining time and pie progress, sleep prevention, quick-timer restore, opt-in iPhone completion alerts |
 | Sound | `TimerSound`, `SoundManager` | Audio session and synthesized WAV tones |
-| Sequence | `GameViewModel`, `GameSequence`, `Round` | Ordered rounds, repeats, skip, restart, do-over, turn progress |
-| Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Editing, built-ins, persistence, import/export, legacy reads |
-| History | `HistoryViewModel`, `GameRecord`, `SessionEvent` | Local session storage, review, export |
+| Sequence | `GameViewModel`, `GameSequence`, `Round`, `ActiveSessionStore` | Ordered rounds, repeats, skip, restart, do-over, turn progress, in-progress session restore |
+| Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Editing, built-ins, persistence, import/export, legacy reads, unsaved editor draft |
+| History | `HistoryViewModel`, `GameRecord`, `SessionEvent` | Local session storage, review, export; `GameRecord.roundColors` is optional |
 | iCloud | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, record mappers, `UbiquitousSettingsStore` | Pro private-database sync and sound preferences |
 | Pro | `ProAccessViewModel`, `ProFeature`, access policies | Verified StoreKit entitlement, purchase/restore, feature gates |
 | Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, timelines, template launch URLs |
 | Watch | `WatchTemplateConnectivity`, `WatchTemplateStore`, `WatchTimerAlertCoordinator` | Paired-template delivery, local snapshots, completion alerts |
-| Presentation | `MainTabView`, playback/editor/history views, leaf controls | Declarative UI, observation, action callbacks |
+| Presentation | `MainTabView`, `GamePlaybackView`, `GameEditorView`, `TimerComponents`, `TimerVisualView`, leaf controls | Declarative UI, shared glass controls and time captions, observation, action callbacks |
 | Theme | `Theme` | Shared labels, symbols, colors, spacing, animation values |
 
 View models and storage/parser helpers own business logic. Leaf views receive
@@ -55,7 +57,12 @@ rules out of leaf SwiftUI views. Feature containers may observe their owners.
 Countdowns reconcile from elapsed dates on pause and activation. A sequence
 starts its next round on return rather than catching up through several missed
 rounds. The separate session elapsed counter has different behavior; do not
-infer background-alarm delivery from countdown reconciliation.
+infer background-alarm delivery from countdown reconciliation. iPhone can
+schedule one opt-in local notification for the running countdown's finish date
+(`TimerAlertScheduler`); that is not a guaranteed background alarm.
+
+The unused `ContentView` entry point is gone; `Visual_TimerApp` hosts
+`MainTabView`. `TimerVisualView` remains the iPhone dial.
 
 ## Documents and sync
 
@@ -63,6 +70,20 @@ Apple templates are JSON at
 `Documents/Templates/<templateID>.turntimer`. Legacy `.vtgame` files still load.
 Imports assign a new local identity and conflict-safe title instead of
 replacing an existing document. The web codec uses the same portable shape.
+
+In-progress iPhone state uses small Codable JSON files in Application Support
+(tests may inject another directory):
+
+| File | Owner | Restored when |
+|---|---|---|
+| `ActiveSession.json` | `ActiveSessionStore` / `GameViewModel` | A playing session after an app close. Snapshots older than four hours come back paused at the saved round. Malformed files are discarded. |
+| `QuickTimer.json` | `QuickTimerStore` | A running or paused quick timer. Snapshots older than four hours, or malformed files, are discarded. |
+| `TemplateDraft.json` | `GameEditorViewModel` | Unsaved template edits. Malformed drafts are discarded. |
+
+These files stay on the device. They are not CloudKit records and are not
+widget snapshots. Watch playback still lives in `WatchAppModel` memory: leaving
+a Watch screen does not stop a countdown, but terminating the Watch app does
+not restore it.
 
 The private CloudKit container is `iCloud.Dan.Visual-Timer`:
 
