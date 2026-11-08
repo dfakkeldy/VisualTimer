@@ -36,7 +36,7 @@ final class Visual_TimerUITests: XCTestCase {
     @MainActor
     func testPolishedTimerPauseAndReset() {
         let app = XCUIApplication()
-        app.launchArguments += ["-savedTimerDuration", "25"]
+        app.launchArguments += ["-savedTimerDuration", "25", "-resetPersistedState", "YES"]
         app.launch()
 
         XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
@@ -69,7 +69,7 @@ final class Visual_TimerUITests: XCTestCase {
     @MainActor
     func testPolishedTimerReplenishesAfterCompletion() {
         let app = XCUIApplication()
-        app.launchArguments += ["-savedTimerDuration", "5"]
+        app.launchArguments += ["-savedTimerDuration", "5", "-resetPersistedState", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["Play"].waitForExistence(timeout: 5))
         app.buttons["Play"].tap()

@@ -45,7 +45,7 @@ struct QuickTimerStore {
     /// worth restoring.
     @discardableResult
     func restore(into timer: TimerViewModel, now: Date = Date()) -> Bool {
-        guard let data = try? Data(contentsOf: url) else { return false }
+        guard timer.state == .notStarted, let data = try? Data(contentsOf: url) else { return false }
         guard let snapshot = try? JSONDecoder().decode(Snapshot.self, from: data),
               now.timeIntervalSince(snapshot.savedAt) < Self.staleAge else {
             clear()

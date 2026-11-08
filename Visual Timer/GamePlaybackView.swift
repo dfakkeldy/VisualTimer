@@ -20,6 +20,7 @@ struct GamePlaybackView: View {
 
     @State private var showSettings = false
     @State private var confirmEnd = false
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
     @State private var dialSize: CGSize = .zero
     /// While someone drags the rim: the set time as a fraction of an hour.
     @State private var rimDragFraction: Double?
@@ -66,6 +67,10 @@ struct GamePlaybackView: View {
         }
         .onChange(of: timerViewModel.visualProgress) { _, progress in
             scheduleEndAlert(progress)
+        }
+        .onChange(of: alertsEnabled) { _, _ in
+            // Switching alerts on or off takes effect for the running countdown now.
+            scheduleEndAlert(timerViewModel.visualProgress)
         }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
@@ -306,7 +311,9 @@ struct GamePlaybackView: View {
             }
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { dialSize = $0 }
-        .simultaneousGesture(rimDrag, isEnabled: showsDurationControls)
+        // High priority: a drag that sets the time never also counts as the
+        // tap that starts it. Taps (under 12 pt of movement) still reach the button.
+        .highPriorityGesture(rimDrag, isEnabled: showsDurationControls)
         .sensoryFeedback(.selection, trigger: timerViewModel.totalDuration)
         .disabled(!isTimerCircleEnabled)
         .accessibilityLabel(timerCircleAccessibilityLabel)

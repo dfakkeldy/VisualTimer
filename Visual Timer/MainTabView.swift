@@ -21,7 +21,7 @@ struct MainTabView: View {
 
     init() {
 #if DEBUG
-        let documentsDirectory = DesignCouncilFixture.current?.documentsDirectory
+        let documentsDirectory = DesignCouncilFixture.current?.documentsDirectory ?? Self.uiTestStateDirectory
         _selectedTab = State(initialValue: DesignCouncilFixture.current?.initialTab ?? 0)
 #else
         let documentsDirectory: URL? = nil
@@ -59,6 +59,19 @@ struct MainTabView: View {
         _historySync = StateObject(wrappedValue: historySyncEngine)
         _ubiquitousSettingsStore = StateObject(wrappedValue: settingsStore)
     }
+
+#if DEBUG
+    /// `-resetPersistedState YES` (UI tests): a fresh folder for saved
+    /// sessions, quick timers, drafts, templates and history, so no state from
+    /// an earlier run is restored.
+    private static let uiTestStateDirectory: URL? = {
+        guard UserDefaults.standard.bool(forKey: "resetPersistedState") else { return nil }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("UITestState", isDirectory: true)
+        try? FileManager.default.removeItem(at: directory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }()
+#endif
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -116,7 +129,7 @@ struct MainTabView: View {
             gameEditorViewModel.refreshSavedTemplates()
             if gameViewModel.restoreSavedSession() {
                 selectedTab = 0
-            } else {
+            } else if !gameViewModel.hasActiveGame {
                 quickTimerStore.restore(into: timerViewModel)
             }
 #if DEBUG

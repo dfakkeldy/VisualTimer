@@ -230,6 +230,14 @@ final class GameViewModel: ObservableObject {
         totalRoundCount += 1
         currentRoundIndex = 0
         gamePhase = .playing
+        // The extra pass is its own session: it is saved, restorable and
+        // recorded in History like the first.
+        let start = Date()
+        gameStartDate = start
+        lastRecordSaved = false
+        sessionEvents = [.gameStarted(timestamp: start)]
+        gameElapsedTime = 0
+        startElapsedTimer()
         configureTimerForCurrentRound(autoStart: true)
     }
 

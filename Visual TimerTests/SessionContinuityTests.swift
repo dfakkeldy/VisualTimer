@@ -160,6 +160,24 @@ final class SessionContinuityTests: XCTestCase {
         XCTAssertEqual(items[1].note, "Skipped")
     }
 
+    func testGoAgainIsRecordedAsItsOwnSession() throws {
+        let directory = try temporaryDirectory()
+        let history = HistoryStore(documentsDirectory: directory)
+        let game = GameViewModel(timerViewModel: TimerViewModel(), historyStore: history)
+        game.loadGame(routine())
+        game.startGame()
+        for _ in 0..<3 { game.handleTimerFinished() }
+        XCTAssertEqual(game.gamePhase, .gameOver)
+        XCTAssertTrue(game.lastRecordSaved)
+        XCTAssertEqual(history.loadAll().count, 1)
+
+        game.addRoundDuringGameOver()
+        XCTAssertFalse(game.lastRecordSaved, "The extra pass isn't saved yet")
+        for _ in 0..<3 { game.handleTimerFinished() }
+        XCTAssertTrue(game.lastRecordSaved)
+        XCTAssertEqual(history.loadAll().count, 2)
+    }
+
     func testTimerTextReadsPlainly() {
         XCTAssertEqual(TimerText.clock(300), "05:00")
         XCTAssertEqual(TimerText.length(541), "9:01")

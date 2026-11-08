@@ -23,6 +23,9 @@ final class WatchAppModel: ObservableObject {
     @Published private(set) var savedTemplates: [WatchTemplate] = []
     @Published private(set) var notificationPermission: WatchNotificationPermission = .notDetermined
     @Published private(set) var quickTimerState: TimerState = .notStarted
+    /// Republished from the quick timer so the home row's time stays live.
+    @Published private(set) var quickTimerRemaining: Int = 0
+    @Published private(set) var quickTimerDuration: Int = 0
     @Published private(set) var activeSession: WatchActiveSession?
 
     private static let quickNotificationPrefix = "turntimer.watch.quick"
@@ -76,6 +79,12 @@ final class WatchAppModel: ObservableObject {
         quickTimer.$state
             .removeDuplicates()
             .assign(to: &$quickTimerState)
+        quickTimer.$timeRemaining
+            .removeDuplicates()
+            .assign(to: &$quickTimerRemaining)
+        quickTimer.$totalDuration
+            .removeDuplicates()
+            .assign(to: &$quickTimerDuration)
         game.$gamePhase
             .combineLatest(game.$gameSequence)
             .map { phase, sequence -> WatchActiveSession? in

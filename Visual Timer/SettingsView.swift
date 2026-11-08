@@ -161,6 +161,13 @@ struct SettingsView: View {
             }
         }
         .presentationBackground(Theme.ColorValue.appBackground)
+        .task {
+            // Show what iOS allows now, as the Templates control does.
+            if let authorized = await TimerAlertScheduler.isAuthorized(), !authorized, alertsEnabled {
+                alertsEnabled = false
+                alertsDenied = true
+            }
+        }
     }
 
     private func header(_ title: String) -> some View {

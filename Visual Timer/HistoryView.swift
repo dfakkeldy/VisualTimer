@@ -150,7 +150,7 @@ struct HistoryView: View {
                 title = "Today"
             } else if calendar.isDateInYesterday(record.playedAt) {
                 title = "Yesterday"
-            } else if let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: record.playedAt), to: calendar.startOfDay(for: Date())).day, days < 7 {
+            } else if let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: record.playedAt), to: calendar.startOfDay(for: Date())).day, days >= 0, days < 7 {
                 title = "This week"
             } else {
                 title = "Earlier"

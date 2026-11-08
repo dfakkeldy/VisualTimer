@@ -204,12 +204,12 @@ struct WatchRootView: View {
 
     /// Live state on the row, so a return from the wrist shows where things are.
     private var quickTimerStatus: String? {
-        let left = WatchTimeText.clock(model.quickTimer.timer.timeRemaining)
+        let left = WatchTimeText.clock(model.quickTimerRemaining)
         switch model.quickTimerState {
         case .running: return "\(left) left"
         case .paused: return "\(Theme.Watch.Label.paused) · \(left)"
         case .notStarted, .finished:
-            let seconds = model.quickTimer.timer.totalDuration
+            let seconds = model.quickTimerDuration
             return seconds < 60 ? "\(seconds) sec" : "\(Int((Double(seconds) / 60).rounded())) min"
         }
     }
