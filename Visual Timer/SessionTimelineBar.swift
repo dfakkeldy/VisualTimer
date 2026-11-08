@@ -45,7 +45,7 @@ struct SessionTimelineBar: View {
             .frame(width: width, height: Style.barHeight, alignment: .topLeading)
             .contentShape(Rectangle())
             .onTapGesture(coordinateSpace: .local) { location in
-                onSelect(segmentID(at: location.x / max(width, 1)))
+                onSelect(segmentID(atX: location.x, totalWidth: width))
             }
         }
         .frame(height: Style.barHeight)
@@ -61,9 +61,7 @@ struct SessionTimelineBar: View {
     }
 
     private func segmentView(_ segment: Segment, totalWidth: CGFloat) -> some View {
-        let x = totalWidth * segment.start
-        let gap = segment.id == segments.last?.id ? 0 : Style.segmentGap
-        let width = max(totalWidth * segment.width - gap, Style.segmentMinWidth)
+        let (x, width) = drawnSpan(segment, totalWidth: totalWidth)
         let isSelected = selectedID == segment.id
         let isDimmed = selectedID != nil && !isSelected
         let shape = RoundedRectangle(cornerRadius: Style.segmentCornerRadius, style: .continuous)
@@ -97,17 +95,36 @@ struct SessionTimelineBar: View {
             .offset(x: x)
     }
 
-    /// The round under a tap, or the nearest one so thin rounds stay reachable.
-    /// Tapping the selected round again clears the selection.
-    private func segmentID(at position: Double) -> Int? {
-        let hit = segments.first { position >= $0.start && position <= $0.start + $0.width }
-            ?? segments.min { distance(position, $0) < distance(position, $1) }
+    /// Where a segment is drawn, in points: never thinner than the minimum,
+    /// never past the bar's end.
+    private func drawnSpan(_ segment: Segment, totalWidth: CGFloat) -> (x: CGFloat, width: CGFloat) {
+        let gap = segment.id == segments.last?.id ? 0 : Style.segmentGap
+        let x = min(totalWidth * segment.start, max(totalWidth - Style.segmentMinWidth, 0))
+        let width = max(totalWidth * segment.width - gap, Style.segmentMinWidth)
+        return (x, min(width, totalWidth - x))
+    }
+
+    /// The round under a tap. Each round answers across at least a finger's
+    /// width, the narrowest wins, so thin rounds stay reachable. Tapping the
+    /// selected round again clears the selection.
+    private func segmentID(atX tapX: CGFloat, totalWidth: CGFloat) -> Int? {
+        func reach(_ segment: Segment) -> (lower: CGFloat, upper: CGFloat, width: CGFloat) {
+            let (x, width) = drawnSpan(segment, totalWidth: totalWidth)
+            let pad = max(Style.minimumHitWidth - width, 0) / 2
+            return (x - pad, x + width + pad, width)
+        }
+        let hit = segments
+            .map { ($0, reach($0)) }
+            .filter { tapX >= $0.1.lower && tapX <= $0.1.upper }
+            .min { $0.1.width < $1.1.width }?.0
+            ?? segments.min { abs(tapX - center($0, totalWidth)) < abs(tapX - center($1, totalWidth)) }
         guard let hit else { return nil }
         return hit.id == selectedID ? nil : hit.id
     }
 
-    private func distance(_ position: Double, _ segment: Segment) -> Double {
-        abs(position - (segment.start + segment.width / 2))
+    private func center(_ segment: Segment, _ totalWidth: CGFloat) -> CGFloat {
+        let (x, width) = drawnSpan(segment, totalWidth: totalWidth)
+        return x + width / 2
     }
 
     private func step(_ delta: Int) {

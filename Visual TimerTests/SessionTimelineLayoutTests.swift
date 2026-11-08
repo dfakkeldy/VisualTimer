@@ -84,9 +84,33 @@ final class SessionTimelineLayoutTests: XCTestCase {
                        RoundColor.palette(index: 2).swiftUIColor)
     }
 
+    func testFallbackColoursSkipSavedOnes() {
+        let events: [SessionEvent] = [
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(10)),
+            .gameEnded(timestamp: at(20)),
+        ]
+        let partly = record(events, colors: ["Maya": .palette(index: 0)])
+        let timeline = SessionTimeline(record: partly)
+        XCTAssertNotEqual(timeline.color(for: timeline.items[0], in: partly),
+                          timeline.color(for: timeline.items[1], in: partly))
+    }
+
     func testEmptySessionHasNoTimeline() {
         let timeline = SessionTimeline(record: record([]))
         XCTAssertTrue(timeline.items.isEmpty)
         XCTAssertEqual(timeline.span, 0)
+        XCTAssertFalse(timeline.hasRounds)
+    }
+
+    func testSessionWithNoTimeHasNothingToDivide() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .gameEnded(timestamp: at(0)),
+        ]))
+        XCTAssertFalse(timeline.hasRounds)
+        XCTAssertNil(timeline.placement(of: timeline.items[0]))
     }
 }

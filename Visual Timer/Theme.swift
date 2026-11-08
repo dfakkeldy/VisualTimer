@@ -103,6 +103,8 @@ enum Theme {
         static let segmentGap: CGFloat = 2
         static let segmentCornerRadius: CGFloat = 6
         static let segmentMinWidth: CGFloat = 3
+        /// Each round answers taps across at least this width.
+        static let minimumHitWidth: CGFloat = 22
         /// Below this width a segment drops its emoji.
         static let emojiMinWidth: CGFloat = 26
         static let markerWidth: CGFloat = 2

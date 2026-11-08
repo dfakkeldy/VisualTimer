@@ -13,7 +13,11 @@ struct SessionDetailView: View {
         self.record = record
         self._history = ObservedObject(wrappedValue: history)
         self._proAccess = ObservedObject(wrappedValue: proAccess)
+        self.sessionTimeline = SessionTimeline(record: record)
     }
+
+    /// Folded once: the record never changes while this screen is open.
+    private let sessionTimeline: SessionTimeline
 
     @State private var showDeleteConfirmation = false
     @State private var showExporter = false
@@ -25,7 +29,9 @@ struct SessionDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 summary
-                overview
+                if sessionTimeline.hasRounds {
+                    overview
+                }
                 timeline
                 deleteButton
             }
@@ -110,8 +116,6 @@ struct SessionDetailView: View {
     }
 
     // MARK: - Timeline
-
-    private var sessionTimeline: SessionTimeline { SessionTimeline(record: record) }
 
     /// The whole session left to right, each round as wide as its share.
     private var overview: some View {
@@ -270,6 +274,8 @@ struct SessionDetailView: View {
                 .animation(.easeOut(duration: Theme.HistoryTimeline.selectionAnimation), value: selectedIndex)
                 .accessibilityElement(children: .combine)
                 .accessibilityValue(timeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
+                .accessibilityAddTraits(placement != nil ? .isButton : [])
+                .accessibilityAddTraits(selectedIndex == index ? .isSelected : [])
             }
         }
     }
@@ -333,21 +339,24 @@ struct SessionTimeline {
     let items: [Item]
     /// Seconds from the first event to the last: the timeline's full width.
     let span: Int
-    /// Distinct round names in the order they first ran, for fallback colours.
-    private let roundOrder: [String]
+    /// Palette slots for rounds saved without a colour, skipping saved ones.
+    private let fallbackColorIndex: [String: Int]
+
+    /// True when there is at least one round with a length to draw.
+    var hasRounds: Bool { span > 0 && items.contains { $0.length != nil } }
 
     init(record: GameRecord) {
         let events = record.session.events
         guard let origin = events.first?.timestamp else {
             items = []
             span = 0
-            roundOrder = []
+            fallbackColorIndex = [:]
             return
         }
         func offset(_ date: Date) -> Int { Int(max(date.timeIntervalSince(origin), 0)) }
 
         var result: [Item] = []
-        var open: (name: String, emoji: String, start: Date, pauses: [Range<Int>], pausedAt: Date?)?
+        var open: (name: String, emoji: String, start: Date, pauses: [Range<Int>], pausedAt: Date?, pauseCount: Int)?
 
         func endPause(at date: Date) {
             guard let pausedAt = open?.pausedAt else { return }
@@ -361,7 +370,7 @@ struct SessionTimeline {
             guard let round = open else { return }
             var parts: [String] = []
             if let note { parts.append(note) }
-            if !round.pauses.isEmpty { parts.append(round.pauses.count == 1 ? "1 pause" : "\(round.pauses.count) pauses") }
+            if round.pauseCount > 0 { parts.append(round.pauseCount == 1 ? "1 pause" : "\(round.pauseCount) pauses") }
             result.append(Item(
                 name: round.name,
                 emoji: round.emoji,
@@ -378,7 +387,7 @@ struct SessionTimeline {
             switch event {
             case .roundStarted(let name, let emoji, let date):
                 close(at: date, .finished)
-                open = (name, emoji, date, [], nil)
+                open = (name, emoji, date, [], nil, 0)
             case .roundFinished(_, let date):
                 close(at: date, .finished)
             case .skipped(_, let date):
@@ -389,6 +398,7 @@ struct SessionTimeline {
             case .restartTimer(_, let date):
                 close(at: date, .restarted, note: "Restarted")
             case .paused(let date):
+                open?.pauseCount += 1
                 if open != nil, open?.pausedAt == nil { open?.pausedAt = date }
             case .resumed(let date):
                 endPause(at: date)
@@ -402,11 +412,20 @@ struct SessionTimeline {
         items = result
         let lastEnd = result.map { $0.startOffset + ($0.length ?? 0) }.max() ?? 0
         span = max(offset(events.last?.timestamp ?? origin), lastEnd)
-        var order: [String] = []
-        for item in result where item.length != nil && !order.contains(item.name) {
-            order.append(item.name)
+        let paletteCount = Theme.ColorValue.timerPalette.count
+        let taken = Set((record.roundColors ?? [:]).values.compactMap { color -> Int? in
+            if case .palette(let index) = color { return (0..<paletteCount).contains(index) ? index : 0 }
+            return nil
+        })
+        var free = (0..<paletteCount).filter { !taken.contains($0) }
+        if free.isEmpty { free = Array(0..<paletteCount) }
+        var fallback: [String: Int] = [:]
+        for item in result where item.length != nil
+            && record.color(forRound: item.name) == nil
+            && fallback[item.name] == nil {
+            fallback[item.name] = free[fallback.count % free.count]
         }
-        roundOrder = order
+        fallbackColorIndex = fallback
     }
 
     // MARK: Layout
@@ -417,10 +436,10 @@ struct SessionTimeline {
         let width: Double
     }
 
-    /// Nil for events (went back, finished), which have no length.
+    /// Nil for events (went back, finished), which have no length, and for
+    /// sessions with no measurable time to divide.
     func placement(of item: Item) -> Placement? {
-        guard let length = item.length else { return nil }
-        guard span > 0 else { return Placement(start: 0, width: 1) }
+        guard let length = item.length, span > 0 else { return nil }
         let total = Double(span)
         let start = min(Double(item.startOffset) / total, 1)
         return Placement(start: start, width: min(Double(length) / total, 1 - start))
@@ -442,8 +461,7 @@ struct SessionTimeline {
     func color(for item: Item, in record: GameRecord) -> Color? {
         guard item.length != nil else { return nil }
         if let color = record.color(forRound: item.name) { return color }
-        guard let index = roundOrder.firstIndex(of: item.name) else { return nil }
-        let palette = Theme.ColorValue.timerPalette
-        return palette[index % palette.count]
+        guard let index = fallbackColorIndex[item.name] else { return nil }
+        return Theme.ColorValue.timerPalette[index]
     }
 }
