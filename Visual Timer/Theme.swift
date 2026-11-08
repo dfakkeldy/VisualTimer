@@ -94,6 +94,30 @@ enum Theme {
         static let timerTickDuration: Double = 1.0
     }
 
+    // MARK: - History timeline
+
+    /// The past session drawn as one horizontal bar, each round as wide as
+    /// its share of the session.
+    enum HistoryTimeline {
+        static let barHeight: CGFloat = 40
+        static let segmentGap: CGFloat = 2
+        static let segmentCornerRadius: CGFloat = 6
+        static let segmentMinWidth: CGFloat = 3
+        /// Below this width a segment drops its emoji.
+        static let emojiMinWidth: CGFloat = 26
+        static let markerWidth: CGFloat = 2
+        static let markerOverhang: CGFloat = 5
+        static let rowTrackHeight: CGFloat = 3
+        static let rowCornerRadius: CGFloat = 10
+        static let exceptionOpacity = 0.45
+        static let dimmedOpacity = 0.35
+        static let selectionStroke: CGFloat = 2
+        static let pauseShade = TimerStyle.ink.opacity(0.55)
+        static let marker = ColorValue.textPrimary
+        static let selectionHighlight = Color.white.opacity(0.06)
+        static let selectionAnimation = 0.18
+    }
+
     // MARK: - Timer Mechanics
 
     enum TimerMechanic {
