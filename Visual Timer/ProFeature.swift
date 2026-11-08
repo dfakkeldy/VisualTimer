@@ -48,6 +48,18 @@ enum ProFeature: Identifiable, Equatable {
         ("square.grid.2x2", "Home Screen and Lock Screen widgets"),
     ]
 
+    /// The benefit that opened the sheet comes first.
+    var orderedBenefits: [(symbol: String, text: String)] {
+        let leadIndex: Int
+        switch self {
+        case .unlimitedTemplates: leadIndex = 0
+        case .historyExport, .fullHistory: leadIndex = 1
+        }
+        var list = Self.benefits
+        let lead = list.remove(at: leadIndex)
+        return [lead] + list
+    }
+
     static var benefitsSentence: String {
         "Pro adds unlimited saved templates, full history and export, iCloud sync, template sharing, and Home Screen and Lock Screen widgets. One-time purchase."
     }

@@ -44,7 +44,7 @@ struct PlayerRowView: View {
             Button(action: onToggleActive) {
                 Image(systemName: round.isActive ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(round.isActive ? round.color.swiftUIColor : Theme.ColorValue.textTertiary)
+                    .foregroundStyle(round.isActive ? Theme.ColorValue.textPrimary : Theme.ColorValue.textTertiary)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)

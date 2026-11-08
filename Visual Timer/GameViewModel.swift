@@ -28,6 +28,9 @@ final class GameViewModel: ObservableObject {
     @Published var totalRoundCount: Int = 1
     @Published var sessionEvents: [SessionEvent] = []
     @Published var gameElapsedTime: TimeInterval = 0
+    /// Shown once after a session is restored, until the next action:
+    /// where the person stopped, in plain words.
+    @Published var resumeNote: String?
 
     /// The timer view model that does the actual countdown.
     let timerViewModel: TimerViewModel
@@ -305,6 +308,7 @@ final class GameViewModel: ObservableObject {
 
     /// Saves the playing session so it survives the app being closed.
     func saveSession() {
+        resumeNote = nil
         guard let sessionStore, gamePhase == .playing, let game = gameSequence,
               let gameStartDate else { return }
         sessionStore.save(ActiveSessionSnapshot(
@@ -316,15 +320,20 @@ final class GameViewModel: ObservableObject {
             gameStartDate: gameStartDate,
             timerTotalDuration: timerViewModel.totalDuration,
             timerProgress: timerViewModel.visualProgress,
-            timerState: ActiveSessionSnapshot.TimerStateValue(timerViewModel.state)
+            timerState: ActiveSessionSnapshot.TimerStateValue(timerViewModel.state),
+            savedAt: Date()
         ))
     }
 
     /// Restores a session saved before the app was closed. Allowed only from
     /// `.idle`, so it never replaces a session in progress. A round that ran
     /// out while the app was closed finishes on the timer's next tick.
+    /// A session saved longer ago than this comes back paused where it was
+    /// saved, instead of replaying hours of overdue rounds.
+    static let staleSessionAge: TimeInterval = 4 * 60 * 60
+
     @discardableResult
-    func restoreSavedSession() -> Bool {
+    func restoreSavedSession(now: Date = Date()) -> Bool {
         guard gamePhase == .idle, let snapshot = sessionStore?.load() else { return false }
         let rounds = snapshot.game.activeRounds
         guard rounds.indices.contains(snapshot.currentRoundIndex) else {
@@ -340,15 +349,26 @@ final class GameViewModel: ObservableObject {
         gameStartDate = snapshot.gameStartDate
         currentRound = round
         gamePhase = .playing
+        let savedAt = snapshot.savedAt ?? snapshot.gameStartDate
+        let isStale = now.timeIntervalSince(savedAt) > Self.staleSessionAge
+        var progress = snapshot.timerProgress
+        var state = snapshot.timerState.timerState
+        if isStale && state == .running {
+            progress = progress.paused(at: savedAt)
+            state = .paused
+            sessionEvents.append(.paused(timestamp: savedAt))
+        }
         timerViewModel.restore(
             totalDuration: snapshot.timerTotalDuration,
-            progress: snapshot.timerProgress,
-            state: snapshot.timerState.timerState,
+            progress: progress,
+            state: state,
             color: round.color.swiftUIColor
         )
         if timerViewModel.state == .running {
             startElapsedTimer()
         }
+        let place = "\(round.name), \(roundProgressText.lowercasedFirstWord)"
+        resumeNote = isStale ? "You stopped at \(place)" : "Picked up where you left off: \(place)"
         return true
     }
 
@@ -406,7 +426,8 @@ final class GameViewModel: ObservableObject {
             gameTitle: game.title,
             session: session,
             playerNames: activeRounds.map(\.name),
-            playedAt: gameStartDate ?? Date()
+            playedAt: gameStartDate ?? Date(),
+            roundColors: Dictionary(activeRounds.map { ($0.name, $0.color) }, uniquingKeysWith: { first, _ in first })
         )
         historyStore.save(record)
         onHistoryRecordSaved?(record)
@@ -447,6 +468,15 @@ struct ActiveSessionSnapshot: Codable {
     var timerTotalDuration: Int
     var timerProgress: TimerVisualProgress
     var timerState: TimerStateValue
+    /// When the snapshot was written; nil in snapshots from before this field.
+    var savedAt: Date?
+}
+
+private extension String {
+    /// "Step 4 of 8" → "step 4 of 8", for use mid-sentence.
+    var lowercasedFirstWord: String {
+        prefix(1).lowercased() + dropFirst()
+    }
 }
 
 /// Stores at most one active session as a small JSON file. Malformed data is

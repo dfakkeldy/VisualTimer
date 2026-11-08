@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Game Session
 
@@ -80,6 +81,13 @@ struct GameRecord: Identifiable, Codable, Equatable {
     /// Snapshot of active player names at game start (ordered).
     var playerNames: [String]
     var playedAt: Date
+    /// Each round's colour by name, so History can show the session in its
+    /// colours. Optional: records saved before this field read as nil.
+    var roundColors: [String: RoundColor]? = nil
+
+    func color(forRound name: String) -> Color? {
+        roundColors?[name]?.swiftUIColor
+    }
 }
 
 // MARK: - History Store

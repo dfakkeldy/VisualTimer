@@ -18,6 +18,7 @@ struct WatchGamePlaybackView: View {
     let onEnd: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmEnd = false
 
     var body: some View {
         ScrollView {
@@ -30,6 +31,15 @@ struct WatchGamePlaybackView: View {
             }
         }
         .navigationTitle(gameViewModel.gameSequence?.title ?? "")
+        .confirmationDialog("End this session?", isPresented: $confirmEnd, titleVisibility: .visible) {
+            Button("End and save", role: .destructive) {
+                onEnd()
+                dismiss()
+            }
+            Button("Keep going", role: .cancel) {}
+        } message: {
+            Text("What you've done so far is saved to History.")
+        }
     }
 
     // MARK: - Playing
@@ -108,8 +118,7 @@ struct WatchGamePlaybackView: View {
             accessibilityID: Theme.Watch.Identifier.sessionEnd,
             isProminent: false
         ) {
-            onEnd()
-            dismiss()
+            confirmEnd = true
         }
     }
 
@@ -130,10 +139,13 @@ struct WatchGamePlaybackView: View {
         VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
             Image(systemName: Theme.Watch.Symbol.sessionComplete)
                 .font(.title)
-                .foregroundStyle(Theme.Watch.ColorValue.sessionComplete)
+                .foregroundStyle(gameViewModel.activeRounds.last?.color.swiftUIColor ?? Theme.Watch.ColorValue.sessionComplete)
                 .accessibilityHidden(true)
             Text(Theme.Watch.Label.sessionComplete)
                 .font(.headline)
+            Text("Total \(WatchTimeText.clock(Int(gameViewModel.sessionDurationSeconds))) · saved")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             WatchControlButton(
                 title: Theme.Watch.Label.done,
                 systemImage: Theme.Symbol.checkmark,

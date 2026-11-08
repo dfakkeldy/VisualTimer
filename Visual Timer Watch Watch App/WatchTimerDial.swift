@@ -19,9 +19,23 @@ struct WatchTimerDial<Content: View>: View {
                         .fill(Theme.Watch.ColorValue.ringTrack)
                     RemainingTimerWedge(elapsedFraction: progress.elapsedFraction(at: timeline.date))
                         .fill(color)
+                        .overlay {
+                            // The phone dial's light, at wrist scale.
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white.opacity(0.28), location: 0),
+                                    .init(color: .clear, location: 0.5),
+                                    .init(color: .black.opacity(0.2), location: 1),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .mask(RemainingTimerWedge(elapsedFraction: progress.elapsedFraction(at: timeline.date)))
+                        }
                     Circle()
                         .strokeBorder(.white.opacity(0.25), lineWidth: 1)
                 }
+                .shadow(color: color.opacity(0.35), radius: 8)
                 .frame(width: dialSize, height: dialSize)
                 .accessibilityHidden(true)
 

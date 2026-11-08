@@ -76,6 +76,14 @@ struct SessionDetailView: View {
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
 
+            let segments = SessionTimeline(record: record).items.enumerated().compactMap { index, item -> SequenceSegment? in
+                guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
+                return SequenceSegment(id: index, color: color, seconds: max(length, 1))
+            }
+            if !segments.isEmpty {
+                SequenceRibbon(segments: segments, height: 8)
+            }
+
             HStack(spacing: 8) {
                 stat(TimerText.words(Int(session.totalElapsedSeconds)), "total")
                 stat("\(session.roundCount)", session.roundCount == 1 ? "round" : "rounds")
@@ -119,15 +127,9 @@ struct SessionDetailView: View {
 
             ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                 HStack(alignment: .top, spacing: 12) {
-                    Text(TimerText.length(item.startOffset))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(Theme.ColorValue.textTertiary)
-                        .frame(width: 44, alignment: .trailing)
-                        .padding(.top, 3)
-
                     VStack(spacing: 0) {
                         Circle()
-                            .fill(item.outcome.isException ? item.outcome.color : Theme.ColorValue.textSecondary)
+                            .fill(record.color(forRound: item.name) ?? (item.outcome.isException ? item.outcome.color : Theme.ColorValue.textSecondary))
                             .frame(width: 9, height: 9)
                             .padding(.top, 6)
                         if index < items.count - 1 {
@@ -145,8 +147,8 @@ struct SessionDetailView: View {
                                 Text(item.emoji).accessibilityHidden(true)
                             }
                             Text(item.name)
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Theme.ColorValue.textPrimary)
+                                .font(item.length == nil ? .subheadline : .body.weight(.medium))
+                                .foregroundStyle(item.outcome == .wentBack ? item.outcome.color : (item.length == nil ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary))
                             Spacer(minLength: 8)
                             if let length = item.length {
                                 Text(TimerText.length(length))
@@ -252,7 +254,8 @@ struct SessionTimeline {
             case .skipped(_, let date):
                 close(at: date, .skipped, note: "Skipped")
             case .doOver(let previous, let date):
-                close(at: date, .wentBack, note: "Went back to \(previous)")
+                close(at: date, .finished, note: "Cut short")
+                result.append(Item(name: "Back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil))
             case .restartTimer(_, let date):
                 close(at: date, .restarted, note: "Restarted")
             case .paused:
@@ -261,7 +264,7 @@ struct SessionTimeline {
                 break
             case .gameEnded(let date):
                 close(at: date, .endedEarly, note: "Session ended here")
-                result.append(Item(name: "Finished", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
+                result.append(Item(name: "End", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
             }
         }
         items = result

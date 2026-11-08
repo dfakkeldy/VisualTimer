@@ -55,15 +55,18 @@ struct HistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Circle()
-                .strokeBorder(Theme.ColorValue.textTertiary, style: StrokeStyle(lineWidth: 2, dash: [6, 6]))
-                .frame(width: 88, height: 88)
+            SequencePie(segments: (StarterTemplateLibrary.template(id: "morning-routine")?.game.segments) ?? [])
+                .frame(width: 96, height: 96)
+                .opacity(0.3)
+                .overlay {
+                    Circle().strokeBorder(Theme.ColorValue.textTertiary, style: StrokeStyle(lineWidth: 1.5, dash: [5, 5]))
+                }
                 .accessibilityHidden(true)
             Text("Your finished sessions appear here")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Theme.ColorValue.textPrimary)
                 .multilineTextAlignment(.center)
-            Text("Run a template from start to finish, or end it early, and it's kept here. Quick timers aren't logged.")
+            Text("Finished and ended sessions are kept. Quick timers aren't.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
                 .multilineTextAlignment(.center)
@@ -73,6 +76,7 @@ struct HistoryView: View {
             .padding(.top, 6)
         }
         .padding(.horizontal, 40)
+        .padding(.bottom, 60)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -111,8 +115,14 @@ struct HistoryView: View {
                         requestedProFeature = .fullHistory
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Label("Unlock full history", systemImage: Theme.Symbol.proUnlock)
-                                .font(.body.weight(.medium))
+                            Label {
+                                Text("Unlock full history")
+                                    .foregroundStyle(Theme.ColorValue.textPrimary)
+                            } icon: {
+                                Image(systemName: Theme.Symbol.proUnlock)
+                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+                            }
+                            .font(.subheadline.weight(.medium))
                             Text(hiddenRecordsText)
                                 .font(.caption)
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
@@ -174,6 +184,12 @@ struct HistoryView: View {
                     .foregroundStyle(Theme.ColorValue.textTertiary)
             }
 
+            let segments = colorSegments(record)
+            if !segments.isEmpty {
+                SequenceRibbon(segments: segments, height: 4)
+                    .padding(.vertical, 2)
+            }
+
             HStack(spacing: 8) {
                 let emoji = emojiStrip(record)
                 if !emoji.isEmpty {
@@ -189,6 +205,15 @@ struct HistoryView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+
+    /// The rounds as they ran, in their colours and sized by time.
+    private func colorSegments(_ record: GameRecord) -> [SequenceSegment] {
+        guard record.roundColors != nil else { return [] }
+        return SessionTimeline(record: record).items.enumerated().compactMap { index, item in
+            guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
+            return SequenceSegment(id: index, color: color, seconds: max(length, 1))
+        }
     }
 
     /// The session's rounds as their emoji, in order, each once.

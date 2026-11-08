@@ -121,8 +121,18 @@ struct DesignCouncilFixture {
             gameTitle: title,
             session: GameSession(events: events),
             playerNames: steps.map(\.0),
-            playedAt: start
+            playedAt: start,
+            roundColors: Dictionary(steps.map { ($0.0, fixtureColor(for: $0.0)) }, uniquingKeysWith: { first, _ in first })
         )
+    }
+
+    /// The colour each sample round has in its template, so History matches.
+    private static func fixtureColor(for name: String) -> RoundColor {
+        if let round = familyGameNight.rounds.first(where: { $0.name == name }) { return round.color }
+        for template in StarterTemplateLibrary.templates {
+            if let round = template.game.rounds.first(where: { $0.name == name }) { return round.color }
+        }
+        return .default
     }
 
     // MARK: - Applying a scene

@@ -8,6 +8,8 @@ struct SettingsView: View {
     @ObservedObject var templateSync: TemplateCloudSyncEngine
     @ObservedObject var historySync: HistoryCloudSyncEngine
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
+    @State private var alertsDenied = false
 
     var body: some View {
         NavigationStack {
@@ -41,13 +43,36 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(proAccess.isProUnlocked ? "Unlocked" : "Free")
-                            .foregroundStyle(Theme.ColorValue.textSecondary)
+                    Toggle(isOn: Binding(
+                        get: { alertsEnabled },
+                        set: { newValue in
+                            guard newValue else {
+                                alertsEnabled = false
+                                return
+                            }
+                            Task {
+                                let granted = await TimerAlertScheduler.requestPermission()
+                                alertsEnabled = granted
+                                alertsDenied = !granted
+                            }
+                        }
+                    )) {
+                        Text("Alert me when time's up")
                     }
                     .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    header("Alerts")
+                } footer: {
+                    Text(alertsDenied
+                         ? "Notifications are off for Turn Timer. You can turn them on in the Settings app."
+                         : "A notification when a timer or round ends while Turn Timer isn't on screen.")
+                }
+
+                Section {
+                    if proAccess.isProUnlocked {
+                        Label("Pro is unlocked", systemImage: Theme.Symbol.checkmark)
+                            .listRowBackground(Theme.ColorValue.surface)
+                    }
 
                     if !proAccess.isProUnlocked {
                         if proAccess.product == nil && proAccess.purchaseState != .loading {
@@ -82,7 +107,7 @@ struct SettingsView: View {
                 } header: {
                     header("Turn Timer Pro")
                 } footer: {
-                    Text(ProFeature.benefitsSentence)
+                    Text("One-time purchase: more saved templates, full history and export, iCloud sync, sharing and widgets.")
                 }
 
                 Section {
@@ -153,7 +178,7 @@ struct SettingsView: View {
             HStack {
                 Text(title)
                 Spacer()
-                Label("With Pro", systemImage: "lock")
+                Text("With Pro")
                     .font(.subheadline)
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }

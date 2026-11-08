@@ -18,7 +18,7 @@ final class GameEditorViewModel: ObservableObject {
     /// The sequence as last loaded or saved, to tell whether there are edits to keep.
     @Published private var cleanState: EditorSnapshot?
 
-    struct EditorSnapshot: Equatable {
+    struct EditorSnapshot: Equatable, Codable {
         let title: String
         let rounds: [Round]
         let roundCount: Int
@@ -39,6 +39,45 @@ final class GameEditorViewModel: ObservableObject {
 
     private func markClean() {
         cleanState = currentSnapshot
+        persistDraft()
+    }
+
+    // MARK: - Draft (edits that survive an app close)
+
+    private struct EditorDraft: Codable {
+        let current: EditorSnapshot
+        let clean: EditorSnapshot?
+        let starterID: String?
+    }
+
+    private let draftURL: URL
+    private var draftCancellable: AnyCancellable?
+
+    /// Writes the sequence on screen when it differs from what was loaded or
+    /// saved, and removes the draft once it matches again.
+    func persistDraft() {
+        guard hasUnsavedChanges, !rounds.isEmpty else {
+            try? FileManager.default.removeItem(at: draftURL)
+            return
+        }
+        let draft = EditorDraft(current: currentSnapshot, clean: cleanState, starterID: currentStarterID)
+        guard let data = try? JSONEncoder().encode(draft) else { return }
+        try? data.write(to: draftURL, options: .atomic)
+    }
+
+    /// Puts back unsaved edits from before the app closed. Malformed drafts are discarded.
+    private func restoreDraft() -> Bool {
+        guard let data = try? Data(contentsOf: draftURL) else { return false }
+        guard let draft = try? JSONDecoder().decode(EditorDraft.self, from: data) else {
+            try? FileManager.default.removeItem(at: draftURL)
+            return false
+        }
+        gameTitle = draft.current.title
+        rounds = draft.current.rounds
+        roundCount = draft.current.roundCount
+        currentStarterID = draft.starterID
+        cleanState = draft.clean
+        return true
     }
 
     @AppStorage("lastGameFileName") private var lastGameFileName: String = ""
@@ -70,12 +109,21 @@ final class GameEditorViewModel: ObservableObject {
         watchTemplateStore: WatchTemplateStore = WatchTemplateStore(),
         watchTemplatePublisher: @escaping @MainActor ([WatchTemplate]) -> Void = {
             WatchTemplateConnectivity.shared.publish(templates: $0)
-        }
+        },
+        draftDirectory: URL? = nil
     ) {
+        let base = draftDirectory
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        self.draftURL = base.appendingPathComponent("TemplateDraft.json")
         self.templateLibrary = templateLibrary
         self.widgetSnapshotStore = widgetSnapshotStore
         self.watchTemplateStore = watchTemplateStore
         self.watchTemplatePublisher = watchTemplatePublisher
+        draftCancellable = Publishers.CombineLatest3($gameTitle, $rounds, $roundCount)
+            .dropFirst()
+            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.persistDraft() }
     }
 
     var isExpanded: Bool { expandedRoundId != nil }
@@ -194,6 +242,7 @@ final class GameEditorViewModel: ObservableObject {
         refreshSavedTemplates()
         migrateLegacyTemplateIfNeeded()
         guard rounds.isEmpty else { return }
+        if restoreDraft() { return }
         if loadLastGame() { return }
         applyStarterTemplate(StarterTemplateLibrary.defaultTemplate)
     }

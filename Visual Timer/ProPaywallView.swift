@@ -10,13 +10,22 @@ struct ProPaywallView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    HStack(spacing: -10) {
+                        ForEach(["game-night", "morning-routine", "recipe-steps"], id: \.self) { id in
+                            SequencePie(segments: StarterTemplateLibrary.template(id: id)?.game.segments ?? [])
+                                .frame(width: 52, height: 52)
+                                .overlay { Circle().strokeBorder(Theme.ColorValue.appBackground, lineWidth: 3) }
+                        }
+                    }
+                    .accessibilityHidden(true)
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Turn Timer Pro")
                             .font(.largeTitle.weight(.bold))
                             .foregroundStyle(Theme.ColorValue.textPrimary)
                         Text(feature.title)
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(Theme.ColorValue.selectionAccent)
+                            .foregroundStyle(Theme.ColorValue.textPrimary)
                         Text(feature.message)
                             .font(.body)
                             .foregroundStyle(Theme.ColorValue.textSecondary)
@@ -24,11 +33,11 @@ struct ProPaywallView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 14) {
-                        ForEach(ProFeature.benefits, id: \.text) { benefit in
+                        ForEach(feature.orderedBenefits, id: \.text) { benefit in
                             HStack(spacing: 14) {
                                 Image(systemName: benefit.symbol)
                                     .font(.body.weight(.semibold))
-                                    .foregroundStyle(Theme.ColorValue.selectionAccent)
+                                    .foregroundStyle(Theme.ColorValue.textSecondary)
                                     .frame(width: 28, alignment: .center)
                                     .accessibilityHidden(true)
                                 Text(benefit.text)

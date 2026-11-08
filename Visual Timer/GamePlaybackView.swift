@@ -13,6 +13,7 @@ struct GamePlaybackView: View {
     @ObservedObject var proAccess: ProAccessViewModel
     @ObservedObject var templateSync: TemplateCloudSyncEngine
     @ObservedObject var historySync: HistoryCloudSyncEngine
+    var onTimerStateChange: () -> Void = {}
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,6 +58,12 @@ struct GamePlaybackView: View {
         } message: {
             Text("What you've done so far is saved to History.")
         }
+        .onChange(of: timerViewModel.state) { _, _ in
+            onTimerStateChange()
+        }
+        .onChange(of: timerViewModel.visualProgress) { _, progress in
+            scheduleEndAlert(progress)
+        }
         .onAppear {
             timerViewModel.onFinish = { [weak soundManager, weak gameViewModel] in
                 soundManager?.playFinishSound()
@@ -66,6 +73,17 @@ struct GamePlaybackView: View {
     }
 
     private var isComplete: Bool { gameViewModel.gamePhase == .gameOver }
+
+    /// One pending alert for the running countdown's end; none otherwise.
+    private func scheduleEndAlert(_ progress: TimerVisualProgress) {
+        if inSession, let round = gameViewModel.currentRound {
+            let name = round.emoji.isEmpty ? round.name : "\(round.emoji) \(round.name)"
+            let next = gameViewModel.nextRound.map { "Next: \($0.name)" } ?? "That was the last one."
+            TimerAlertScheduler.update(finishDate: progress.finishDate, title: "\(name) is done", body: next)
+        } else {
+            TimerAlertScheduler.update(finishDate: progress.finishDate, title: "Time's up", body: "Your \(TimerText.words(timerViewModel.totalDuration)) timer has finished.")
+        }
+    }
     private var inSession: Bool { gameViewModel.hasActiveGame }
 
     private var backdropColor: Color {
@@ -176,9 +194,11 @@ struct GamePlaybackView: View {
                             .font(.caption)
                             .foregroundStyle(Theme.ColorValue.textTertiary)
                         HStack(spacing: 5) {
-                            Circle()
-                                .fill(next.color.swiftUIColor)
-                                .frame(width: 8, height: 8)
+                            if next.emoji.isEmpty {
+                                Circle()
+                                    .fill(next.color.swiftUIColor)
+                                    .frame(width: 8, height: 8)
+                            }
                             Text(next.emoji.isEmpty ? next.name : "\(next.emoji) \(next.name)")
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
@@ -199,15 +219,22 @@ struct GamePlaybackView: View {
             Text("All done")
                 .font(.system(size: Theme.GamePlayback.gameOverFontSize, weight: .bold))
                 .foregroundStyle(Theme.ColorValue.textPrimary)
-            if let title = gameViewModel.gameSequence?.title {
-                Label("\(title) · saved to History", systemImage: Theme.Symbol.checkmark)
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-            }
+            Text(completionLine)
+                .font(.subheadline)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, Theme.Dimension.sectionSpacingSmall)
         .accessibilityElement(children: .combine)
+    }
+
+    private var completionLine: String {
+        let done = gameViewModel.countingPlayerCount > 0 ? "Everyone had a turn" : "Every step done"
+        return "\(done) · saved to History"
+    }
+
+    private var finishTint: Color {
+        gameViewModel.activeRounds.last?.color.swiftUIColor ?? Theme.ColorValue.selectionAccent
     }
 
     // MARK: - Dial
@@ -216,14 +243,14 @@ struct GamePlaybackView: View {
     private var dial: some View {
         if isComplete, let game = gameViewModel.gameSequence {
             ZStack {
-                SequencePie(segments: game.segments)
-                    .padding(.horizontal, Theme.Dimension.circleHorizontalPadding)
+                SequencePie(segments: game.segments, glowColor: game.activeRounds.first?.color.swiftUIColor)
                 GlyphDisc {
                     Image(systemName: Theme.Symbol.checkmark)
                         .font(.system(size: Theme.TimerStyle.runningIconSize, weight: .bold))
                         .foregroundStyle(.white)
                 }
             }
+            .padding(.horizontal, Theme.Dimension.circleHorizontalPadding)
             .accessibilityElement()
             .accessibilityLabel(Theme.Label.gameOver)
         } else {
@@ -241,6 +268,8 @@ struct GamePlaybackView: View {
                     fillColor: timerViewModel.timerColor,
                     completionCount: timerViewModel.timerColorIndex
                 )
+                // Paused reads from across the room: the colour drains a little.
+                .saturation(timerViewModel.state == .paused ? 0.45 : 1)
 
                 if let icon = centerIcon {
                     GlyphDisc {
@@ -361,6 +390,9 @@ struct GamePlaybackView: View {
     }
 
     private var caption: String {
+        if let note = gameViewModel.resumeNote, inSession, !isComplete {
+            return note
+        }
         if isComplete {
             let steps = gameViewModel.activeRounds.count * max(gameViewModel.totalRoundCount, 1)
             let noun = gameViewModel.countingPlayerCount > 0 ? "turn" : "step"
@@ -371,9 +403,9 @@ struct GamePlaybackView: View {
             let sessionLeft = gameViewModel.remainingSessionSeconds(currentRemaining: remaining)
             switch timerViewModel.state {
             case .running:
-                return "\(TimerText.approximateLeft(sessionLeft).capitalizedFirst) · \(TimerText.endsAt(sessionLeft))"
+                return "Session · \(TimerText.approximateLeft(sessionLeft)) · \(TimerText.endsAt(sessionLeft).lowercasedFirst)"
             case .paused:
-                return "\(Theme.Label.paused) · \(TimerText.approximateLeft(sessionLeft))"
+                return "\(Theme.Label.paused) · tap the dial to resume"
             case .notStarted, .finished:
                 return Theme.Label.tapToStart
             }
@@ -382,7 +414,7 @@ struct GamePlaybackView: View {
         case .running:
             return TimerText.endsAt(remaining)
         case .paused:
-            return Theme.Label.paused
+            return "\(Theme.Label.paused) · tap the dial to resume"
         case .notStarted, .finished:
             return Theme.Label.tapToStart
         }
@@ -398,7 +430,7 @@ struct GamePlaybackView: View {
                     GlassCapsuleButton(title: Theme.Label.goAgain, systemImage: Theme.Symbol.restart) {
                         gameViewModel.addRoundDuringGameOver()
                     }
-                    GlassCapsuleButton(title: Theme.Label.done, systemImage: Theme.Symbol.checkmark, prominent: true) {
+                    GlassCapsuleButton(title: Theme.Label.done, systemImage: nil, prominent: true, tint: finishTint) {
                         gameViewModel.endGame()
                     }
                 }
@@ -463,21 +495,25 @@ struct GamePlaybackView: View {
                 let color = round.color.swiftUIColor
                 let isCurrent = index == gameViewModel.currentRoundIndex
                 let size = isCurrent ? Theme.GamePlayback.progressDotCurrentSize : Theme.GamePlayback.progressDotSize
+                // In a turn-based session, breaks are short bars so the dots
+                // count the same turns as the text beneath them.
+                let isBreak = gameViewModel.countingPlayerCount > 0 && !round.countsAsPlayer
+                let shape = Capsule()
                 Group {
                     if index <= gameViewModel.currentRoundIndex {
-                        Circle().fill(color)
+                        shape.fill(color)
                     } else {
-                        Circle().strokeBorder(color.opacity(0.7), lineWidth: 1.5)
+                        shape.strokeBorder(color.opacity(0.7), lineWidth: 1.5)
                     }
                 }
-                .frame(width: size, height: size)
+                .frame(width: isBreak ? size * 1.8 : size, height: isBreak ? 3 : size)
             }
         }
     }
 }
 
 private extension String {
-    var capitalizedFirst: String {
-        prefix(1).uppercased() + dropFirst()
+    var lowercasedFirst: String {
+        prefix(1).lowercased() + dropFirst()
     }
 }

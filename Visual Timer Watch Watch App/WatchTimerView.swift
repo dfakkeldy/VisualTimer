@@ -126,6 +126,7 @@ struct WatchTimerView: View {
                 }
             }
         }
+        .padding(.horizontal, viewModel.showsReset ? 0 : 18)
     }
 }
 

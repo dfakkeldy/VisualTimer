@@ -14,6 +14,27 @@ struct GameEditorView: View {
     @State private var requestedProFeature: ProFeature?
     @State private var showImportPicker = false
     @State private var shareItem: TemplateShareItem?
+    @State private var pendingReplacement: PendingReplacement?
+
+    /// A template the person tapped while the current one has unsaved edits.
+    private enum PendingReplacement: Identifiable {
+        case saved(SavedTemplate)
+        case starter(StarterTemplate)
+
+        var id: String {
+            switch self {
+            case .saved(let template): return template.id.uuidString
+            case .starter(let template): return template.id
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .saved(let template): return template.title
+            case .starter(let template): return template.title
+            }
+        }
+    }
     @FocusState private var titleFocused: Bool
 
     private var editingRound: Round? {
@@ -70,8 +91,21 @@ struct GameEditorView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.ColorValue.appBackground)
-            .safeAreaInset(edge: .bottom) {
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 startBar
+            }
+            .confirmationDialog(
+                "Replace your unsaved changes?",
+                isPresented: Binding(get: { pendingReplacement != nil }, set: { if !$0 { pendingReplacement = nil } }),
+                titleVisibility: .visible,
+                presenting: pendingReplacement
+            ) { replacement in
+                Button("Open \(replacement.title)", role: .destructive) {
+                    apply(replacement)
+                }
+                Button("Keep editing", role: .cancel) {}
+            } message: { _ in
+                Text("Your edits to “\(editor.gameTitle)” haven't been saved.")
             }
             .navigationTitle("Templates")
             .navigationBarTitleDisplayMode(.inline)
@@ -192,10 +226,9 @@ struct GameEditorView: View {
     @ViewBuilder
     private var saveControl: some View {
         if editor.isShowingSavedTemplate && !editor.hasUnsavedChanges {
-            Label("Saved", systemImage: Theme.Symbol.checkmark)
+            Text("Saved")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(Theme.ColorValue.textTertiary)
-                .labelStyle(.titleAndIcon)
         } else {
             Button {
                 saveGame()
@@ -216,7 +249,7 @@ struct GameEditorView: View {
                 ForEach(editor.savedTemplates) { template in
                     let isCurrent = editor.isShowingSavedTemplate && editor.currentSavedTemplateID == template.id
                     Button {
-                        loadSavedTemplate(template)
+                        request(.saved(template))
                     } label: {
                         templateCard(
                             title: template.title,
@@ -232,7 +265,7 @@ struct GameEditorView: View {
                 ForEach(StarterTemplateLibrary.templates) { template in
                     let isCurrent = editor.currentStarterID == template.id
                     Button {
-                        editor.applyStarterTemplate(template)
+                        request(.starter(template))
                     } label: {
                         templateCard(
                             title: template.title,
@@ -249,6 +282,24 @@ struct GameEditorView: View {
             .padding(.vertical, 4)
         }
         .scrollIndicators(.hidden)
+        .scrollClipDisabled()
+    }
+
+    private func request(_ replacement: PendingReplacement) {
+        if editor.hasUnsavedChanges {
+            pendingReplacement = replacement
+        } else {
+            apply(replacement)
+        }
+    }
+
+    private func apply(_ replacement: PendingReplacement) {
+        switch replacement {
+        case .saved(let template):
+            loadSavedTemplate(template)
+        case .starter(let template):
+            editor.applyStarterTemplate(template)
+        }
     }
 
     private func templateCard(title: String, detail: String, segments: [SequenceSegment], isCurrent: Bool) -> some View {
@@ -278,7 +329,7 @@ struct GameEditorView: View {
 
     private var startBar: some View {
         GlassCapsuleButton(
-            title: "Start \(editor.gameTitle.isEmpty ? "sequence" : editor.gameTitle)",
+            title: Theme.Label.start,
             systemImage: Theme.Symbol.play,
             prominent: true
         ) {
@@ -287,17 +338,23 @@ struct GameEditorView: View {
         }
         .disabled(!editor.canSaveOrStartTemplate)
         .accessibilityIdentifier("templates.start")
+        .accessibilityLabel("Start \(editor.gameTitle)")
         .padding(.horizontal, 20)
         .padding(.top, 10)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
         .background {
-            LinearGradient(
-                colors: [Theme.ColorValue.appBackground.opacity(0), Theme.ColorValue.appBackground],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .ignoresSafeArea()
+            Theme.ColorValue.appBackground
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [Theme.ColorValue.appBackground.opacity(0), Theme.ColorValue.appBackground],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 24)
+                    .offset(y: -24)
+                }
+                .ignoresSafeArea(edges: .bottom)
         }
     }
 
@@ -454,6 +511,8 @@ private struct PlayerEditSheet: View {
                         .accessibilityLabel("Time, \(durationDisplay)")
                     }
 
+                    groupHeader("Look")
+
                     field("Colour") {
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Editor.colorSwatchSpacing), count: 8), spacing: Theme.Editor.colorSwatchSpacing) {
                             ForEach(0..<Theme.ColorValue.timerPalette.count, id: \.self) { index in
@@ -479,15 +538,27 @@ private struct PlayerEditSheet: View {
                     }
 
                     field("Emoji") {
-                        TextField("Add an emoji", text: $emojiText)
-                            .font(.title2)
-                            .padding(10)
-                            .frame(width: 120)
-                            .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 12))
-                            .onChange(of: emojiText) { _, newValue in
-                                onUpdateEmoji(newValue)
-                            }
+                        HStack(spacing: 12) {
+                            TextField("＋", text: $emojiText)
+                                .font(.system(size: 30))
+                                .multilineTextAlignment(.center)
+                                .frame(width: 60, height: 60)
+                                .background(Theme.ColorValue.surface, in: .rect(cornerRadius: 16))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .strokeBorder(selectedColor.opacity(0.8), lineWidth: 1.5)
+                                }
+                                .onChange(of: emojiText) { _, newValue in
+                                    onUpdateEmoji(newValue)
+                                }
+                                .accessibilityLabel("Emoji")
+                            Text("Tap the tile to type or pick an emoji.")
+                                .font(.caption)
+                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                        }
                     }
+
+                    groupHeader("Behaviour")
 
                     field("End sound") {
                         Picker("End sound", selection: $selectedSound) {
@@ -543,29 +614,29 @@ private struct PlayerEditSheet: View {
     private var preview: some View {
         HStack(spacing: 16) {
             ZStack {
-                Circle().fill(selectedColor)
-                Circle().strokeBorder(.white.opacity(Theme.TimerStyle.highlightOpacity), lineWidth: Theme.TimerStyle.rimWidth)
+                SequencePie(segments: [SequenceSegment(id: 0, color: selectedColor, seconds: 1)], glowColor: selectedColor)
                 if !emojiText.isEmpty {
-                    GlyphDisc(size: 46) {
-                        Text(emojiText).font(.system(size: 26))
-                    }
+                    Text(emojiText).font(.system(size: 34))
+                        .shadow(color: .black.opacity(Theme.TimerStyle.shadeOpacity), radius: 3)
                 }
             }
             .frame(width: 84, height: 84)
             .animation(.easeInOut(duration: Theme.TimerStyle.colourDuration), value: selectedColorIndex)
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(nameText.isEmpty ? "Untitled round" : nameText)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(selectedColor)
-                    .lineLimit(1)
-                Text(TimerText.clock(localDuration))
-                    .font(.system(.title3, design: .rounded).weight(.semibold).monospacedDigit())
-                    .foregroundStyle(Theme.ColorValue.textPrimary)
-            }
+            Text(nameText.isEmpty ? "Untitled round" : nameText)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(selectedColor)
+                .lineLimit(2)
         }
         .padding(.bottom, 4)
+    }
+
+    private func groupHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textPrimary)
+            .padding(.top, 10)
     }
 
     private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

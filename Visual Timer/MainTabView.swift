@@ -16,6 +16,7 @@ struct MainTabView: View {
     @State private var selectedTab = 0
 
     private let templateLibrary: TemplateLibraryStore
+    private let quickTimerStore: QuickTimerStore
     private var timerViewModel: TimerViewModel { gameViewModel.timerViewModel }
 
     init() {
@@ -49,8 +50,9 @@ struct MainTabView: View {
             }
         )
         gameViewModel.sessionStore = ActiveSessionStore(directory: documentsDirectory)
+        quickTimerStore = QuickTimerStore(directory: documentsDirectory)
         _gameViewModel = StateObject(wrappedValue: gameViewModel)
-        _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary))
+        _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary, draftDirectory: documentsDirectory))
         _historyViewModel = StateObject(wrappedValue: historyViewModel)
         _proAccess = StateObject(wrappedValue: ProAccessViewModel())
         _templateSync = StateObject(wrappedValue: syncEngine)
@@ -66,7 +68,14 @@ struct MainTabView: View {
                 soundManager: soundManager,
                 proAccess: proAccess,
                 templateSync: templateSync,
-                historySync: historySync
+                historySync: historySync,
+                onTimerStateChange: { [quickTimerStore, gameViewModel] in
+                    if gameViewModel.hasActiveGame {
+                        quickTimerStore.clear()
+                    } else {
+                        quickTimerStore.save(gameViewModel.timerViewModel)
+                    }
+                }
             )
             .tabItem {
                 Label(Theme.Tab.timerTabTitle, systemImage: Theme.Tab.timerTabSymbol)
@@ -107,6 +116,8 @@ struct MainTabView: View {
             gameEditorViewModel.refreshSavedTemplates()
             if gameViewModel.restoreSavedSession() {
                 selectedTab = 0
+            } else {
+                quickTimerStore.restore(into: timerViewModel)
             }
 #if DEBUG
             DesignCouncilFixture.current?.apply(to: gameViewModel)

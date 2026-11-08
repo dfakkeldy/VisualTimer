@@ -109,7 +109,10 @@ struct GlyphDisc<Content: View>: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Theme.TimerStyle.ink.opacity(Theme.TimerStyle.glyphDiscOpacity))
+                .fill(Theme.TimerStyle.ink)
+                .overlay {
+                    Circle().strokeBorder(.white.opacity(Theme.TimerStyle.backdropOpacity), lineWidth: Theme.TimerStyle.surfaceBorder)
+                }
                 .frame(width: size, height: size)
             content()
         }
@@ -163,11 +166,45 @@ struct SequenceRibbon: View {
 }
 
 /// A full dial cut into round-coloured wedges, sized by duration: the whole
-/// session as one picture.
+/// session as one picture, with the live dial's light, rim and glow.
 struct SequencePie: View {
     let segments: [SequenceSegment]
+    var glowColor: Color? = nil
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
+        wedges
+            .overlay {
+                if !reduceTransparency {
+                    Circle().fill(
+                        LinearGradient(
+                            stops: [
+                                .init(color: .white.opacity(Theme.TimerStyle.highlightOpacity), location: 0),
+                                .init(color: .clear, location: 0.45),
+                                .init(color: .black.opacity(Theme.TimerStyle.shadeOpacity), location: 1),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                }
+            }
+            .overlay {
+                Circle().strokeBorder(.white.opacity(Theme.TimerStyle.highlightOpacity), lineWidth: Theme.TimerStyle.rimWidth)
+            }
+            .background {
+                if let glowColor, !reduceTransparency {
+                    Circle()
+                        .fill(Theme.TimerStyle.well)
+                        .shadow(color: glowColor.opacity(Theme.TimerStyle.glowOpacity), radius: Theme.TimerStyle.glowRadius)
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .accessibilityHidden(true)
+    }
+
+    private var wedges: some View {
         Canvas { context, size in
             let rect = CGRect(origin: .zero, size: size)
             let center = CGPoint(x: rect.midX, y: rect.midY)
@@ -181,12 +218,13 @@ struct SequencePie: View {
                 path.addArc(center: center, radius: radius, startAngle: .degrees(start), endAngle: .degrees(start + sweep), clockwise: false)
                 path.closeSubpath()
                 context.fill(path, with: .color(segment.color))
-                context.stroke(path, with: .color(Theme.TimerStyle.ink), lineWidth: segments.count > 1 ? 1.5 : 0)
+                if segments.count > 1 {
+                    context.stroke(path, with: .color(Theme.TimerStyle.ink.opacity(0.7)), lineWidth: 0.75)
+                }
                 start += sweep
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .accessibilityHidden(true)
     }
 }
 

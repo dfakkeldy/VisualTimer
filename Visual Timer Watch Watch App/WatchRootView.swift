@@ -189,7 +189,8 @@ struct WatchRootView: View {
         switch model.quickTimerState {
         case .running: return Theme.Watch.Label.running
         case .paused: return Theme.Watch.Label.paused
-        case .notStarted, .finished: return nil
+        case .notStarted, .finished:
+            return WatchTimeText.clock(model.quickTimer.timer.totalDuration)
         }
     }
 
