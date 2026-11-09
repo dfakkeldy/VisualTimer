@@ -6,8 +6,12 @@ struct StopwatchView: View {
     @ObservedObject var model: StopwatchViewModel
     let replacesUnsavedEdits: Bool
     let onApply: (StopwatchRecording) throws -> Void
+    let applyBlocker: (StopwatchRecording) -> StopwatchError?
     let onClose: () -> Void
     let onRequestPro: (ProFeature) -> Void
+
+    private enum FocusTarget: Hashable { case review, start, history }
+    @AccessibilityFocusState private var focusedElement: FocusTarget?
 
     @State private var showDiscard = false
     @State private var showDelete = false
@@ -39,7 +43,12 @@ struct StopwatchView: View {
                 }
             }
             .confirmationDialog(model.discardTitle, isPresented: $showDiscard, titleVisibility: .visible) {
-                Button(model.hasUnkeptPlan ? Theme.Stopwatch.discardPlan : Theme.Stopwatch.discard, role: .destructive) {
+                if model.canDiscardRecordingKeepingPlan {
+                    Button(Theme.Stopwatch.discardMeasurementsKeepingPlan, role: .destructive) {
+                        model.discardUnkeptRecording()
+                    }
+                }
+                Button(model.discardAction, role: .destructive) {
                     model.discardUnkeptWork()
                     onClose()
                 }
@@ -55,7 +64,9 @@ struct StopwatchView: View {
                 Button(Theme.Stopwatch.keepRecording, role: .cancel) { earlyFinishStepID = nil }
             } message: { Text(model.finishEarlyHint) }
             .confirmationDialog(Theme.Stopwatch.deleteTitle, isPresented: $showDelete, titleVisibility: .visible) {
-                Button(Theme.Stopwatch.deleteRecording, role: .destructive) { model.deleteReview() }
+                Button(Theme.Stopwatch.deleteRecording, role: .destructive) {
+                    if model.deleteReview() { announce(Theme.Stopwatch.recordingDeleted) }
+                }
                 Button(Theme.Stopwatch.cancel, role: .cancel) {}
             } message: { Text(Theme.Stopwatch.deleteHint) }
             .confirmationDialog(Theme.Stopwatch.replaceTitle, isPresented: $showReplace, titleVisibility: .visible) {
@@ -66,6 +77,9 @@ struct StopwatchView: View {
                    isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
                 Button(Theme.Stopwatch.ok) { model.errorMessage = nil }
             } message: { Text(model.errorMessage ?? "") }
+            .onChange(of: model.reviewRecord?.id) { _, id in
+                focusedElement = id != nil ? .review : (model.isLibrary ? .history : .start)
+            }
             .onChange(of: model.session?.index) { _, _ in
                 if let message = model.currentStepAnnouncement { announce(message) }
             }
@@ -129,6 +143,8 @@ struct StopwatchView: View {
                             stepActions(index: index)
                         } label: {
                             Image(systemName: Theme.Stopwatch.optionsSymbol)
+                                .frame(minWidth: Theme.Stopwatch.minimumTarget, minHeight: Theme.Stopwatch.minimumTarget)
+                                .contentShape(Rectangle())
                         }
                         .accessibilityLabel(Theme.Stopwatch.stepOptions(index + 1))
                     }
@@ -153,6 +169,7 @@ struct StopwatchView: View {
                 .font(.headline)
                 .disabled(!model.canStart)
                 .accessibilityIdentifier(Theme.Stopwatch.startIdentifier)
+                .accessibilityFocused($focusedElement, equals: .start)
                 .accessibilityHint(model.startBlocker ?? "")
             if let message = model.startBlocker {
                 Text(message).font(.caption)
@@ -239,9 +256,11 @@ struct StopwatchView: View {
 
     @ViewBuilder
     private func reviewSections(record: StopwatchRecording) -> some View {
+        let blocker = applyBlocker(record)
         Section {
             Text(record.source.title).font(.title2.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($focusedElement, equals: .review)
             Text(record.startedAt.formatted(date: .abbreviated, time: .standard))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Text(model.isReviewSaved ? Theme.Stopwatch.saved : Theme.Stopwatch.notSaved)
@@ -259,9 +278,11 @@ struct StopwatchView: View {
                 if model.applyKind == .newTemplate && replacesUnsavedEdits { showReplace = true } else { apply() }
             }
             .font(.headline)
-            .disabled(!model.canApply)
+            .disabled(!model.canApply || blocker != nil)
             .accessibilityIdentifier(Theme.Stopwatch.applyIdentifier)
-            if model.needsSourceTemplate {
+            if let blocker {
+                Text(blocker.localizedDescription).font(.subheadline)
+            } else if model.needsSourceTemplate {
                 Text(model.openSourceHint).font(.subheadline)
             }
             if !record.isComplete {
@@ -279,6 +300,9 @@ struct StopwatchView: View {
     @ViewBuilder
     private var historySections: some View {
         Section {
+            if model.hasUnkeptPlan {
+                Text(Theme.Stopwatch.historyBlockedByPlan).font(.caption)
+            }
             if model.visibleRecords.isEmpty {
                 ContentUnavailableView(model.hasOlderRecords ? Theme.Stopwatch.noRecentRecordings : Theme.Stopwatch.emptyTitle, systemImage: Theme.Stopwatch.emptySymbol,
                                        description: Text(model.hasOlderRecords ? Theme.Stopwatch.historyLimit : Theme.Stopwatch.emptyHint))
@@ -297,6 +321,7 @@ struct StopwatchView: View {
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
                         }
                     }
+                    .disabled(model.hasUnkeptPlan)
                 }
             }
             if model.unreadableCount > 0 {
@@ -308,7 +333,10 @@ struct StopwatchView: View {
                 if !model.visibleRecords.isEmpty { Text(Theme.Stopwatch.historyLimit).font(.caption) }
                 Button(Theme.Stopwatch.unlockHistory) { onRequestPro(.fullHistory) }
             }
-        } header: { Text(Theme.Stopwatch.history) } footer: { Text(Theme.Stopwatch.localHint) }
+        } header: {
+            Text(Theme.Stopwatch.history)
+                .accessibilityFocused($focusedElement, equals: .history)
+        } footer: { Text(Theme.Stopwatch.localHint) }
         .listRowBackground(Theme.ColorValue.surface)
 
         if !model.isLibrary && !model.visibleRecords.isEmpty {
@@ -323,6 +351,11 @@ struct StopwatchView: View {
     }
 
     private func apply() {
+        guard let record = model.reviewRecord else { return }
+        if let blocker = applyBlocker(record) {
+            model.errorMessage = blocker.localizedDescription
+            return
+        }
         if model.applyReview(onApply) { onClose() }
     }
 }

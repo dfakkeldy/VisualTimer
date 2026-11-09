@@ -164,6 +164,9 @@ struct GameEditorView: View {
             .onAppear {
                 editor.loadInitialTemplateIfNeeded()
             }
+            .onChange(of: proAccess.isProUnlocked) { _, unlocked in
+                stopwatchWorkspace.updateProAccess(unlocked)
+            }
             .fileImporter(
                 isPresented: $showImportPicker,
                 allowedContentTypes: [.turnTimerTemplate],
@@ -181,6 +184,7 @@ struct GameEditorView: View {
                 if let model = stopwatchWorkspace.model {
                     StopwatchView(model: model, replacesUnsavedEdits: editor.hasUnsavedChanges,
                                   onApply: { try editor.applyStopwatchRecording($0, kind: model.applyKind) },
+                                  applyBlocker: { editor.stopwatchApplyBlocker($0, kind: model.applyKind) },
                                   onClose: { stopwatchWorkspace.isPresented = false },
                                   onRequestPro: stopwatchWorkspace.requestPro)
                 }

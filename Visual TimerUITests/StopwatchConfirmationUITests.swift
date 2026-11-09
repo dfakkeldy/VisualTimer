@@ -1,0 +1,127 @@
+import XCTest
+
+/// Exercises the actual confirmation buttons; model tests cannot protect these routes.
+final class StopwatchConfirmationUITests: XCTestCase {
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    @MainActor
+    func testFinishEarlyCancelKeepsRecordingAndConfirmOpensReview() {
+        let app = launchTemplates()
+        reveal(app.buttons["Time this template"], in: app)
+        app.buttons["Time this template"].tap()
+        let start = app.buttons["stopwatch.start"]
+        reveal(start, in: app)
+        start.tap()
+        let early = app.buttons["stopwatch.finishEarly"]
+        XCTAssertTrue(early.waitForExistence(timeout: 5), "The default Game Night starter has four enabled steps")
+        early.tap()
+        XCTAssertTrue(app.buttons["Keep recording"].waitForExistence(timeout: 3))
+        app.buttons["Keep recording"].tap()
+        XCTAssertTrue(early.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["stopwatch.elapsed"].exists)
+        XCTAssertTrue(app.buttons["stopwatch.next"].exists)
+        XCTAssertFalse(app.staticTexts["Review measurements"].exists)
+
+        early.tap()
+        // The trigger is identified by stopwatch.finishEarly; this label selects
+        // the separate confirmation action in the presented dialog.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == %@ AND identifier != %@", "Finish early", "stopwatch.finishEarly")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3))
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["Review measurements"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Not saved yet"].exists)
+        XCTAssertTrue(app.buttons["Save recording"].exists)
+        XCTAssertFalse(app.staticTexts["stopwatch.elapsed"].exists)
+    }
+
+    @MainActor
+    func testApplyNewCancelPreservesDirtyEditorAndConfirmAppliesUnsavedPlan() throws {
+        let app = launchTemplates()
+        let editorTitle = app.textFields["Template name"]
+        editorTitle.tap()
+        editorTitle.typeText(" edited\n")
+        let priorTitle = try XCTUnwrap(editorTitle.value as? String)
+        XCTAssertNotEqual(priorTitle, "Game Night")
+        reveal(app.buttons["Plan a new routine"], in: app)
+        app.buttons["Plan a new routine"].tap()
+        let routineTitle = app.textFields["Routine name"]
+        XCTAssertTrue(routineTitle.waitForExistence(timeout: 5))
+        routineTitle.tap()
+        routineTitle.typeText(" learned\n")
+        let plannedTitle = try XCTUnwrap(routineTitle.value as? String)
+        XCTAssertNotEqual(plannedTitle, priorTitle)
+        let step = app.textFields["Step 1 name"]
+        step.tap()
+        step.typeText("Solo step\n")
+        let start = app.buttons["stopwatch.start"]
+        reveal(start, in: app)
+        XCTAssertTrue(start.isEnabled)
+        start.tap()
+        let finish = app.buttons["stopwatch.finish"]
+        XCTAssertTrue(finish.waitForExistence(timeout: 5))
+        finish.tap()
+        XCTAssertTrue(app.staticTexts["Review measurements"].waitForExistence(timeout: 5))
+        let apply = app.buttons["stopwatch.apply"]
+        reveal(apply, in: app)
+        apply.tap()
+        XCTAssertTrue(app.staticTexts["Replace your unsaved template edits?"].waitForExistence(timeout: 3))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(apply.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Not saved yet"].exists, "Cancel must not save or apply the recording")
+
+        // Safe sheet dismissal lets us inspect the actual editor after Cancel,
+        // then return to the same unsaved review and confirm the second attempt.
+        let sheetHeader = app.navigationBars["Routine stopwatch"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+        sheetHeader.press(forDuration: 0.1, thenDragTo: bottom)
+        XCTAssertTrue(app.navigationBars["Templates"].waitForExistence(timeout: 5))
+        reveal(editorTitle, in: app, scrollingUp: false)
+        XCTAssertEqual(editorTitle.value as? String, priorTitle)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Alice")).firstMatch.exists)
+        let returnToStopwatch = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Return to stopwatch")).firstMatch
+        reveal(returnToStopwatch, in: app)
+        returnToStopwatch.tap()
+        XCTAssertTrue(app.staticTexts["Review measurements"].waitForExistence(timeout: 5))
+        reveal(apply, in: app)
+        apply.tap()
+        let confirm = app.buttons.matching(NSPredicate(format: "label == %@ AND identifier != %@", "Apply as new template", "stopwatch.apply")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3))
+        confirm.tap()
+        XCTAssertTrue(app.navigationBars["Templates"].waitForExistence(timeout: 5))
+        reveal(editorTitle, in: app, scrollingUp: false)
+        XCTAssertEqual(editorTitle.value as? String, plannedTitle)
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Solo step")).firstMatch.exists)
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Alice")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["Save"].isEnabled, "Apply leaves the new template unsaved in the editor")
+    }
+
+    @MainActor
+    private func launchTemplates() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-resetPersistedState", "YES",
+            "-lastTemplateID", "", "-lastGameFileName", "",
+            "-hasMigratedLegacyTemplateLibrary", "YES",
+            "-timerAlertsOffered", "YES", "-timerAlertsEnabled", "NO",
+            "-AppleLanguages", "(en)", "-AppleLocale", "en_CA",
+        ]
+        app.launch()
+        let templates = app.tabBars.buttons["Templates"]
+        XCTAssertTrue(templates.waitForExistence(timeout: 5))
+        templates.tap()
+        XCTAssertTrue(app.textFields["Template name"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["Template name"].value as? String, "Game Night")
+        return app
+    }
+
+    @MainActor
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, scrollingUp: Bool = true) {
+        for _ in 0..<8 {
+            if element.exists && element.isHittable { return }
+            if scrollingUp { app.swipeUp() } else { app.swipeDown() }
+        }
+        XCTAssertTrue(element.exists && element.isHittable, "Expected control must be reachable")
+    }
+}

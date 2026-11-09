@@ -335,6 +335,7 @@ extension Theme {
     enum Stopwatch {
         static let spacing: CGFloat = 16
         static let smallSpacing: CGFloat = 8
+        static let minimumTarget: CGFloat = 44
         static let chartHeight: CGFloat = 220
         static let chartRowHeight: CGFloat = 52
         static let chartMinimumHeight: CGFloat = 140
@@ -417,7 +418,7 @@ extension Theme {
         static let saveRecording = "Save recording"
         static let apply = "Apply durations"
         static let applyNew = "Apply as new template"
-        static let applyHint = "Applying saves this recording and edits the template. Use Save in the editor to keep the template changes. Durations round to whole seconds, with a 5-second minimum."
+        static let applyHint = "Applying saves this recording and edits the template. Save in the editor, or start the timer, to keep the template changes. Durations round to whole seconds, with a \(StopwatchLimits.minimumTemplateSeconds)-second minimum."
         static let partialNewHint = "This recording ended early. Record every step to create a template. You can still save these measurements."
         static let partialHint = "Only measured steps will change. Other template durations stay as they are."
         static let neutralHint = "More or less time is information, not a score."
@@ -433,8 +434,9 @@ extension Theme {
         static let emptyHint = "Finish and save a recording to compare this routine over time."
         static let trendEmpty = "No saved measurements for this step yet."
         static let onePointHint = "One recording so far. Record again to see how time changes."
-        static let trendHint = "Circles show actual time. The dashed target line uses each recording's original target. Dates and values are listed below."
+        static let trendHint = "Circles show actual time. Squares and the dashed target line show each recording's original target. Dates and values are listed below."
         static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
+        static let historyBlockedByPlan = "Save a recording of your edited plan, or discard the plan edits, before opening local recordings."
         static let unlockHistory = "See full history"
         static let close = "Close"
         static let returnToStopwatch = "Return to stopwatch"
@@ -450,12 +452,15 @@ extension Theme {
         static let discardTitle = "Discard this recording?"
         static let discardHint = "Unkept measurements will be lost. Saved recordings stay on this device."
         static let discard = "Discard recording"
+        static let discardMeasurementsKeepingPlan = "Discard measurements, keep plan"
+        static let discardRecordingAndPlan = "Discard recording and plan"
         static let keepRecording = "Keep recording"
         static let errorTitle = "Stopwatch"
         static let ok = "OK"
         static let deleteTitle = "Delete this recording?"
         static let deleteHint = "This removes its local measurements. It doesn't change the template."
         static let deleteRecording = "Delete recording"
+        static let recordingDeleted = "Recording deleted"
         static let cancel = "Cancel"
         static let replaceTitle = "Replace your unsaved template edits?"
         static let replaceHint = "Applying this new routine replaces the edits currently in the template editor. Your saved templates stay as they are."
@@ -477,20 +482,23 @@ extension Theme {
             "Step \(position) of \(count), \(name)"
         }
         static func earlierStep(_ name: String) -> String { "\(name) (earlier step)" }
-        static func setsDuration(_ seconds: Int) -> String { "Sets duration to \(seconds)s" }
+        static func setsDuration(_ seconds: Int) -> String { "Template duration: \(seconds)s" }
         static let invalidSource = "Add named steps before recording. Each target must be between 1 second and 24 hours."
         static let invalidRecording = "This stopwatch recording is invalid or uses an unsupported format."
-        static let changedTemplate = "The template or its enabled steps have changed. Measurements were kept, but no durations were applied."
+        static func changedTemplate(_ title: String) -> String {
+            "The template or its enabled steps have changed. Open “\(title)”, then Local stopwatch recordings to apply. Restore any removed or disabled measured steps first."
+        }
         static func saveError(_ detail: String) -> String {
             "Recording could not be saved on this device: \(detail) Try again before closing."
         }
         static func deleteError(_ detail: String) -> String { "Recording could not be deleted: \(detail)" }
         static func loadError(_ detail: String) -> String { "Local recordings could not be loaded: \(detail)" }
-        static func comparison(target: String?, actual: String, difference: Double?) -> String {
-            guard let target, let difference else { return "Actual \(actual) · No target" }
-            let delta = abs(difference) < 0.5 ? "matches target"
-                : "\(StopwatchText.duration(abs(difference))) \(difference > 0 ? "over" : "under") target"
-            return "Target \(target) · Actual \(actual) · \(delta)"
+        static func comparisonWithoutTarget(_ actual: String) -> String { "Actual \(actual) · No target" }
+        static let matchesTarget = "matches target"
+        static func overTarget(_ difference: String) -> String { "\(difference) over target" }
+        static func underTarget(_ difference: String) -> String { "\(difference) under target" }
+        static func comparison(target: String, actual: String, delta: String) -> String {
+            "Target \(target) · Actual \(actual) · \(delta)"
         }
     }
 }

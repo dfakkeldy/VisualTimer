@@ -157,6 +157,27 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(try store.load().records, [unrelated])
     }
 
+    func testStoreRoundTripsWholeRecordsInDateAndFixedUUIDOrder() throws {
+        let store = StopwatchRecordingStore(directory: try temporaryDirectory())
+        let original = source()
+        let changed = StopwatchSource(templateID: original.templateID, title: "Updated routine",
+            steps: original.steps.map { .init(id: $0.id, name: $0.name, targetSeconds: 90) })
+        let older = recording(source: original, durations: [32.125, 50.75, 10], date: epoch)
+        let tiedDate = epoch.addingTimeInterval(60)
+        func tied(_ id: String, source: StopwatchSource, durations: [Double]) -> StopwatchRecording {
+            let record = recording(source: source, durations: durations, date: tiedDate)
+            return StopwatchRecording(version: record.version, id: UUID(uuidString: id)!, source: source,
+                startedAt: record.startedAt, finishedAt: record.finishedAt, measurements: record.measurements)
+        }
+        let tiedFirst = tied("00000000-0000-0000-0000-000000000001", source: changed, durations: [8.5, 9.25, 11])
+        let tiedSecond = tied("00000000-0000-0000-0000-000000000002", source: original, durations: [15, 16, 17])
+        let newest = recording(source: changed, durations: [21, 22, 23], date: epoch.addingTimeInterval(120))
+        for record in [tiedSecond, older, newest, tiedFirst] { try store.save(record) }
+        let loaded = try store.load()
+        XCTAssertEqual(loaded.records, [newest, tiedFirst, tiedSecond, older])
+        XCTAssertTrue(loaded.unreadableFiles.isEmpty)
+    }
+
     func testMalformedFileReportedAndPreservedAlongsideReadableRecords() throws {
         let directory = try temporaryDirectory()
         let store = StopwatchRecordingStore(directory: directory)
@@ -300,7 +321,7 @@ final class StopwatchTests: XCTestCase {
         let model = viewModel(source: source, store: store, clock: TestClock())
         model.start()
         model.finish(stepID: source.steps[0].id)
-        XCTAssertFalse(model.applyReview { _ in throw StopwatchError.changedTemplate })
+        XCTAssertFalse(model.applyReview { _ in throw StopwatchError.changedTemplate(source.title) })
         XCTAssertTrue(model.isReviewSaved)
         XCTAssertFalse(model.isApplied)
         store.failDelete = true
@@ -453,14 +474,18 @@ final class StopwatchTests: XCTestCase {
         let step = source(targets: [30]).steps[0]
         XCTAssertEqual(StopwatchText.comparison(step: step, actual: 32), "Target 30s · Actual 32s · 2s over target")
         XCTAssertEqual(StopwatchText.comparison(step: step, actual: 28), "Target 30s · Actual 28s · 2s under target")
-        for actual in [29.6, 30.4] {
+        XCTAssertEqual(StopwatchText.comparison(step: step, actual: 28.5), "Target 30s · Actual 29s · 1s under target")
+        XCTAssertEqual(StopwatchText.comparison(step: step, actual: 30.5), "Target 30s · Actual 31s · 1s over target")
+        for actual in [29.5, 29.6, 30.4] {
             XCTAssertEqual(StopwatchText.comparison(step: step, actual: actual), "Target 30s · Actual 30s · matches target")
         }
         XCTAssertEqual(StopwatchText.comparison(step: source(targets: [nil]).steps[0], actual: 7), "Actual 7s · No target")
         let row = StopwatchViewModel.ComparisonRow(step: step, measurement: .init(stepID: step.id, seconds: 0.2), position: 1)
-        XCTAssertEqual(row.appliedDurationHint, "Sets duration to 5s")
+        XCTAssertEqual(row.appliedDurationHint, "Template duration: 5s")
+        XCTAssertTrue(row.measurement.adjustsForTemplate)
         let rounded = StopwatchViewModel.ComparisonRow(step: step, measurement: .init(stepID: step.id, seconds: 7.6), position: 1)
         XCTAssertNil(rounded.appliedDurationHint)
+        XCTAssertFalse(rounded.measurement.adjustsForTemplate)
     }
 
     func testShowAndBackToPlanCannotReplaceRunningOrUnsavedReview() {
@@ -550,6 +575,110 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(model.source.title, baseline.title)
         XCTAssertEqual(model.source.steps[0].name, "Changed step")
         XCTAssertFalse(model.hasUnkeptWork)
+    }
+
+    func testDeletingOnlySavedNewPlanRetainsEditsAcrossDismissal() {
+        let initial = source(targets: [nil])
+        let store = MemoryStopwatchStore()
+        let model = StopwatchViewModel(source: initial, mode: .newPlan, isProUnlocked: false,
+            store: store, automaticallyRefresh: false)
+        let workspace = StopwatchWorkspace()
+        workspace.open(model)
+        model.setTitle("Keep this plan")
+        model.renameStep(id: initial.steps[0].id, name: "Keep this step")
+        let edited = model.source
+        model.start()
+        model.finish(stepID: initial.steps[0].id)
+        XCTAssertTrue(model.saveReview())
+        XCTAssertFalse(model.hasUnkeptWork)
+        store.failDelete = true
+        XCTAssertFalse(model.deleteReview())
+        XCTAssertNotNil(model.reviewRecord)
+        store.failDelete = false
+        XCTAssertTrue(model.deleteReview())
+        XCTAssertTrue(model.records.isEmpty)
+        XCTAssertTrue(model.hasUnkeptPlan)
+        XCTAssertEqual(model.source, edited)
+        workspace.isPresented = false
+        XCTAssertNil(workspace.sheetDidDismiss())
+        XCTAssertTrue(workspace.model === model)
+        workspace.returnToStopwatch()
+        XCTAssertTrue(workspace.isPresented)
+        model.discardUnkeptWork()
+        XCTAssertEqual(model.source, initial)
+    }
+
+    func testDeleteUsesNewestRemainingSameRoutineBaselineEvenOutsideFreeHistory() {
+        let initial = source(targets: [nil])
+        let older = StopwatchSource(templateID: initial.templateID, title: "Older plan", steps: initial.steps)
+        let newestRemaining = StopwatchSource(templateID: initial.templateID, title: "Newest kept plan", steps: initial.steps)
+        let store = MemoryStopwatchStore()
+        store.records = [recording(source: older, durations: [10], date: epoch),
+                         recording(source: newestRemaining, durations: [12], date: epoch.addingTimeInterval(20))]
+            + (30..<36).map { recording(source: source(targets: [nil]), durations: [15], date: epoch.addingTimeInterval(Double($0))) }
+        let model = StopwatchViewModel(source: initial, mode: .newPlan, isProUnlocked: false,
+            store: store, date: { self.epoch.addingTimeInterval(100) }, automaticallyRefresh: false)
+        model.setTitle("Newest, now deleted")
+        model.start()
+        model.finish(stepID: initial.steps[0].id)
+        XCTAssertTrue(model.saveReview())
+        XCTAssertTrue(model.deleteReview())
+        XCTAssertTrue(model.visibleRecords.isEmpty)
+        XCTAssertTrue(model.hasOlderRecords)
+        XCTAssertTrue(model.hasUnkeptPlan)
+        model.discardUnkeptWork()
+        XCTAssertEqual(model.source, newestRemaining, "Baseline comes from all retained records, newest first")
+    }
+
+    func testDiscardMeasurementsKeepsEditedPlanAndAllowsAnotherRecording() {
+        let initial = source(targets: [nil])
+        let store = MemoryStopwatchStore()
+        let model = StopwatchViewModel(source: initial, mode: .newPlan, isProUnlocked: false,
+            store: store, automaticallyRefresh: false)
+        XCTAssertFalse(model.canDiscardRecordingKeepingPlan)
+        model.setTitle("Keep routine")
+        model.renameStep(id: initial.steps[0].id, name: "Keep step")
+        let edited = model.source
+        model.start()
+        XCTAssertTrue(model.canDiscardRecordingKeepingPlan)
+        XCTAssertEqual(model.discardAction, "Discard recording and plan")
+        model.finish(stepID: initial.steps[0].id)
+        XCTAssertTrue(model.canDiscardRecordingKeepingPlan)
+        model.discardUnkeptRecording()
+        XCTAssertEqual(model.source, edited)
+        XCTAssertTrue(model.hasUnkeptPlan)
+        XCTAssertFalse(model.canDiscardRecordingKeepingPlan)
+        XCTAssertTrue(model.canStart)
+        model.start()
+        XCTAssertEqual(model.session?.source, edited)
+        XCTAssertEqual(model.session?.phase, .running)
+        XCTAssertEqual(store.saveCount, 0)
+    }
+
+    func testWorkspaceEntitlementUpdatesWithoutPaywallRefreshBothHistoryDirections() {
+        let original = source(targets: [nil])
+        let store = MemoryStopwatchStore()
+        store.records = (0..<7).map {
+            recording(source: original, durations: [Double($0 + 10)], date: epoch.addingTimeInterval(Double($0)))
+        }
+        let model = StopwatchViewModel(source: original, mode: .newPlan, isProUnlocked: false,
+            store: store, automaticallyRefresh: false)
+        let workspace = StopwatchWorkspace()
+        workspace.open(model)
+        model.setTitle("Retained unsaved plan")
+        workspace.isPresented = false
+        XCTAssertNil(workspace.sheetDidDismiss())
+        XCTAssertEqual(model.visibleRecords.count, 5)
+        XCTAssertTrue(model.hasOlderRecords)
+        workspace.updateProAccess(true)
+        XCTAssertEqual(model.visibleRecords.count, 7)
+        XCTAssertFalse(model.hasOlderRecords)
+        workspace.updateProAccess(false)
+        XCTAssertEqual(model.visibleRecords.count, 5)
+        XCTAssertTrue(model.hasOlderRecords)
+        XCTAssertTrue(workspace.model === model)
+        XCTAssertFalse(workspace.isPresented)
+        XCTAssertEqual(model.source.title, "Retained unsaved plan")
     }
 
     func testPlanShowGuardAndDiscardDialogNameTheWorkAtRisk() {
@@ -704,6 +833,7 @@ final class StopwatchTests: XCTestCase {
         XCTAssertNil(model.currentStepAnnouncement)
         model.start()
         XCTAssertEqual(model.currentStepAnnouncement, "Step 1 of 3, Prepare")
+        XCTAssertEqual(model.workspaceStatus, "Step 1 of 3 · Recording")
         clock.time = 1
         model.refreshTime()
         clock.time = 2
@@ -714,6 +844,7 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(model.currentStepAnnouncement, "Step 2 of 3, Focus")
         model.pause()
         XCTAssertEqual(model.session?.phase, .paused)
+        XCTAssertEqual(model.workspaceStatus, "Step 2 of 3 · Paused")
         model.resume()
         XCTAssertEqual(model.session?.phase, .running)
         clock.time = 100_000
@@ -821,6 +952,43 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(editor.stopwatchSource().steps.map(\.targetSeconds), [12])
         XCTAssertEqual(editor.stopwatchTemplateID, source.templateID)
         XCTAssertTrue(editor.hasUnsavedChanges)
+    }
+
+    func testEditorApplyPreflightMatchesBothApplicationPathsAndNamesRecovery() throws {
+        let directory = try temporaryDirectory()
+        let library = TemplateLibraryStore(documentsDirectory: directory)
+        let editor = editor(library: library, directory: directory)
+        editor.applyStarterTemplate(StarterTemplateLibrary.defaultTemplate)
+        let original = editor.stopwatchSource()
+        let measured = recording(source: original, durations: [12, 13])
+        XCTAssertNil(editor.stopwatchApplyBlocker(measured, kind: .existingTemplate))
+        editor.toggleActive(id: original.steps[1].id)
+        let before = editor.rounds
+        let blocker = try XCTUnwrap(editor.stopwatchApplyBlocker(measured, kind: .existingTemplate))
+        XCTAssertEqual(blocker.localizedDescription, "The template or its enabled steps have changed. Open “Game Night”, then Local stopwatch recordings to apply. Restore any removed or disabled measured steps first.")
+        XCTAssertThrowsError(try editor.applyStopwatchRecording(measured, kind: .existingTemplate)) {
+            XCTAssertEqual($0.localizedDescription, blocker.localizedDescription)
+        }
+        XCTAssertEqual(editor.rounds, before)
+        editor.toggleActive(id: original.steps[1].id)
+        editor.applyStarterTemplate(StarterTemplateLibrary.templates[1])
+        XCTAssertNotNil(editor.stopwatchApplyBlocker(measured, kind: .existingTemplate))
+        let plan = source(targets: [nil, nil])
+        let partial = recording(source: plan, durations: [10])
+        XCTAssertEqual(editor.stopwatchApplyBlocker(partial, kind: .newTemplate)?.localizedDescription,
+                       Theme.Stopwatch.invalidRecording)
+        let complete = recording(source: plan, durations: [10, 20])
+        XCTAssertNil(editor.stopwatchApplyBlocker(complete, kind: .newTemplate))
+        try editor.applyStopwatchRecording(complete, kind: .newTemplate)
+        guard case .saved = editor.saveToDocuments(isProUnlocked: false) else { return XCTFail("First save remains free") }
+        editor.gameTitle = "Current saved title"
+        guard case .saved = editor.saveToDocuments(isProUnlocked: false) else { return XCTFail("Updating remains free") }
+        let savedBlocker = try XCTUnwrap(editor.stopwatchApplyBlocker(complete, kind: .newTemplate))
+        XCTAssertTrue(savedBlocker.localizedDescription.contains("Open “Current saved title”, then Local stopwatch recordings to apply."))
+        XCTAssertThrowsError(try editor.applyNewStopwatchRoutine(complete)) {
+            XCTAssertEqual($0.localizedDescription, savedBlocker.localizedDescription)
+        }
+        XCTAssertEqual(editor.gameTitle, "Current saved title")
     }
 
     @MainActor

@@ -20,8 +20,7 @@ final class StopwatchViewModel: ObservableObject {
         var label: String { "\(position). \(step.name)" }
         var summary: String { StopwatchText.comparison(step: step, actual: measurement.seconds) }
         var appliedDurationHint: String? {
-            Double(measurement.templateSeconds) == measurement.seconds.rounded()
-                ? nil : Theme.Stopwatch.setsDuration(measurement.templateSeconds)
+            measurement.adjustsForTemplate ? Theme.Stopwatch.setsDuration(measurement.templateSeconds) : nil
         }
     }
 
@@ -37,6 +36,7 @@ final class StopwatchViewModel: ObservableObject {
     var isNewRoutine: Bool { mode == .newPlan }
     var isLibrary: Bool { mode == .library }
     private let savedTemplateTitles: [UUID: String]
+    private let initialPlan: StopwatchSource
     private var planBaseline: StopwatchSource
     @Published private(set) var source: StopwatchSource
     @Published private(set) var session: StopwatchSession?
@@ -62,6 +62,7 @@ final class StopwatchViewModel: ObservableObject {
          date: @escaping () -> Date = Date.init,
          automaticallyRefresh: Bool = true) {
         self.source = source
+        self.initialPlan = source
         self.planBaseline = source
         self.mode = mode
         self.savedTemplateTitles = savedTemplateTitles
@@ -84,8 +85,16 @@ final class StopwatchViewModel: ObservableObject {
         hasUnsavedPlanEdits && session == nil && reviewRecord == nil
     }
     var hasUnkeptWork: Bool { hasUnkeptRecording || hasUnkeptPlan }
+    var canDiscardRecordingKeepingPlan: Bool { isNewRoutine && hasUnkeptRecording && hasUnsavedPlanEdits }
+    var discardAction: String {
+        if canDiscardRecordingKeepingPlan { return Theme.Stopwatch.discardRecordingAndPlan }
+        return hasUnkeptPlan ? Theme.Stopwatch.discardPlan : Theme.Stopwatch.discard
+    }
     var workspaceStatus: String {
-        if isRecording { return session?.phase == .paused ? Theme.Stopwatch.paused : Theme.Stopwatch.recording }
+        if isRecording, let session {
+            return Theme.Stopwatch.progress(position: session.index + 1, count: session.source.steps.count,
+                                            isPaused: session.phase == .paused)
+        }
         return hasUnkeptPlan ? Theme.Stopwatch.unsavedPlan : Theme.Stopwatch.unsavedReview
     }
     var discardTitle: String {
@@ -110,15 +119,15 @@ final class StopwatchViewModel: ObservableObject {
         return Theme.Stopwatch.stepAnnouncement(position: session.index + 1, count: session.source.steps.count, name: step.name)
     }
     var canStart: Bool { session == nil && reviewRecord == nil && startBlocker == nil }
+    private var routineRecords: [StopwatchRecording] {
+        isLibrary ? records : records.filter { $0.source.templateID == source.templateID }
+    }
     var visibleRecords: [StopwatchRecording] {
         // Apply the existing history limit before filtering by routine.
-        let accessible = HistoryAccessPolicy.visibleRecords(records, isProUnlocked: isProUnlocked)
-        return isLibrary ? accessible : accessible.filter { $0.source.templateID == source.templateID }
+        let accessibleIDs = Set(HistoryAccessPolicy.visibleRecords(records, isProUnlocked: isProUnlocked).map(\.id))
+        return routineRecords.filter { accessibleIDs.contains($0.id) }
     }
-    var hasOlderRecords: Bool {
-        let relevant = isLibrary ? records : records.filter { $0.source.templateID == source.templateID }
-        return visibleRecords.count < relevant.count
-    }
+    var hasOlderRecords: Bool { visibleRecords.count < routineRecords.count }
     var startBlocker: String? {
         if source.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return Theme.Stopwatch.missingRoutineName }
         if source.steps.isEmpty { return Theme.Stopwatch.missingSteps }
@@ -153,8 +162,7 @@ final class StopwatchViewModel: ObservableObject {
     var trendPoints: [TrendPoint] {
         guard let selectedTrendStepID else { return [] }
         return visibleRecords.reversed().compactMap { record in
-            guard record.source.templateID == source.templateID,
-                  let step = record.source.steps.first(where: { $0.id == selectedTrendStepID }),
+            guard let step = record.source.steps.first(where: { $0.id == selectedTrendStepID }),
                   let measurement = record.measurements.first(where: { $0.stepID == selectedTrendStepID }) else { return nil }
             return TrendPoint(id: record.id, date: record.startedAt, step: step, seconds: measurement.seconds)
         }
@@ -298,15 +306,25 @@ final class StopwatchViewModel: ObservableObject {
         }
     }
 
-    func deleteReview() {
-        guard isReviewSaved, let record = reviewRecord else { return }
+    @discardableResult
+    func deleteReview() -> Bool {
+        guard isReviewSaved, let record = reviewRecord else { return false }
         do {
             try store.delete(id: record.id)
             reviewRecord = nil
             session = nil
             isReviewSaved = false
+            // Do not retain the deleted baseline even if the subsequent reload fails.
+            records.removeAll { $0.id == record.id }
             reload()
-        } catch { errorMessage = Theme.Stopwatch.deleteError(error.localizedDescription) }
+            if isNewRoutine {
+                planBaseline = records.first { $0.source.templateID == source.templateID }?.source ?? initialPlan
+            }
+            return true
+        } catch {
+            errorMessage = Theme.Stopwatch.deleteError(error.localizedDescription)
+            return false
+        }
     }
 
     func reload() {
@@ -350,8 +368,12 @@ final class StopwatchWorkspace: ObservableObject {
         return nil
     }
 
+    func updateProAccess(_ unlocked: Bool) {
+        model?.isProUnlocked = unlocked
+    }
+
     func paywallDidDismiss(isProUnlocked: Bool) {
-        model?.isProUnlocked = isProUnlocked
+        updateProAccess(isProUnlocked)
         guard pendingProFeature != nil, model != nil else { return }
         pendingProFeature = nil
         isPresented = true

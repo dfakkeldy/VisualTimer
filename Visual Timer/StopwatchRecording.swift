@@ -28,7 +28,7 @@ enum StopwatchLimits {
     static let duplicateTapInterval: TimeInterval = 0.35
     static let displayRefreshInterval: TimeInterval = 0.1
     static let maximumStepSeconds: TimeInterval = 86_400
-    static let minimumTemplateSeconds = 5
+    static let minimumTemplateSeconds = Theme.TimerMechanic.minimumDuration
 }
 
 struct StopwatchMeasurement: Codable, Equatable, Identifiable {
@@ -36,14 +36,18 @@ struct StopwatchMeasurement: Codable, Equatable, Identifiable {
     let seconds: TimeInterval
     var id: UUID { stepID }
 
-    /// Countdown templates use whole seconds and have a five-second minimum.
+    /// Countdown templates use whole seconds and the shared minimum duration.
     var templateSeconds: Int {
         Int(min(StopwatchLimits.maximumStepSeconds,
                 max(Double(StopwatchLimits.minimumTemplateSeconds), seconds.rounded())))
     }
+
+    var adjustsForTemplate: Bool { templateSeconds != Int(seconds.rounded()) }
 }
 
 struct StopwatchRecording: Codable, Equatable, Identifiable {
+    // Add optional fields without raising this version. Raise it only alongside
+    // a decoder that continues to read recordings saved with older versions.
     static let schemaVersion = 1
     let version: Int
     let id: UUID
@@ -70,7 +74,7 @@ struct StopwatchRecording: Codable, Equatable, Identifiable {
 enum StopwatchError: LocalizedError {
     case invalidSource
     case invalidRecording
-    case changedTemplate
+    case changedTemplate(String)
 
     var errorDescription: String? {
         switch self {
@@ -78,8 +82,8 @@ enum StopwatchError: LocalizedError {
             return Theme.Stopwatch.invalidSource
         case .invalidRecording:
             return Theme.Stopwatch.invalidRecording
-        case .changedTemplate:
-            return Theme.Stopwatch.changedTemplate
+        case .changedTemplate(let title):
+            return Theme.Stopwatch.changedTemplate(title)
         }
     }
 }
@@ -209,8 +213,17 @@ enum StopwatchText {
     }
 
     static func comparison(step: StopwatchSource.Step, actual: TimeInterval) -> String {
-        Theme.Stopwatch.comparison(target: step.targetSeconds.map { duration(Double($0)) },
-                                   actual: duration(actual),
-                                   difference: step.targetSeconds.map { actual - Double($0) })
+        let actualText = duration(actual)
+        guard let target = step.targetSeconds else { return Theme.Stopwatch.comparisonWithoutTarget(actualText) }
+        let difference = Int(actual.rounded()) - target
+        let delta: String
+        if difference == 0 {
+            delta = Theme.Stopwatch.matchesTarget
+        } else if difference > 0 {
+            delta = Theme.Stopwatch.overTarget(duration(Double(difference)))
+        } else {
+            delta = Theme.Stopwatch.underTarget(duration(Double(-difference)))
+        }
+        return Theme.Stopwatch.comparison(target: duration(Double(target)), actual: actualText, delta: delta)
     }
 }

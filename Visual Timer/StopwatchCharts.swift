@@ -5,6 +5,8 @@ import Charts
 struct StopwatchComparisonView: View {
     let rows: [StopwatchViewModel.ComparisonRow]
 
+    private var hasTargets: Bool { rows.contains { $0.step.targetSeconds != nil } }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Stopwatch.spacing) {
             Chart(rows) { row in
@@ -19,8 +21,8 @@ struct StopwatchComparisonView: View {
                     .foregroundStyle(by: .value(Theme.Stopwatch.review, Theme.Stopwatch.actual))
                     .position(by: .value(Theme.Stopwatch.review, Theme.Stopwatch.actual))
             }
-            .chartForegroundStyleScale(domain: [Theme.Stopwatch.target, Theme.Stopwatch.actual],
-                                       range: [Theme.Stopwatch.targetColor, Theme.Stopwatch.actualColor])
+            .chartForegroundStyleScale(domain: hasTargets ? [Theme.Stopwatch.target, Theme.Stopwatch.actual] : [Theme.Stopwatch.actual],
+                                       range: hasTargets ? [Theme.Stopwatch.targetColor, Theme.Stopwatch.actualColor] : [Theme.Stopwatch.actualColor])
             .chartYScale(domain: Array(rows.map(\.label).reversed()))
             .chartXAxis {
                 AxisMarks { value in

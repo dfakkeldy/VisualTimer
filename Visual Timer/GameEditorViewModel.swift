@@ -289,16 +289,29 @@ final class GameEditorViewModel: ObservableObject {
         }
     }
 
+    /// Shared preflight for the review UI and both application paths.
+    func stopwatchApplyBlocker(_ recording: StopwatchRecording, kind: StopwatchViewModel.ApplyKind) -> StopwatchError? {
+        do { try recording.validate() }
+        catch { return (error as? StopwatchError) ?? .invalidRecording }
+        let savedSource = templateLibrary.listTemplates().first { $0.id == recording.source.templateID }
+        let changedSource = StopwatchError.changedTemplate(savedSource?.title ?? recording.source.title)
+        switch kind {
+        case .existingTemplate:
+            let activeIDs = Set(rounds.filter(\.isActive).map(\.id))
+            guard recording.source.templateID == stopwatchTemplateID,
+                  Set(rounds.map(\.id)).count == rounds.count,
+                  recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else { return changedSource }
+        case .newTemplate:
+            guard recording.isComplete else { return .invalidRecording }
+            guard savedSource == nil else { return changedSource }
+        }
+        return nil
+    }
+
     /// Applies only to the same template and enabled step identities. No save,
     /// CloudKit publication, or clean-state update occurs here.
     func applyStopwatchMeasurements(_ recording: StopwatchRecording) throws {
-        try recording.validate()
-        let activeIDs = Set(rounds.filter(\.isActive).map(\.id))
-        guard recording.source.templateID == stopwatchTemplateID,
-              Set(rounds.map(\.id)).count == rounds.count,
-              recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else {
-            throw StopwatchError.changedTemplate
-        }
+        if let blocker = stopwatchApplyBlocker(recording, kind: .existingTemplate) { throw blocker }
         hasPendingStopwatchApplication = true
         let durations = Dictionary(uniqueKeysWithValues: recording.measurements.map { ($0.stepID, $0.templateSeconds) })
         rounds = rounds.map { round in
@@ -311,12 +324,7 @@ final class GameEditorViewModel: ObservableObject {
 
     /// A name-only plan becomes a new unsaved template after a complete recording.
     func applyNewStopwatchRoutine(_ recording: StopwatchRecording) throws {
-        try recording.validate()
-        guard recording.isComplete else { throw StopwatchError.invalidRecording }
-        // Recover un-applied plans without ever overwriting another saved source.
-        guard !templateLibrary.listTemplates().contains(where: { $0.id == recording.source.templateID }) else {
-            throw StopwatchError.changedTemplate
-        }
+        if let blocker = stopwatchApplyBlocker(recording, kind: .newTemplate) { throw blocker }
         hasPendingStopwatchApplication = true
         let durations = Dictionary(uniqueKeysWithValues: recording.measurements.map { ($0.stepID, $0.templateSeconds) })
         lastTemplateID = ""
