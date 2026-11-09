@@ -567,9 +567,11 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(model.discardHint, Theme.Stopwatch.discardPlanHint)
         model.start()
         XCTAssertEqual(model.discardTitle, "Discard this recording?")
+        XCTAssertEqual(model.discardHint, Theme.Stopwatch.discardPlanAndRecordingHint)
         model.finish(stepID: source.steps[0].id)
         XCTAssertEqual(model.workspaceStatus, "Unsaved review")
         XCTAssertEqual(model.discardTitle, "Discard these measurements?")
+        XCTAssertEqual(model.discardHint, Theme.Stopwatch.discardPlanAndRecordingHint)
         XCTAssertEqual(store.saveCount, 0)
     }
 
@@ -633,6 +635,22 @@ final class StopwatchTests: XCTestCase {
             XCTAssertTrue(workspace.model === model)
             XCTAssertFalse(model.isProUnlocked)
         }
+    }
+
+    func testEditorPaywallRefreshesProForRetainedWorkspaceWithoutReopeningIt() {
+        let model = StopwatchViewModel(source: source(), mode: .newPlan, isProUnlocked: false,
+            store: MemoryStopwatchStore(), automaticallyRefresh: false)
+        let workspace = StopwatchWorkspace()
+        workspace.open(model)
+        model.setTitle("Unsaved routine")
+        workspace.isPresented = false
+        XCTAssertNil(workspace.sheetDidDismiss())
+        workspace.paywallDidDismiss(isProUnlocked: true)
+        XCTAssertTrue(workspace.model === model)
+        XCTAssertTrue(model.isProUnlocked)
+        XCTAssertFalse(workspace.isPresented)
+        workspace.returnToStopwatch()
+        XCTAssertTrue(workspace.isPresented)
     }
 
     func testFinishEarlyCountsOnlyStepsAfterCurrentAndExplainsPartialPlan() {

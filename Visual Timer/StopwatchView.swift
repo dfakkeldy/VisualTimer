@@ -69,13 +69,6 @@ struct StopwatchView: View {
             .onChange(of: model.session?.index) { _, _ in
                 if let message = model.currentStepAnnouncement { announce(message) }
             }
-            .onChange(of: model.session?.phase) { _, phase in
-                if phase == .paused { announce(Theme.Stopwatch.paused) }
-                if phase == .running { announce(Theme.Stopwatch.recording) }
-            }
-            .onChange(of: model.isReviewSaved) { _, saved in
-                if saved { announce(Theme.Stopwatch.savedAction) }
-            }
             .onChange(of: model.hasReachedStepLimit) { _, reached in
                 if reached { announce(Theme.Stopwatch.limitHint) }
             }
@@ -111,7 +104,6 @@ struct StopwatchView: View {
                 TextField(Theme.Stopwatch.routineName,
                           text: Binding(get: { model.source.title }, set: model.setTitle))
                     .font(.title2.weight(.bold))
-                    .accessibilityAddTraits(.isHeader)
             } else {
                 Text(model.source.title).font(.title2.weight(.bold))
                     .accessibilityAddTraits(.isHeader)
@@ -203,7 +195,7 @@ struct StopwatchView: View {
                     earlyFinishStepID = step.id
                     showFinishEarly = true
                 }
-                    .accessibilityIdentifier(Theme.Stopwatch.finishIdentifier)
+                    .accessibilityIdentifier(Theme.Stopwatch.finishEarlyIdentifier)
             }
         } footer: {
             Text(session.phase == .paused ? Theme.Stopwatch.pausedHint : Theme.Stopwatch.backgroundHint)
@@ -224,7 +216,13 @@ struct StopwatchView: View {
     @ViewBuilder
     private func recordingControls(session: StopwatchSession, step: StopwatchSource.Step) -> some View {
         Button {
-            if session.phase == .paused { model.resume() } else { model.pause() }
+            if session.phase == .paused {
+                model.resume()
+                announce(Theme.Stopwatch.recording)
+            } else {
+                model.pause()
+                announce(Theme.Stopwatch.paused)
+            }
         } label: {
             Label(session.phase == .paused ? Theme.Stopwatch.resume : Theme.Stopwatch.pause,
                   systemImage: session.phase == .paused ? Theme.Stopwatch.resumeSymbol : Theme.Stopwatch.pauseSymbol)
@@ -253,7 +251,9 @@ struct StopwatchView: View {
         .listRowBackground(Theme.ColorValue.surface)
 
         Section {
-            Button(model.isReviewSaved ? Theme.Stopwatch.savedAction : Theme.Stopwatch.saveRecording) { model.saveReview() }
+            Button(model.isReviewSaved ? Theme.Stopwatch.savedAction : Theme.Stopwatch.saveRecording) {
+                if model.saveReview() { announce(Theme.Stopwatch.savedAction) }
+            }
                 .disabled(model.isReviewSaved)
             Button(model.applyKind == .newTemplate ? Theme.Stopwatch.applyNew : Theme.Stopwatch.apply) {
                 if model.applyKind == .newTemplate && replacesUnsavedEdits { showReplace = true } else { apply() }
@@ -305,7 +305,7 @@ struct StopwatchView: View {
                 Button(Theme.Stopwatch.retryLoading, action: model.reload)
             }
             if model.hasOlderRecords {
-                Text(Theme.Stopwatch.historyLimit).font(.caption)
+                if !model.visibleRecords.isEmpty { Text(Theme.Stopwatch.historyLimit).font(.caption) }
                 Button(Theme.Stopwatch.unlockHistory) { onRequestPro(.fullHistory) }
             }
         } header: { Text(Theme.Stopwatch.history) } footer: { Text(Theme.Stopwatch.localHint) }

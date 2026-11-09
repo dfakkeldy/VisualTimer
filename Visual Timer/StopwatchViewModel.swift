@@ -79,8 +79,9 @@ final class StopwatchViewModel: ObservableObject {
 
     var isRecording: Bool { session?.phase == .running || session?.phase == .paused }
     var hasUnkeptRecording: Bool { isRecording || (reviewRecord != nil && !isReviewSaved) }
+    private var hasUnsavedPlanEdits: Bool { isNewRoutine && source != planBaseline }
     var hasUnkeptPlan: Bool {
-        isNewRoutine && session == nil && reviewRecord == nil && source != planBaseline
+        hasUnsavedPlanEdits && session == nil && reviewRecord == nil
     }
     var hasUnkeptWork: Bool { hasUnkeptRecording || hasUnkeptPlan }
     var workspaceStatus: String {
@@ -92,7 +93,8 @@ final class StopwatchViewModel: ObservableObject {
             : (isRecording ? Theme.Stopwatch.discardTitle : Theme.Stopwatch.discardReviewTitle)
     }
     var discardHint: String {
-        hasUnkeptPlan ? Theme.Stopwatch.discardPlanHint
+        if hasUnsavedPlanEdits && hasUnkeptRecording { return Theme.Stopwatch.discardPlanAndRecordingHint }
+        return hasUnkeptPlan ? Theme.Stopwatch.discardPlanHint
             : (isRecording ? Theme.Stopwatch.discardHint : Theme.Stopwatch.discardReviewHint)
     }
     var unmeasuredStepCount: Int {
@@ -349,9 +351,9 @@ final class StopwatchWorkspace: ObservableObject {
     }
 
     func paywallDidDismiss(isProUnlocked: Bool) {
-        guard pendingProFeature != nil, let model else { return }
+        model?.isProUnlocked = isProUnlocked
+        guard pendingProFeature != nil, model != nil else { return }
         pendingProFeature = nil
-        model.isProUnlocked = isProUnlocked
         isPresented = true
     }
 }
