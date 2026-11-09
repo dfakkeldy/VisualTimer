@@ -97,7 +97,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
     }
 
     @MainActor
-    func testEarlyReviewTextClippingAtLargestAccessibilitySize() throws {
+    func testEarlyReviewAccessibilityAuditAtLargestTextSize() throws {
         // Measure the same rendered label before and after the launch override;
         // launch arguments alone do not prove Dynamic Type reached the app.
         let standardApp = launchTemplates(arguments: [
@@ -145,6 +145,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
         let reviewList = app.collectionViews.element(boundBy: reviewIndex)
         let comparison = reviewList.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "1. Alice", "Actual")).firstMatch
         reveal(comparison, in: app)
+        revealFullyForAudit(comparison, in: reviewList, app: app)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "AX5 early-review comparison"
         screenshot.lifetime = .keepAlways
@@ -179,6 +180,23 @@ final class StopwatchConfirmationUITests: XCTestCase {
     @MainActor
     private func auditKey(_ element: XCUIElement) -> String {
         "\(element.elementType.rawValue)|\(element.identifier)|\(element.label)|\(element.frame)"
+    }
+
+    @MainActor
+    private func revealFullyForAudit(_ element: XCUIElement, in list: XCUIElement, app: XCUIApplication) {
+        let top = max(list.frame.minY, app.navigationBars["Routine stopwatch"].frame.maxY)
+        let bottom = list.frame.maxY
+        for _ in 0..<8 {
+            let bounds = element.frame
+            if bounds.minY >= top && bounds.maxY <= bottom { return }
+            let endY: CGFloat = bounds.maxY > bottom ? 0.45 : 0.75
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+                .press(forDuration: 0.05,
+                       thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: endY)),
+                       withVelocity: .slow, thenHoldForDuration: 0.1)
+        }
+        XCTAssertTrue(element.frame.minY >= top && element.frame.maxY <= bottom,
+                      "Audit the complete comparison, not only its partially visible heading")
     }
 
     @MainActor

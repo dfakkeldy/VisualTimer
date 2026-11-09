@@ -83,7 +83,7 @@ disabled with an explanation while plan edits remain unkept; **Undo plan edits**
 for confirmation and undoes those edits without closing the stopwatch.
 
 Comparison bars and dated per-step trends use neutral target/actual language. At
-standard text sizes, charts have visible text alternatives and duration-formatted
+standard text sizes, charts appear above always-visible text rows with duration-formatted
 axes. Comparison bars are distinguished by position, legend, and text rows. In the trend chart, target
 and actual series differ in shape and dashed versus solid stroke: circles show
 actuals, while squares mark captured targets. A no-target comparison omits Target
@@ -130,8 +130,10 @@ A third UI test requests the largest accessibility text size, verifies the overr
 through rendered label geometry, and audits an early-finish review for clipped text,
 including the five-second minimum-duration hint. It saves rendered and accessibility
 context and excludes only clipping issues verified to belong to the background
-editor. Its regression result remains unverified until an unfixed/fixed audit pair
-completes; full accessibility labels alone do not establish that text is visible.
+editor. The one-row audit passed an unfixed-chart probe, so it is a smoke check, not a
+proven detector for the captured three-row truncation. Full comparison visibility
+is checked before auditing. Same-data rendered captures remain the proof for that
+layout failure; complete accessibility labels alone do not establish visibility.
 Apple build/test execution uses the Mac build-slot scheduler. On 2026-11-08,
 the iOS app, embedded Watch app, and iOS test targets compiled. All 182 unit
 tests passed, including 52 stopwatch tests, and both confirmation UI tests
