@@ -419,7 +419,7 @@ extension Theme {
         static let saveRecording = "Save recording"
         static let apply = "Apply durations"
         static let applyNew = "Apply as new template"
-        static let applyHint = "Applying saves this recording and edits the template. Save in the editor to keep the template changes. Starting the timer also saves a template that's already saved. Durations round to whole seconds, with a \(StopwatchLimits.minimumTemplateSeconds)-second minimum."
+        static let applyHint = "Applying saves this recording and edits the template. Save in the editor to keep the template changes. Starting the timer also saves a template that's already saved. Durations round to whole seconds, with a \(TimerMechanic.minimumDuration)-second minimum."
         static let partialNewHint = "This recording ended early. Record every step to create a template. You can still save these measurements."
         static let partialHint = "Only measured steps will change. Other template durations stay as they are."
         static let neutralHint = "More or less time is information, not a score."
