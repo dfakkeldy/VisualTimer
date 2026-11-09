@@ -20,6 +20,7 @@ verification, and [Roadmap](Roadmap.md) for the current priorities.
 Useful docs:
 
 - [Architecture](Architecture.md)
+- [Stopwatch templates](docs/stopwatch-templates.md)
 - [Roadmap](Roadmap.md)
 - [App Store readiness](docs/app-store/readiness.md)
 - [Fastlane release docs](fastlane/README.md)
@@ -38,6 +39,17 @@ Useful docs:
   sounds, add emoji, and decide whether a round counts as a turn. Unsaved
   edits survive an app close as a draft. Opening another template card while
   edits are unsaved asks before replacing them.
+- **Routine stopwatch (iPhone/iPad)** - Time this template measures one pass
+  through enabled rounds; Plan a new routine accepts names without durations.
+  Start counts up; Next completes a step; Finish & review opens comparison;
+  Finish early keeps the current step's time so far. Pause excludes paused
+  time. Save a recording on this device, then Apply durations and save the
+  template to keep them. Review shows target/actual comparison bars and dated
+  per-step trends without scoring faster or slower as success. Free history
+  shows the five most recent recordings across routines; Pro uses the existing
+  full-history limit. Recordings do not sync to iCloud, Apple Watch, or the
+  web app. An unfinished recording does not survive an app restart. See
+  [stopwatch templates](docs/stopwatch-templates.md).
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
   restart, or do over a turn. Captions show clock time ("Ends …"), session
   time left, and "Step N of M"; "Next" previews the following round for
@@ -94,8 +106,8 @@ Useful docs:
 These scope bullets describe implemented source, not signed-device acceptance.
 Public App Store 1.0 availability is recorded in Status and the readiness
 ledger. None of the iPhone alerts, rim drag, session restore, History session
-timeline, or Watch dial-tap behavior has been verified on a physical iPhone
-or Watch.
+timeline, routine stopwatch, or Watch dial-tap behavior has been verified on
+a physical iPhone or Watch.
 Production sync, saved Watch-template transfer and timer lock/background
 behavior still need the focused checks in the readiness ledger. No
 background-alarm guarantee is implied.
@@ -113,6 +125,10 @@ background-alarm guarantee is implied.
   unsaved template edits are stored as small JSON files in Application Support
   (`ActiveSession.json`, `QuickTimer.json`, `TemplateDraft.json`). Malformed
   files are discarded rather than restored.
+- **Stopwatch recordings** - Explicitly saved measurements are JSON files in
+  Application Support (`StopwatchRecordings/<id>.json`). They stay on the
+  device and are not CloudKit records. Malformed files are kept for recovery
+  while readable neighbours still load. Unfinished recordings are memory-only.
 - **Opt-in iPhone alerts** - `TimerAlertScheduler` schedules one local
   notification for the running countdown's finish date when the user has
   enabled alerts and iOS allows them. Pause, skip, end, and reset cancel it.
@@ -122,8 +138,9 @@ background-alarm guarantee is implied.
   returns to normal sleep behavior when paused or reset.
 - **Silent-switch override** - The audio session uses playback behavior so the
   finish sound can play even when the hardware silent switch is engaged.
-- **State machines** - Timer and sequence transitions are guarded so playback
-  remains predictable across play, pause, skip, restart, and completion.
+- **State machines** - Timer, sequence, and stopwatch transitions are guarded
+  so playback remains predictable across play, pause, skip, restart, Next,
+  Finish, and completion.
 - **StoreKit Pro unlock** - `turntimer.pro.unlock` is configured in
   `TurnTimer.storekit` for local testing. Free users keep starter templates and
   one custom saved template; Pro unlocks additional saved templates, full
@@ -161,6 +178,7 @@ status, data formats, sync boundaries, and release-engineering notes.
 | Timer core | `TimerViewModel`, `TimerState`, `TimerSound`, `SoundManager` | Countdown state, audio, sleep prevention |
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
+| Stopwatch | `StopwatchViewModel`, `StopwatchSession`, `StopwatchRecordingStore`, `StopwatchWorkspace` | Guarded step timing, device-local recordings, review/Apply |
 | Sync | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, CloudKit mappers, `UbiquitousSettingsStore` | Pro iCloud template/history sync and lightweight settings sync |
 | Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, widget timelines, and template launch URLs |
 | History | `HistoryViewModel`, `SessionTimeline`, session views | Completed session storage, review, proportional timeline and By name totals |

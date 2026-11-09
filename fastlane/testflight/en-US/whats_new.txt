@@ -11,6 +11,7 @@ Please test:
 - Template import/export without overwriting existing templates.
 - Recent history and Pro-gated history/export behavior.
 - History session detail: proportional vertical timeline (turns, pauses, went-back, Finished/Ended) and By name totals (Share / Average / Turns).
+- Routine stopwatch: Time this template or Plan a new routine; Next / Finish & review / Finish early; Pause excludes paused time; save recordings on this device; Apply durations then save the template; comparison bars and dated per-step trends. Recordings do not sync to iCloud, Watch, or the web app. An unfinished recording does not survive an app restart.
 - Pro unlock and Restore Purchases in TestFlight sandbox if available.
 - iCloud template/history sync after the production CloudKit schema is deployed.
 - Home Screen/Lock Screen widgets and watch playback where installed.
