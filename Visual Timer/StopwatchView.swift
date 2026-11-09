@@ -32,6 +32,7 @@ struct StopwatchView: View {
                     historySections
                 }
             }
+            .id(model.isRecording ? "recording" : (model.reviewRecord?.id.uuidString ?? "plan"))
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.ColorValue.appBackground)
