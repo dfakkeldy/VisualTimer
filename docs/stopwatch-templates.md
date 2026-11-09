@@ -117,12 +117,13 @@ clean drafts and first autosave, and editor application/save policy.
 Two focused XCUITests use the existing reset-persisted-state launch flow to exercise
 Finish early Cancel/confirm and Apply-as-new replacement Cancel/confirm through the
 actual view buttons. They require no additional app fixture infrastructure.
-Apple build/test execution must use the Mac build-slot scheduler. On 2026-11-08,
-the changed Swift sources/tests passed syntax parsing, the diff passed whitespace
-checks, project and app plists passed lint, and the StoreKit configuration parsed.
-The scheduler remained on HOLD outside permitted build hours, so the authored tests
-have not run and platform compilation remains outstanding. The fake store's actor
-conformance has not been compiler-verified. UI captures and spoken VoiceOver output
-also remain unverified; source changes do not establish focus, layout, or presentation
-behavior on a running app. The two new UI tests have not run. Hill-climb source
-reviews are recorded separately; this implementation pass performed no device testing.
+Apple build/test execution uses the Mac build-slot scheduler. On 2026-11-08,
+the iOS app, embedded Watch app, and iOS test targets compiled. All 182 unit
+tests passed, including 52 stopwatch tests, and both confirmation UI tests
+passed on the iPhone 17 Pro simulator with iOS 27.0. The tests exercise native
+popover dismissal when the platform omits a cancel-role row. Source parsing,
+whitespace, plist and StoreKit configuration checks also passed.
+Rendered chart, large-text and spoken VoiceOver evidence remains outstanding;
+compilation and tests do not establish those behaviors. Hill-climb findings
+and evidence are recorded separately. No physical-device acceptance or release
+is claimed.

@@ -65,33 +65,6 @@ struct GameEditorView: View {
                 }
 
                 Section {
-                    ForEach(editor.rounds) { round in
-                        PlayerRowView(
-                            round: round,
-                            onTap: { editor.expandedRoundId = round.id },
-                            onToggleActive: { editor.toggleActive(id: round.id) },
-                            onDelete: { editor.deleteRound(id: round.id) }
-                        )
-                        .listRowBackground(Theme.ColorValue.surface)
-                    }
-                    .onMove(perform: editor.moveRounds)
-
-                    Button {
-                        editor.addRound()
-                    } label: {
-                        Label(Theme.Label.addPlayer, systemImage: Theme.Symbol.addPlayer)
-                            .font(.body.weight(.medium))
-                    }
-                    .listRowBackground(Theme.ColorValue.surface)
-                } header: {
-                    sectionHeader("Rounds")
-                } footer: {
-                    Text("Tap a round to edit it. Touch and hold to reorder.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.ColorValue.textTertiary)
-                }
-
-                Section {
                     if stopwatchWorkspace.hasUnkeptWork, let model = stopwatchWorkspace.model {
                         Button(action: stopwatchWorkspace.returnToStopwatch) {
                             VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
@@ -118,6 +91,33 @@ struct GameEditorView: View {
                     Text(stopwatchWorkspace.hasUnkeptWork ? Theme.Stopwatch.retainedWorkspaceHint : Theme.Stopwatch.editorHint)
                 }
                 .listRowBackground(Theme.ColorValue.surface)
+
+                Section {
+                    ForEach(editor.rounds) { round in
+                        PlayerRowView(
+                            round: round,
+                            onTap: { editor.expandedRoundId = round.id },
+                            onToggleActive: { editor.toggleActive(id: round.id) },
+                            onDelete: { editor.deleteRound(id: round.id) }
+                        )
+                        .listRowBackground(Theme.ColorValue.surface)
+                    }
+                    .onMove(perform: editor.moveRounds)
+
+                    Button {
+                        editor.addRound()
+                    } label: {
+                        Label(Theme.Label.addPlayer, systemImage: Theme.Symbol.addPlayer)
+                            .font(.body.weight(.medium))
+                    }
+                    .listRowBackground(Theme.ColorValue.surface)
+                } header: {
+                    sectionHeader("Rounds")
+                } footer: {
+                    Text("Tap a round to edit it. Touch and hold to reorder.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.ColorValue.textTertiary)
+                }
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)

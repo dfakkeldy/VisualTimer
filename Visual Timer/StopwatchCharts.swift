@@ -23,7 +23,7 @@ struct StopwatchComparisonView: View {
             }
             .chartForegroundStyleScale(domain: hasTargets ? [Theme.Stopwatch.target, Theme.Stopwatch.actual] : [Theme.Stopwatch.actual],
                                        range: hasTargets ? [Theme.Stopwatch.targetColor, Theme.Stopwatch.actualColor] : [Theme.Stopwatch.actualColor])
-            .chartYScale(domain: Array(rows.map(\.label).reversed()))
+            .chartYScale(domain: rows.map(\.label))
             .chartXAxis {
                 AxisMarks { value in
                     AxisGridLine()
