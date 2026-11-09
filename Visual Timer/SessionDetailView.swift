@@ -138,14 +138,19 @@ struct SessionDetailView: View {
                 turnCount: total.turns.count,
                 averageSeconds: total.averageSeconds,
                 turns: total.turns.map { index in
-                    SessionTotalEntry.Turn(seconds: timeline.items[index].length ?? 0, isDimmed: timeline.items[index].outcome.dimsRound)
+                    SessionTotalEntry.Turn(
+                        seconds: timeline.items[index].length ?? 0,
+                        isDimmed: timeline.items[index].outcome.dimsRound,
+                        pass: timeline.passStarts.filter { $0 <= index }.count,
+                        isCutShort: wentBackTarget(after: index, in: timeline.items) != nil
+                    )
                 }
             )
         }
         let sum = max(entries.reduce(0) { $0 + $1.seconds }, 1)
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Totals")
+                Text("By name")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.ColorValue.textSecondary)
                 Spacer(minLength: 12)
@@ -160,11 +165,11 @@ struct SessionDetailView: View {
             Group {
                 switch totalsStyle {
                 case .pie:
-                    SessionTotalsPie(entries: entries, totalSeconds: sum)
+                    SessionTotalsPie(entries: entries, totalSeconds: sum, revealed: revealed)
                 case .bars:
-                    SessionTotalsBars(entries: entries, totalSeconds: sum)
+                    SessionTotalsBars(entries: entries, totalSeconds: sum, revealed: revealed)
                 case .turns:
-                    SessionTotalsTurns(entries: entries)
+                    SessionTotalsTurns(entries: entries, revealed: revealed)
                 }
             }
             // One height for all three, so switching never moves the timeline.
@@ -205,9 +210,12 @@ struct SessionDetailView: View {
                             item,
                             trueHeight: CGFloat(trueHeights[index] ?? 0),
                             isFirst: index == roundIndices.first,
+                            gapAbove: index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap,
                             wentBackTo: wentBackTarget(after: index, in: items)
                         )
-                        .padding(.top, index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? 0 : Style.turnGap)
+                        // Every turn's start sits in the break above it, so each
+                        // clock time is printed once.
+                        .padding(.top, index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap)
                     } else if item.outcome == .sessionEnd {
                         finishRow(item)
                     }
@@ -241,7 +249,6 @@ struct SessionDetailView: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(Theme.ColorValue.textSecondary)
             .padding(.top, isFirst ? 0 : Style.passGap)
-            .padding(.bottom, Style.passLabelBottomPadding)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -276,7 +283,7 @@ struct SessionDetailView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, isFirst: Bool, wentBackTo: String?) -> some View {
+    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, isFirst: Bool, gapAbove: CGFloat, wentBackTo: String?) -> some View {
         let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
         let dimmed = item.outcome.dimsRound
         let pauses = sessionTimeline.pauseFractions(of: item)
@@ -293,22 +300,32 @@ struct SessionDetailView: View {
                     .font(.body.monospacedDigit())
                     .foregroundStyle(Theme.ColorValue.textSecondary)
             }
-            Text(detailLine(item, wentBackTo: wentBackTo))
-                .font(.caption)
-                .foregroundStyle(Theme.ColorValue.textSecondary)
+            if let note = item.outcomeNote {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
         }
         .padding(.top, Style.rowTopPadding)
         .padding(.leading, Style.labelInset)
         .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .topLeading)
         .overlay(alignment: .topLeading) {
-            pauseLabels(item, pauses: pauses, trueHeight: trueHeight)
+            // The start time, centred on the break above this turn.
+            Text(clockText(offset: item.startOffset))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+                .padding(.leading, Style.labelInset)
+                .alignmentGuide(.top) { d in d[VerticalAlignment.center] + gapAbove / 2 }
+        }
+        .overlay(alignment: .topLeading) {
+            pauseLabels(item, pauses: pauses, trueHeight: trueHeight, hasNote: item.outcomeNote != nil)
         }
         .overlay(alignment: .bottomLeading) {
             // The moment it happened: the foot of this turn, beside the spine.
             if let wentBackTo {
                 HStack(spacing: 6) {
                     Image(systemName: Style.wentBackSymbol)
-                        .foregroundStyle(color)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
                     Text("went back to \(wentBackTo)")
                         .foregroundStyle(Theme.ColorValue.textSecondary)
                 }
@@ -316,14 +333,6 @@ struct SessionDetailView: View {
                 .padding(.leading, Style.labelInset)
                 .padding(.bottom, Style.wentBackBottomSpace)
                 .accessibilityHidden(true)
-            } else if trueHeight >= Style.endTimeMinHeight, let length = item.length {
-                // A tall turn shows both its ends, so its height reads as time.
-                Text("until \(clockText(offset: item.startOffset + length))")
-                    .font(.caption)
-                    .foregroundStyle(Theme.ColorValue.textTertiary)
-                    .padding(.leading, Style.labelInset)
-                    .padding(.bottom, Style.endTimeBottomSpace)
-                    .accessibilityHidden(true)
             }
         }
         .padding(.leading, Style.spineColumnWidth)
@@ -344,15 +353,16 @@ struct SessionDetailView: View {
     }
 
     /// "paused 45s" beside each hatched band, never over the round's name.
-    private func pauseLabels(_ item: SessionTimeline.Item, pauses: [ClosedRange<Double>], trueHeight: CGFloat) -> some View {
+    private func pauseLabels(_ item: SessionTimeline.Item, pauses: [ClosedRange<Double>], trueHeight: CGFloat, hasNote: Bool) -> some View {
         let durations = item.pauses.map { $0.count }
+        let floor: CGFloat = hasNote ? Style.pauseLabelMinimumY : Style.pauseLabelMinimumYNoNote
         return ZStack(alignment: .topLeading) {
             ForEach(Array(pauses.enumerated()), id: \.offset) { index, pause in
                 let middle: CGFloat = trueHeight * CGFloat((pause.lowerBound + pause.upperBound) / 2)
                 Text("paused \(TimerText.units(durations[index]))")
                     .font(.caption)
                     .foregroundStyle(Theme.ColorValue.textSecondary)
-                    .offset(x: Style.labelInset, y: max(middle - Style.pauseLabelHalfHeight, Style.pauseLabelMinimumY))
+                    .offset(x: Style.labelInset, y: max(middle - Style.pauseLabelHalfHeight, floor))
             }
         }
         .accessibilityHidden(true)
@@ -376,13 +386,6 @@ struct SessionDetailView: View {
             }
             .accessibilityElement(children: .combine)
             .padding(.top, Style.turnGap)
-    }
-
-    /// "6:32 AM · Cut short". A went-back is marked where it happened instead.
-    private func detailLine(_ item: SessionTimeline.Item, wentBackTo: String?) -> String {
-        var parts = [clockText(offset: item.startOffset)]
-        if let note = item.outcomeNote { parts.append(note) }
-        return parts.joined(separator: " · ")
     }
 
     private func clockText(offset: Int) -> String {

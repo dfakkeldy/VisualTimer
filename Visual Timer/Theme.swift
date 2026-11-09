@@ -105,9 +105,11 @@ enum Theme {
         /// The ink seam between two rounds on the spine.
         static let seam: CGFloat = 1
         /// The break between two turns, and between two passes ("Round 2").
-        static let turnGap: CGFloat = 8
+        /// Each turn's start time sits centred in the break above it.
+        static let turnGap: CGFloat = 16
         static let passGap: CGFloat = 20
-        static let passLabelBottomPadding: CGFloat = 8
+        /// The break under a round heading, which also holds the first clock.
+        static let clockBreak: CGFloat = 20
         /// Space between the spine column and a round's label.
         static let labelInset: CGFloat = 10
         /// Rounds share this height, at least this much per round.
@@ -119,17 +121,16 @@ enum Theme {
         static let pauseLabelHalfHeight: CGFloat = 8
         /// Pause labels never sit higher than this, clear of the name and start line.
         static let pauseLabelMinimumY: CGFloat = 46
+        static let pauseLabelMinimumYNoNote: CGFloat = 30
         static let eventLineWidth: CGFloat = 2
         static let eventGlyphSize: CGFloat = 22
         static let finishDiscSize: CGFloat = 20
-        static let finishRingWidth: CGFloat = 1.5
+        static let finishMarkSize: CGFloat = 16
+        static let endedMarkSize: CGFloat = 12
         /// Extra room at the foot of a turn that ends in "went back".
         static let wentBackLabelHeight: CGFloat = 26
         /// Room under the went-back line, so it reads as the end of its own turn.
         static let wentBackBottomSpace: CGFloat = 8
-        /// Turns at least this tall also show their end time at their foot.
-        static let endTimeMinHeight: CGFloat = 100
-        static let endTimeBottomSpace: CGFloat = 8
         static let legendSwatchHeight: CGFloat = 22
         static let deleteTopPadding: CGFloat = 32
         static let dimmedOpacity = 0.45
@@ -156,17 +157,19 @@ enum Theme {
         static let barHeight: CGFloat = 12
         static let barRadius: CGFloat = 6
         static let barMinWidth: CGFloat = 3
-        /// Turn blocks meet at a seam, so a row's length stays its true total.
-        static let turnGap: CGFloat = 2
+        /// Turn blocks meet at a seam; a new pass gets a wider break.
+        static let turnGap: CGFloat = 4
+        static let passGap: CGFloat = 8
+        static let averageValueWidth: CGFloat = 112
         static let valueWidth: CGFloat = 60
         static let percentWidth: CGFloat = 36
         /// One row of the tallest view (Turns: a block and its length beneath).
         static let rowHeight: CGFloat = 30
-        static let keyHeight: CGFloat = 16
+        /// Room for a key of up to two lines, so a longer key never crowds what follows.
+        static let keyHeight: CGFloat = 34
         static let keySpacing: CGFloat = 10
         /// The short colour mark that ties a Pie legend row to its arc.
         static let legendMarkWidth: CGFloat = 4
-        static let sweepDuration = 0.6
         /// The faint full-length track behind each bar.
         static let track = ColorValue.surfaceStroke
 

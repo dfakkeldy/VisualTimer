@@ -10,8 +10,8 @@ enum SessionTotalsStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .pie: return "Pie"
-        case .bars: return "Bars"
+        case .pie: return "Share"
+        case .bars: return "Average"
         case .turns: return "Turns"
         }
     }
@@ -22,6 +22,10 @@ struct SessionTotalEntry: Identifiable, Equatable {
     struct Turn: Equatable {
         let seconds: Int
         let isDimmed: Bool
+        /// Which pass through the sequence this turn was in, 0 for the first.
+        var pass = 0
+        /// Ended by going back, so its block ends square, not rounded.
+        var isCutShort = false
     }
 
     let id: String
@@ -63,10 +67,8 @@ struct SessionTotalsKey: View {
 struct SessionTotalsPie: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
-
-    /// The ring sweeps once from twelve, as the dial does.
-    @State private var swept = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Drawn in with the timeline's one reveal: the ring sweeps from twelve.
+    let revealed: Bool
 
     private typealias Style = Theme.HistoryTotals
 
@@ -98,17 +100,9 @@ struct SessionTotalsPie: View {
                 .frame(width: Style.pieSize, height: Style.pieSize)
                 .mask {
                     Circle()
-                        .trim(from: 0, to: swept ? 1 : 0)
+                        .trim(from: 0, to: revealed ? 1 : 0)
                         .stroke(lineWidth: Style.ringWidth * 2)
                         .rotationEffect(.degrees(Theme.Rotation.trimOriginOffset))
-                }
-                .onAppear {
-                    guard !swept else { return }
-                    if reduceMotion {
-                        swept = true
-                    } else {
-                        withAnimation(.easeOut(duration: Style.sweepDuration)) { swept = true }
-                    }
                 }
                 .accessibilityHidden(true)
 
@@ -146,12 +140,13 @@ struct SessionTotalsPie: View {
 // MARK: - Bars
 
 /// The typical turn: one line per name, in the order they first ran, each
-/// bar its average turn on a faint track whose full width is the longest
-/// average. Pie answers "who took the most time"; this answers "whose turns
+/// bar its average turn on the open canvas, the longest at full width. Pie answers "who took the most time"; this answers "whose turns
 /// run long".
 struct SessionTotalsBars: View {
     let entries: [SessionTotalEntry]
     let totalSeconds: Int
+    /// Bars grow from zero with the timeline's one reveal.
+    let revealed: Bool
 
     private typealias Style = Theme.HistoryTotals
 
@@ -167,33 +162,31 @@ struct SessionTotalsBars: View {
                             .lineLimit(1)
                             .frame(width: Style.labelWidth, alignment: .leading)
                         GeometryReader { proxy in
-                            let width: CGFloat = proxy.size.width * CGFloat(entry.averageSeconds) / CGFloat(longest)
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Style.track)
-                                Capsule()
-                                    .fill(entry.color)
-                                    .frame(width: max(width, Style.barMinWidth))
-                            }
-                            .frame(height: Style.barHeight)
-                            .frame(maxHeight: .infinity, alignment: .center)
+                            let share: CGFloat = CGFloat(entry.averageSeconds) / CGFloat(longest)
+                            let width: CGFloat = proxy.size.width * share * (revealed ? 1 : 0)
+                            Capsule()
+                                .fill(entry.color)
+                                .frame(width: max(width, Style.barMinWidth), height: Style.barHeight)
+                                .frame(maxHeight: .infinity, alignment: .center)
                         }
                         .frame(height: Style.rowHeight)
-                        VStack(alignment: .trailing, spacing: 0) {
+                        HStack(alignment: .firstTextBaseline, spacing: 0) {
                             Text(TimerText.units(entry.averageSeconds))
                                 .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
-                            Text(entry.turnCount == 1 ? "1 turn" : "\(entry.turnCount) turns")
-                                .font(.caption2)
+                                .foregroundStyle(entry.averageSeconds == longest ? Theme.ColorValue.textPrimary : Theme.ColorValue.textSecondary)
+                            Text(entry.turnCount == 1 ? " · 1 turn" : " · \(entry.turnCount) turns")
+                                .font(.caption)
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
                         }
-                        .frame(width: Style.valueWidth, alignment: .trailing)
+                        .lineLimit(1)
+                        .frame(width: Style.averageValueWidth, alignment: .trailing)
                     }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("\(entry.label), average turn \(TimerText.units(entry.averageSeconds)), \(entry.turnCount == 1 ? "1 turn" : "\(entry.turnCount) turns")")
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            SessionTotalsKey(text: "Average turn for each name. Full width is the longest.")
+            SessionTotalsKey(text: "Average turn, pauses included. Full width is the longest.")
         }
     }
 }
@@ -205,6 +198,8 @@ struct SessionTotalsBars: View {
 /// at a glance.
 struct SessionTotalsTurns: View {
     let entries: [SessionTotalEntry]
+    /// Blocks grow from zero with the timeline's one reveal.
+    let revealed: Bool
 
     private typealias Style = Theme.HistoryTotals
 
@@ -221,16 +216,22 @@ struct SessionTotalsTurns: View {
                             .lineLimit(1)
                             .frame(width: Style.labelWidth, alignment: .leading)
                         GeometryReader { proxy in
-                            let gaps: CGFloat = Style.turnGap * CGFloat(max(entry.turns.count - 1, 0))
-                            let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest)
+                            let gaps: CGFloat = Self.gapsWidth(entry.turns)
+                            let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest) * (revealed ? 1 : 0)
                             Capsule()
                                 .fill(Style.track)
                                 .frame(width: proxy.size.width, height: Style.barHeight)
-                            HStack(alignment: .top, spacing: Style.turnGap) {
-                                ForEach(Array(entry.turns.enumerated()), id: \.offset) { _, turn in
+                            HStack(alignment: .top, spacing: 0) {
+                                ForEach(Array(entry.turns.enumerated()), id: \.offset) { index, turn in
                                     let width: CGFloat = max(scale * CGFloat(turn.seconds), Style.barMinWidth)
                                     VStack(alignment: .leading, spacing: 3) {
-                                        Capsule()
+                                        UnevenRoundedRectangle(
+                                            topLeadingRadius: Style.barRadius,
+                                            bottomLeadingRadius: Style.barRadius,
+                                            bottomTrailingRadius: turn.isCutShort ? 0 : Style.barRadius,
+                                            topTrailingRadius: turn.isCutShort ? 0 : Style.barRadius,
+                                            style: .continuous
+                                        )
                                             .fill(entry.color.opacity(turn.isDimmed ? Theme.HistoryTimeline.dimmedOpacity : 1))
                                             .frame(width: width, height: Style.barHeight)
                                         Text(TimerText.units(turn.seconds))
@@ -240,6 +241,7 @@ struct SessionTotalsTurns: View {
                                             .fixedSize()
                                             .frame(width: width, alignment: .leading)
                                     }
+                                    .padding(.leading, index == 0 ? 0 : Self.gap(before: index, in: entry.turns))
                                 }
                             }
                         }
@@ -251,8 +253,17 @@ struct SessionTotalsTurns: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             SessionTotalsKey(text: hasDimmed
-                ? "One block per turn, in the order played. Faded turns were skipped or restarted."
-                : "One block per turn, in the order played.")
+                ? "Each turn in order. Full width is the longest total. Faded turns were skipped or restarted."
+                : "Each turn in order. Full width is the longest total.")
         }
+    }
+
+    /// A seam between turns of one pass, a wider break where a new pass begins.
+    private static func gap(before index: Int, in turns: [SessionTotalEntry.Turn]) -> CGFloat {
+        turns[index].pass == turns[index - 1].pass ? Style.turnGap : Style.passGap
+    }
+
+    private static func gapsWidth(_ turns: [SessionTotalEntry.Turn]) -> CGFloat {
+        turns.indices.dropFirst().reduce(0) { $0 + gap(before: $1, in: turns) }
     }
 }
