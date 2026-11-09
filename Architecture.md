@@ -2,9 +2,10 @@
 
 Last audited: 2026-10-24. Session restore, template drafts, and iPhone
 completion alerts (PR #138, merged 2026-11-08) and History session timeline
-and By name totals (PR #142, merged 2026-11-09) are reflected below. The
-public App Store 1.0 listing sentence was updated 2026-11-08; other
-sections were not re-audited.
+and By name totals (PR #142, merged 2026-11-09) are reflected below.
+Routine stopwatch recordings (Stopwatch module and `StopwatchRecordings` storage
+rows) are also reflected. The public App Store 1.0 listing sentence was updated
+2026-11-08; other sections were not re-audited.
 
 Turn Timer has SwiftUI apps for iOS 18+ and watchOS 11+, a WidgetKit extension,
 and a local-first React web app. The Xcode project uses Swift 5 language mode

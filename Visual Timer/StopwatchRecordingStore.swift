@@ -6,6 +6,7 @@ struct StopwatchLoadResult {
 }
 
 protocol StopwatchRecordingStorage {
+    /// Loads newest first, ties by ID; used by HistoryAccessPolicy's prefix, trend reversal, and records.first selection.
     func load() throws -> StopwatchLoadResult
     func save(_ recording: StopwatchRecording) throws
     func delete(id: UUID) throws
@@ -45,9 +46,7 @@ final class StopwatchRecordingStore: StopwatchRecordingStorage {
                 failures.append(url.lastPathComponent)
             }
         }
-        records.sort {
-            $0.startedAt == $1.startedAt ? $0.id.uuidString < $1.id.uuidString : $0.startedAt > $1.startedAt
-        }
+        records.sort(by: StopwatchRecording.newestFirst)
         return StopwatchLoadResult(records: records, unreadableFiles: failures.sorted())
     }
 

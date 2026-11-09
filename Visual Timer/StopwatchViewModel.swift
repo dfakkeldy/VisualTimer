@@ -89,6 +89,7 @@ final class StopwatchViewModel: ObservableObject {
     var hasUnkeptPlan: Bool {
         hasUnsavedPlanEdits && session == nil && reviewRecord == nil
     }
+    var isHistoryBlockedByPlan: Bool { hasUnkeptPlan && !visibleRecords.isEmpty }
     var hasUnkeptWork: Bool { hasUnkeptRecording || hasUnkeptPlan }
     var canDiscardRecordingKeepingPlan: Bool { isNewRoutine && hasUnkeptRecording }
     var discardAction: String {

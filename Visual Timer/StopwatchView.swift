@@ -333,7 +333,7 @@ struct StopwatchView: View {
     @ViewBuilder
     private var historySections: some View {
         Section {
-            if model.hasUnkeptPlan {
+            if model.isHistoryBlockedByPlan {
                 Text(Theme.Stopwatch.historyBlockedByPlan).font(.caption)
                 Button(Theme.Stopwatch.undoPlanEdits, role: .destructive) { showUndoPlanEdits = true }
             }
@@ -355,7 +355,7 @@ struct StopwatchView: View {
                                 .foregroundStyle(Theme.ColorValue.textSecondary)
                         }
                     }
-                    .disabled(model.hasUnkeptPlan)
+                    .disabled(model.isHistoryBlockedByPlan)
                 }
             }
             if model.unreadableCount > 0 {

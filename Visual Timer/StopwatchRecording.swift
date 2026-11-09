@@ -64,6 +64,10 @@ struct StopwatchRecording: Codable, Equatable, Identifiable {
     var isComplete: Bool { measurements.count == source.steps.count }
     var totalSeconds: TimeInterval { measurements.reduce(0) { $0 + $1.seconds } }
 
+    static func newestFirst(_ lhs: Self, _ rhs: Self) -> Bool {
+        lhs.startedAt == rhs.startedAt ? lhs.id.uuidString < rhs.id.uuidString : lhs.startedAt > rhs.startedAt
+    }
+
     func validate() throws {
         try source.validate()
         guard version == Self.schemaVersion,

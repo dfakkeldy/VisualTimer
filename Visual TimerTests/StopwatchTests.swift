@@ -50,6 +50,12 @@ final class StopwatchTests: XCTestCase {
         session.next(expectedStepID: source.steps[1].id, at: 12.4, date: epoch)
         XCTAssertEqual(session.index, 1, "A rapid second tap must not skip the newly displayed step")
         XCTAssertEqual(session.measurements.map(\.seconds), [12.25])
+        session.next(expectedStepID: source.steps[0].id, at: 13, date: epoch)
+        session.finish(expectedStepID: source.steps[0].id, at: 13.5, date: epoch)
+        XCTAssertEqual(session.index, 1)
+        XCTAssertEqual(session.phase, .running)
+        XCTAssertEqual(session.measurements.map(\.seconds), [12.25])
+        XCTAssertNil(session.recording)
         XCTAssertEqual(session.elapsed(at: 15), 2.75)
         session.pause(at: 16)
         session.next(expectedStepID: source.steps[1].id, at: 100, date: epoch)
@@ -794,6 +800,7 @@ final class StopwatchTests: XCTestCase {
         XCTAssertFalse(model.hasUnkeptWork)
         model.setTitle("Changed plan")
         XCTAssertTrue(model.hasUnkeptPlan)
+        XCTAssertFalse(model.isHistoryBlockedByPlan)
         model.setTitle(baseline.title)
         XCTAssertFalse(model.hasUnkeptPlan)
         model.renameStep(id: baseline.steps[0].id, name: "Changed step")
@@ -816,6 +823,7 @@ final class StopwatchTests: XCTestCase {
         XCTAssertFalse(model.hasUnkeptPlan)
         model.setTitle("Another edit")
         XCTAssertTrue(model.hasUnkeptPlan)
+        XCTAssertTrue(model.isHistoryBlockedByPlan)
         model.discardUnkeptWork()
         XCTAssertEqual(model.source.title, baseline.title)
         XCTAssertEqual(model.source.steps[0].name, "Changed step")
@@ -1348,7 +1356,7 @@ private final class MemoryStopwatchStore: StopwatchRecordingStorage {
 
     func load() throws -> StopwatchLoadResult {
         if failLoad { throw CocoaError(.fileReadNoPermission) }
-        return StopwatchLoadResult(records: records.sorted { $0.startedAt > $1.startedAt }, unreadableFiles: unreadableFiles)
+        return StopwatchLoadResult(records: records.sorted(by: StopwatchRecording.newestFirst), unreadableFiles: unreadableFiles)
     }
     func save(_ recording: StopwatchRecording) throws {
         if failSave { throw CocoaError(.fileWriteNoPermission) }
