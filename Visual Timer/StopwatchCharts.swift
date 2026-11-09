@@ -36,7 +36,7 @@ struct StopwatchComparisonView: View {
                     }
                 }
                 .frame(height: max(Theme.Stopwatch.chartMinimumHeight, CGFloat(rows.count) * Theme.Stopwatch.chartRowHeight))
-                .accessibilityElement(children: .ignore)
+                .accessibilityRepresentation { EmptyView() }
                 .accessibilityHidden(true)
             }
 
@@ -111,7 +111,7 @@ struct StopwatchTrendView: View {
                         }
                     }
                     .frame(height: Theme.Stopwatch.chartHeight)
-                    .accessibilityElement(children: .ignore)
+                    .accessibilityRepresentation { EmptyView() }
                     .accessibilityHidden(true)
                 }
 
