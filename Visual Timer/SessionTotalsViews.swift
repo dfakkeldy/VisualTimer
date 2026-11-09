@@ -144,7 +144,6 @@ struct SessionTotalsPie: View {
 /// run long".
 struct SessionTotalsBars: View {
     let entries: [SessionTotalEntry]
-    let totalSeconds: Int
     /// Bars grow from zero with the timeline's one reveal.
     let revealed: Bool
 
@@ -216,7 +215,10 @@ struct SessionTotalsTurns: View {
                             .lineLimit(1)
                             .frame(width: Style.labelWidth, alignment: .leading)
                         GeometryReader { proxy in
-                            let gaps: CGFloat = Self.gapsWidth(entry.turns)
+                            // Gaps never take more than a fifth of the row, however many turns.
+                            let fullGaps: CGFloat = Self.gapsWidth(entry.turns)
+                            let gapScale: CGFloat = fullGaps > 0 ? min(1, proxy.size.width * 0.2 / fullGaps) : 1
+                            let gaps: CGFloat = fullGaps * gapScale
                             let scale: CGFloat = max(proxy.size.width - gaps, 0) / CGFloat(widest) * (revealed ? 1 : 0)
                             Capsule()
                                 .fill(Style.track)
@@ -234,14 +236,17 @@ struct SessionTotalsTurns: View {
                                         )
                                             .fill(entry.color.opacity(turn.isDimmed ? Theme.HistoryTimeline.dimmedOpacity : 1))
                                             .frame(width: width, height: Style.barHeight)
-                                        Text(TimerText.units(turn.seconds))
-                                            .font(.caption2.monospacedDigit())
-                                            .foregroundStyle(Theme.ColorValue.textSecondary)
-                                            .lineLimit(1)
-                                            .fixedSize()
-                                            .frame(width: width, alignment: .leading)
+                                        // A length shows only when it fits under its own block.
+                                        ViewThatFits(in: .horizontal) {
+                                            Text(TimerText.units(turn.seconds))
+                                                .font(.caption2.monospacedDigit())
+                                                .foregroundStyle(Theme.ColorValue.textSecondary)
+                                                .lineLimit(1)
+                                            Color.clear.frame(height: 1)
+                                        }
+                                        .frame(width: width, alignment: .leading)
                                     }
-                                    .padding(.leading, index == 0 ? 0 : Self.gap(before: index, in: entry.turns))
+                                    .padding(.leading, index == 0 ? 0 : Self.gap(before: index, in: entry.turns) * gapScale)
                                 }
                             }
                         }

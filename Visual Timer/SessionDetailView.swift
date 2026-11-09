@@ -29,6 +29,8 @@ struct SessionDetailView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Grows the fixed totals height with Dynamic Type, so larger text never clips.
     @ScaledMetric(relativeTo: .subheadline) private var totalsScale: CGFloat = 1
+    /// Grows the timeline's breaks and label room with Dynamic Type.
+    @ScaledMetric(relativeTo: .caption) private var timelineScale: CGFloat = 1
 
     var body: some View {
         ScrollView {
@@ -135,7 +137,7 @@ struct SessionDetailView: View {
                 color: total.turns.first.flatMap { timeline.color(for: timeline.items[$0], in: record) }
                     ?? Theme.ColorValue.textTertiary,
                 seconds: total.seconds,
-                turnCount: total.turns.count,
+                turnCount: total.turnCount,
                 averageSeconds: total.averageSeconds,
                 turns: total.turns.map { index in
                     SessionTotalEntry.Turn(
@@ -149,25 +151,24 @@ struct SessionDetailView: View {
         }
         let sum = max(entries.reduce(0) { $0 + $1.seconds }, 1)
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("By name")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.ColorValue.textSecondary)
-                Spacer(minLength: 12)
-                Picker("Show totals as", selection: $totalsStyle) {
-                    ForEach(SessionTotalsStyle.allCases) { style in
-                        Text(style.title).tag(style)
-                    }
+            // Side by side when they fit; the switch drops below at large text.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    totalsHeading
+                    Spacer(minLength: 12)
+                    totalsPicker.fixedSize()
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                VStack(alignment: .leading, spacing: 8) {
+                    totalsHeading
+                    totalsPicker
+                }
             }
             Group {
                 switch totalsStyle {
                 case .pie:
                     SessionTotalsPie(entries: entries, totalSeconds: sum, revealed: revealed)
                 case .bars:
-                    SessionTotalsBars(entries: entries, totalSeconds: sum, revealed: revealed)
+                    SessionTotalsBars(entries: entries, revealed: revealed)
                 case .turns:
                     SessionTotalsTurns(entries: entries, revealed: revealed)
                 }
@@ -175,7 +176,22 @@ struct SessionDetailView: View {
             // One height for all three, so switching never moves the timeline.
             .frame(height: Theme.HistoryTotals.contentHeight(names: entries.count) * totalsScale, alignment: .top)
         }
-        .animation(.easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: totalsStyle)
+        .animation(reduceMotion ? nil : .easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: totalsStyle)
+    }
+
+    private var totalsHeading: some View {
+        Text("By name")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+    }
+
+    private var totalsPicker: some View {
+        Picker("Show totals as", selection: $totalsStyle) {
+            ForEach(SessionTotalsStyle.allCases) { style in
+                Text(style.title).tag(style)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 
     // MARK: - Timeline
@@ -210,12 +226,12 @@ struct SessionDetailView: View {
                             item,
                             trueHeight: CGFloat(trueHeights[index] ?? 0),
                             isFirst: index == roundIndices.first,
-                            gapAbove: index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap,
+                            gapAbove: (index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap) * timelineScale,
                             wentBackTo: wentBackTarget(after: index, in: items)
                         )
                         // Every turn's start sits in the break above it, so each
                         // clock time is printed once.
-                        .padding(.top, index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap)
+                        .padding(.top, (index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap) * timelineScale)
                     } else if item.outcome == .sessionEnd {
                         finishRow(item)
                     }
@@ -287,7 +303,10 @@ struct SessionDetailView: View {
         let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
         let dimmed = item.outcome.dimsRound
         let pauses = sessionTimeline.pauseFractions(of: item)
-        let rowHeight = max(trueHeight, CGFloat(Style.minimumRowHeight) + (wentBackTo == nil ? 0 : Style.wentBackLabelHeight))
+        let pauseYs = pauseLabelOffsets(pauses, trueHeight: trueHeight, hasNote: item.outcomeNote != nil)
+        let wentBackRoom: CGFloat = wentBackTo == nil ? 0 : Style.wentBackLabelHeight * timelineScale
+        let labelsEnd: CGFloat = (pauseYs.last.map { $0 + Style.pauseLabelSpacing * timelineScale } ?? CGFloat(Style.minimumRowHeight) * timelineScale)
+        let rowHeight = max(trueHeight, labelsEnd + wentBackRoom)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if !item.emoji.isEmpty {
@@ -318,7 +337,7 @@ struct SessionDetailView: View {
                 .alignmentGuide(.top) { d in d[VerticalAlignment.center] + gapAbove / 2 }
         }
         .overlay(alignment: .topLeading) {
-            pauseLabels(item, pauses: pauses, trueHeight: trueHeight, hasNote: item.outcomeNote != nil)
+            pauseLabels(item, offsets: pauseYs)
         }
         .overlay(alignment: .bottomLeading) {
             // The moment it happened: the foot of this turn, beside the spine.
@@ -348,21 +367,31 @@ struct SessionDetailView: View {
             .frame(width: Style.spineColumnWidth)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityValue(sessionTimeline.percent(of: item).map { "\($0) percent of the session" } ?? "")
-        .accessibilityHint(wentBackTo.map { "Then went back to \($0)." } ?? "")
+        .accessibilityValue(accessibilityDetail(item, wentBackTo: wentBackTo))
     }
 
-    /// "paused 45s" beside each hatched band, never over the round's name.
-    private func pauseLabels(_ item: SessionTimeline.Item, pauses: [ClosedRange<Double>], trueHeight: CGFloat, hasNote: Bool) -> some View {
+    /// Where each "paused 45s" sits: level with its hatched band, never over
+    /// the turn's name or note, and never on top of the label before it.
+    private func pauseLabelOffsets(_ pauses: [ClosedRange<Double>], trueHeight: CGFloat, hasNote: Bool) -> [CGFloat] {
+        let floor: CGFloat = (hasNote ? Style.pauseLabelMinimumY : Style.pauseLabelMinimumYNoNote) * timelineScale
+        let spacing: CGFloat = Style.pauseLabelSpacing * timelineScale
+        var result: [CGFloat] = []
+        for pause in pauses {
+            let middle: CGFloat = trueHeight * CGFloat((pause.lowerBound + pause.upperBound) / 2)
+            let lowest: CGFloat = result.last.map { $0 + spacing } ?? floor
+            result.append(max(middle - Style.pauseLabelHalfHeight * timelineScale, lowest))
+        }
+        return result
+    }
+
+    private func pauseLabels(_ item: SessionTimeline.Item, offsets: [CGFloat]) -> some View {
         let durations = item.pauses.map { $0.count }
-        let floor: CGFloat = hasNote ? Style.pauseLabelMinimumY : Style.pauseLabelMinimumYNoNote
         return ZStack(alignment: .topLeading) {
-            ForEach(Array(pauses.enumerated()), id: \.offset) { index, pause in
-                let middle: CGFloat = trueHeight * CGFloat((pause.lowerBound + pause.upperBound) / 2)
+            ForEach(Array(offsets.enumerated()), id: \.offset) { index, y in
                 Text("paused \(TimerText.units(durations[index]))")
                     .font(.caption)
                     .foregroundStyle(Theme.ColorValue.textSecondary)
-                    .offset(x: Style.labelInset, y: max(middle - Style.pauseLabelHalfHeight, floor))
+                    .offset(x: Style.labelInset, y: y)
             }
         }
         .accessibilityHidden(true)
@@ -386,6 +415,15 @@ struct SessionDetailView: View {
             }
             .accessibilityElement(children: .combine)
             .padding(.top, Style.turnGap)
+    }
+
+    /// What the hidden marks show, said aloud: share, pauses, went back.
+    private func accessibilityDetail(_ item: SessionTimeline.Item, wentBackTo: String?) -> String {
+        var parts: [String] = []
+        if let percent = sessionTimeline.percent(of: item) { parts.append("\(percent) percent of the session") }
+        for pause in item.pauses { parts.append("paused \(TimerText.units(pause.count))") }
+        if let wentBackTo { parts.append("then went back to \(wentBackTo)") }
+        return parts.joined(separator: ", ")
     }
 
     private func clockText(offset: Int) -> String {
@@ -414,23 +452,6 @@ struct SessionTimeline {
 
         /// Rounds that didn't run their course are drawn quieter.
         var dimsRound: Bool { self == .skipped || self == .restarted }
-
-        var isException: Bool {
-            switch self {
-            case .finished, .sessionEnd: return false
-            default: return true
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .skipped: return .yellow
-            case .wentBack: return .purple
-            case .restarted: return .mint
-            case .endedEarly: return .orange
-            case .finished, .sessionEnd: return Theme.ColorValue.textSecondary
-            }
-        }
     }
 
     struct Item {
@@ -556,7 +577,9 @@ struct SessionTimeline {
         let roundIndices = result.indices.filter { result[$0].length != nil }
         if let first = roundIndices.first {
             for index in roundIndices.dropFirst()
-            where result[index].name == result[first].name && result[index - 1].outcome != .wentBack {
+            where result[index].name == result[first].name
+                && result[index - 1].outcome != .wentBack
+                && result[index - 1].outcome != .restarted {
                 starts.append(index)
             }
         }
@@ -572,25 +595,29 @@ struct SessionTimeline {
         let seconds: Int
         /// Indices into `items`, in the order the turns ran.
         let turns: [Int]
+        /// Turns taken, not counting attempts that were restarted.
+        let turnCount: Int
         var id: String { name }
-        var averageSeconds: Int { turns.isEmpty ? 0 : seconds / turns.count }
+        var averageSeconds: Int { turnCount == 0 ? seconds : seconds / turnCount }
     }
 
     /// Each name once, in the order it first ran.
     var totals: [Total] {
         var order: [String] = []
-        var byName: [String: (emoji: String, seconds: Int, turns: [Int])] = [:]
+        var byName: [String: (emoji: String, seconds: Int, turns: [Int], count: Int)] = [:]
         for (index, item) in items.enumerated() {
             guard let length = item.length else { continue }
             if byName[item.name] == nil {
                 order.append(item.name)
-                byName[item.name] = (item.emoji, 0, [])
+                byName[item.name] = (item.emoji, 0, [], 0)
             }
             byName[item.name]?.seconds += length
             byName[item.name]?.turns.append(index)
+            // A restarted attempt is part of the turn that follows it.
+            if item.outcome != .restarted { byName[item.name]?.count += 1 }
         }
         return order.compactMap { name in
-            byName[name].map { Total(name: name, emoji: $0.emoji, seconds: $0.seconds, turns: $0.turns) }
+            byName[name].map { Total(name: name, emoji: $0.emoji, seconds: $0.seconds, turns: $0.turns, turnCount: $0.count) }
         }
     }
 

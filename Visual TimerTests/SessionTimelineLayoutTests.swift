@@ -158,6 +158,22 @@ final class SessionTimelineLayoutTests: XCTestCase {
         XCTAssertEqual(totals[1].seconds, 80)
     }
 
+    func testRestartingTheFirstTurnIsNotANewRound() {
+        let timeline = SessionTimeline(record: record([
+            .gameStarted(timestamp: at(0)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(0)),
+            .restartTimer(playerName: "Maya", timestamp: at(5)),
+            .roundStarted(playerName: "Maya", emoji: "", timestamp: at(5)),
+            .roundStarted(playerName: "Theo", emoji: "", timestamp: at(65)),
+            .gameEnded(timestamp: at(95)),
+        ]))
+        XCTAssertTrue(timeline.passStarts.isEmpty, "A restart redoes the turn; it doesn't start a round")
+        let maya = timeline.totals[0]
+        XCTAssertEqual(maya.seconds, 65)
+        XCTAssertEqual(maya.turnCount, 1, "The restarted attempt belongs to the turn after it")
+        XCTAssertEqual(maya.averageSeconds, 65)
+    }
+
     func testLengthsCarryTheirUnits() {
         XCTAssertEqual(TimerText.units(130), "2m 10s")
         XCTAssertEqual(TimerText.units(45), "45s")

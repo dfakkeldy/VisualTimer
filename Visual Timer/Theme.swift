@@ -102,8 +102,6 @@ enum Theme {
         static let spineWidth: CGFloat = 12
         static let spineColumnWidth: CGFloat = 32
         static let spineRadius: CGFloat = 6
-        /// The ink seam between two rounds on the spine.
-        static let seam: CGFloat = 1
         /// The break between two turns, and between two passes ("Round 2").
         /// Each turn's start time sits centred in the break above it.
         static let turnGap: CGFloat = 16
@@ -122,8 +120,9 @@ enum Theme {
         /// Pause labels never sit higher than this, clear of the name and start line.
         static let pauseLabelMinimumY: CGFloat = 46
         static let pauseLabelMinimumYNoNote: CGFloat = 30
+        /// The least room between two pause labels in one turn.
+        static let pauseLabelSpacing: CGFloat = 18
         static let eventLineWidth: CGFloat = 2
-        static let eventGlyphSize: CGFloat = 22
         static let finishDiscSize: CGFloat = 20
         static let finishMarkSize: CGFloat = 16
         static let endedMarkSize: CGFloat = 12
@@ -141,8 +140,6 @@ enum Theme {
         static let revealDuration = 0.7
         static let eventLine = ColorValue.surfaceStroke
         static let wentBackSymbol = "arrow.uturn.backward"
-        static let finishedSymbol = "checkmark"
-        static let endedSymbol = "stop.fill"
     }
 
     /// A session's totals per name: pie, ranked bars, or turn blocks.
@@ -151,7 +148,6 @@ enum Theme {
         static let ringWidth: CGFloat = 12
         static let seamWidth: CGFloat = 1.5
         static let pieSpacing: CGFloat = 20
-        static let dotSize: CGFloat = 9
         static let rowSpacing: CGFloat = 12
         static let labelWidth: CGFloat = 96
         static let barHeight: CGFloat = 12
@@ -161,7 +157,6 @@ enum Theme {
         static let turnGap: CGFloat = 4
         static let passGap: CGFloat = 8
         static let averageValueWidth: CGFloat = 112
-        static let valueWidth: CGFloat = 60
         static let percentWidth: CGFloat = 36
         /// One row of the tallest view (Turns: a block and its length beneath).
         static let rowHeight: CGFloat = 30
