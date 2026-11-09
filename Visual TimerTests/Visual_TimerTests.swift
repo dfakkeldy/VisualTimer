@@ -3,6 +3,7 @@ import XCTest
 import SwiftUI
 @testable import Visual_Timer
 
+@MainActor
 final class Visual_TimerTests: XCTestCase {
 
     // MARK: - Cloud sync scheduling
