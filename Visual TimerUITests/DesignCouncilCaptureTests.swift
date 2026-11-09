@@ -91,6 +91,51 @@ final class DesignCouncilCaptureTests: XCTestCase {
     }
 
     @MainActor
+    func test10eSessionTotalsBars() throws {
+        let app = launch("history", totalsStyle: "bars")
+        let row = historyRow(in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        sleep(2)
+        capture("10e-session-totals-bars")
+    }
+
+    @MainActor
+    func test10fSessionTotalsTurns() throws {
+        let app = launch("history", totalsStyle: "turns")
+        let row = historyRow(in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        sleep(2)
+        capture("10f-session-totals-turns")
+    }
+
+    @MainActor
+    func test10cSessionDetailRows() throws {
+        let app = launch("history")
+        let row = historyRow(in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        sleep(1)
+        app.swipeUp()
+        sleep(1)
+        capture("10c-session-detail-rows")
+    }
+
+    @MainActor
+    func test10dSessionDetailEnd() throws {
+        let app = launch("history")
+        let row = historyRow(in: app)
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        sleep(1)
+        app.swipeUp()
+        app.swipeUp()
+        sleep(1)
+        capture("10d-session-detail-end")
+    }
+
+    @MainActor
     func test11Settings() throws {
         let app = launch("quickReady")
         let settings = app.buttons["Settings"]
@@ -123,7 +168,7 @@ final class DesignCouncilCaptureTests: XCTestCase {
     }
 
     @MainActor
-    private func launch(_ scene: String, showAlertOffer: Bool = false) -> XCUIApplication {
+    private func launch(_ scene: String, showAlertOffer: Bool = false, totalsStyle: String = "pie") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-designCouncilFixture", scene,
@@ -135,6 +180,7 @@ final class DesignCouncilCaptureTests: XCTestCase {
             "-hasMigratedLegacyTemplateLibrary", "YES",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_CA",
+            "-historyTotalsStyle", totalsStyle,
         ]
         app.launch()
         sleep(2)

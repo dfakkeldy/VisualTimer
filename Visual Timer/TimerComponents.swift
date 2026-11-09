@@ -239,6 +239,17 @@ enum TimerText {
         return String(format: "%02d:%02d", s / 60, s % 60)
     }
 
+    /// "2m 10s", "45s", "1h 5m": a length with its units, so it can't be
+    /// mistaken for a time of day beside one.
+    static func units(_ seconds: Int) -> String {
+        let s = max(seconds, 0)
+        var parts: [String] = []
+        if s >= 3600 { parts.append("\(s / 3600)h") }
+        if (s % 3600) / 60 > 0 { parts.append("\((s % 3600) / 60)m") }
+        if s % 60 > 0 || parts.isEmpty { parts.append("\(s % 60)s") }
+        return parts.joined(separator: " ")
+    }
+
     /// "9:01" style for lengths.
     static func length(_ seconds: Int) -> String {
         let s = max(seconds, 0)

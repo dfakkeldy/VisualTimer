@@ -94,6 +94,88 @@ enum Theme {
         static let timerTickDuration: Double = 1.0
     }
 
+    // MARK: - History timeline
+
+    /// A past session drawn as one vertical spine, each round as tall as its
+    /// share of the session.
+    enum HistoryTimeline {
+        static let spineWidth: CGFloat = 12
+        static let spineColumnWidth: CGFloat = 32
+        static let spineRadius: CGFloat = 6
+        /// The break between two turns, and between two passes ("Round 2").
+        /// Each turn's start time sits centred in the break above it.
+        static let turnGap: CGFloat = 16
+        static let passGap: CGFloat = 20
+        /// The break under a round heading, which also holds the first clock.
+        static let clockBreak: CGFloat = 20
+        /// Space between the spine column and a round's label.
+        static let labelInset: CGFloat = 10
+        /// Rounds share this height, at least this much per round.
+        static let heightPerRound: Double = 72
+        static let minimumTotalHeight: Double = 480
+        /// Room a round's label needs; extra height beyond its colour is hairline.
+        static let minimumRowHeight: Double = 52
+        static let rowTopPadding: CGFloat = 2
+        static let pauseLabelHalfHeight: CGFloat = 8
+        /// Pause labels never sit higher than this, clear of the name and start line.
+        static let pauseLabelMinimumY: CGFloat = 46
+        static let pauseLabelMinimumYNoNote: CGFloat = 30
+        /// The least room between two pause labels in one turn.
+        static let pauseLabelSpacing: CGFloat = 18
+        static let eventLineWidth: CGFloat = 2
+        static let finishDiscSize: CGFloat = 20
+        static let finishMarkSize: CGFloat = 16
+        static let endedMarkSize: CGFloat = 12
+        /// Extra room at the foot of a turn that ends in "went back".
+        static let wentBackLabelHeight: CGFloat = 26
+        /// Room under the went-back line, so it reads as the end of its own turn.
+        static let wentBackBottomSpace: CGFloat = 8
+        static let legendSwatchHeight: CGFloat = 22
+        static let deleteTopPadding: CGFloat = 32
+        static let dimmedOpacity = 0.45
+        static let pauseShade = TimerStyle.ink.opacity(0.4)
+        static let hatchLine = Color.white.opacity(0.22)
+        static let hatchLineWidth: CGFloat = 1
+        static let hatchSpacing: CGFloat = 5
+        static let revealDuration = 0.7
+        static let eventLine = ColorValue.surfaceStroke
+        static let wentBackSymbol = "arrow.uturn.backward"
+    }
+
+    /// A session's totals per name: pie, ranked bars, or turn blocks.
+    enum HistoryTotals {
+        static let pieSize: CGFloat = 104
+        static let ringWidth: CGFloat = 12
+        static let seamWidth: CGFloat = 1.5
+        static let pieSpacing: CGFloat = 20
+        static let rowSpacing: CGFloat = 12
+        static let labelWidth: CGFloat = 96
+        static let barHeight: CGFloat = 12
+        static let barRadius: CGFloat = 6
+        static let barMinWidth: CGFloat = 3
+        /// Turn blocks meet at a seam; a new pass gets a wider break.
+        static let turnGap: CGFloat = 4
+        static let passGap: CGFloat = 8
+        static let averageValueWidth: CGFloat = 112
+        static let percentWidth: CGFloat = 36
+        /// One row of the tallest view (Turns: a block and its length beneath).
+        static let rowHeight: CGFloat = 30
+        /// Room for a key of up to two lines, so a longer key never crowds what follows.
+        static let keyHeight: CGFloat = 34
+        static let keySpacing: CGFloat = 10
+        /// The short colour mark that ties a Pie legend row to its arc.
+        static let legendMarkWidth: CGFloat = 4
+        /// The faint full-length track behind each bar.
+        static let track = ColorValue.surfaceStroke
+
+        /// The same height for Pie, Bars and Turns, so the switch never moves
+        /// anything below it.
+        static func contentHeight(names: Int) -> CGFloat {
+            let rows = CGFloat(names) * rowHeight + CGFloat(max(names - 1, 0)) * rowSpacing
+            return max(pieSize, rows) + keySpacing + keyHeight
+        }
+    }
+
     // MARK: - Timer Mechanics
 
     enum TimerMechanic {
