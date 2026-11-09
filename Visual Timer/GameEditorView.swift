@@ -447,8 +447,7 @@ struct GameEditorView: View {
         guard !stopwatchWorkspace.hasUnkeptWork else { return }
         titleFocused = false
         let source = mode == .newPlan
-            ? StopwatchSource(templateID: UUID(), title: Theme.Stopwatch.newRoutine,
-                steps: [.init(id: UUID(), name: "", targetSeconds: nil)])
+            ? StopwatchSource.newPlan(title: Theme.Stopwatch.newRoutine)
             : editor.stopwatchSource()
         editor.persistDraft()
         stopwatchWorkspace.open(StopwatchViewModel(

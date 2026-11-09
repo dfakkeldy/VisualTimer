@@ -299,13 +299,17 @@ final class GameEditorViewModel: ObservableObject {
             guard recording.source.templateID == stopwatchTemplateID,
                   Set(rounds.map(\.id)).count == rounds.count,
                   recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else {
-                let savedSource = templateLibrary.listTemplates().first { $0.id == recording.source.templateID }
-                return .changedTemplate(savedSource?.title ?? recording.source.title)
+                let id = recording.source.templateID
+                let savedTitle = (try? templateLibrary.loadDocument(id: id))
+                    .flatMap { $0.templateID == id ? $0.title : nil }
+                return .changedTemplate(savedTitle ?? recording.source.title)
             }
         case .newTemplate:
             guard recording.isComplete else { return .invalidRecording }
-            if let savedSource = templateLibrary.listTemplates().first(where: { $0.id == recording.source.templateID }) {
-                return .changedTemplate(savedSource.title)
+            let id = recording.source.templateID
+            if let savedTitle = (try? templateLibrary.loadDocument(id: id))
+                .flatMap({ $0.templateID == id ? $0.title : nil }) {
+                return .changedTemplate(savedTitle)
             }
         }
         return nil

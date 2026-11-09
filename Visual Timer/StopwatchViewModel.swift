@@ -89,9 +89,9 @@ final class StopwatchViewModel: ObservableObject {
         hasUnsavedPlanEdits && session == nil && reviewRecord == nil
     }
     var hasUnkeptWork: Bool { hasUnkeptRecording || hasUnkeptPlan }
-    var canDiscardRecordingKeepingPlan: Bool { isNewRoutine && hasUnkeptRecording && hasUnsavedPlanEdits }
+    var canDiscardRecordingKeepingPlan: Bool { isNewRoutine && hasUnkeptRecording }
     var discardAction: String {
-        if canDiscardRecordingKeepingPlan { return Theme.Stopwatch.discardRecordingAndPlan }
+        if canDiscardRecordingKeepingPlan && hasUnsavedPlanEdits { return Theme.Stopwatch.discardRecordingAndPlan }
         return hasUnkeptPlan ? Theme.Stopwatch.discardPlan : Theme.Stopwatch.discard
     }
     var workspaceStatus: String {
@@ -106,7 +106,10 @@ final class StopwatchViewModel: ObservableObject {
             : (isRecording ? Theme.Stopwatch.discardTitle : Theme.Stopwatch.discardReviewTitle)
     }
     var discardHint: String {
-        if canDiscardRecordingKeepingPlan { return Theme.Stopwatch.discardPlanAndRecordingHint }
+        if canDiscardRecordingKeepingPlan {
+            return hasUnsavedPlanEdits ? Theme.Stopwatch.discardPlanAndRecordingHint
+                : Theme.Stopwatch.discardRecordingKeepingPlanHint
+        }
         return hasUnkeptPlan ? Theme.Stopwatch.discardPlanHint
             : (isRecording ? Theme.Stopwatch.discardHint : Theme.Stopwatch.discardReviewHint)
     }

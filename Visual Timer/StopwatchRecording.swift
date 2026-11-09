@@ -12,6 +12,11 @@ struct StopwatchSource: Codable, Equatable {
     let title: String
     let steps: [Step]
 
+    static func newPlan(title: String) -> StopwatchSource {
+        StopwatchSource(templateID: UUID(), title: title,
+                        steps: [.init(id: UUID(), name: "", targetSeconds: nil)])
+    }
+
     func validate() throws {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !steps.isEmpty, steps.count <= StopwatchLimits.maximumSteps,

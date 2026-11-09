@@ -26,9 +26,11 @@ a continuous monotonic clock, independent of wall-clock changes and UI refresh t
 Each step is capped at 24 hours; the display pauses at the cap. Stale duplicate Next
 and Finish events are guarded by step identity; a brief Next guard also rejects a
 second tap after the next step appears. Close asks before discarding an edited plan,
-a recording, or an unsaved review. For a new routine with plan edits, the dialog
+a recording, or an unsaved review. For any new routine's unkept recording, the dialog
 also offers **Discard measurements, keep plan**, which returns to the plan without
-closing; **Discard recording and plan** names the action that loses both. Deleting
+closing, including after an earlier recording was saved. With plan edits,
+**Discard recording and plan** names the action that loses both; without edits,
+**Discard recording** discards the measurements and closes. Deleting
 a saved recording restores the plan baseline from the newest remaining recording
 for that routine, or the opening plan if none remain. Plan edits that lose their
 only saved recording therefore remain available through Return to stopwatch. Swiping

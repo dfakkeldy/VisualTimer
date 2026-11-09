@@ -425,6 +425,7 @@ extension Theme {
         static let neutralHint = "More or less time is information, not a score."
         static let notSaved = "Not saved yet"
         static let saved = "Saved on this device"
+        static let savedNewRoutineHint = "Find it later in \(recordingsEntry)."
         static let savedAction = "Saved"
         static let recordAgain = "Back to routine"
         static let history = "Local recordings"
@@ -448,6 +449,7 @@ extension Theme {
         static let retainedWorkspaceHint = "Return to your stopwatch to keep or discard its work before opening another stopwatch."
         static let discardPlanTitle = "Discard this plan?"
         static let discardPlanAndRecordingHint = "Discard just the measurements to keep editing your plan, or discard both the recording and plan. Saved recordings stay on this device."
+        static let discardRecordingKeepingPlanHint = "Discard just the measurements to record this routine again, or discard the recording and close. Saved recordings stay on this device."
         static let discardPlanHint = "Your unsaved routine name and step edits will be lost."
         static let discardPlan = "Discard plan"
         static let discardReviewTitle = "Discard these measurements?"
@@ -493,7 +495,7 @@ extension Theme {
         static let invalidSource = "Add named steps before recording. Each target must be between 1 second and 24 hours."
         static let invalidRecording = "This stopwatch recording is invalid or uses an unsupported format."
         static func changedTemplate(_ title: String) -> String {
-            "The template or its enabled steps have changed. Open “\(title)”, then Local stopwatch recordings to apply. Restore any removed or disabled measured steps first."
+            "The template or its enabled steps have changed. Open “\(title)”, then \(recordingsEntry) to apply. Restore any removed or disabled measured steps first."
         }
         static func saveError(_ detail: String) -> String {
             "Recording could not be saved on this device: \(detail) Try again before closing."

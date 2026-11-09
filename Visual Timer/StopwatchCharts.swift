@@ -79,6 +79,7 @@ struct StopwatchTrendView: View {
                         LineMark(x: .value(Theme.Stopwatch.history, point.date),
                                  y: .value(Theme.Stopwatch.seconds, target),
                                  series: .value(Theme.Stopwatch.review, Theme.Stopwatch.target))
+                            .interpolationMethod(.stepEnd)
                             .foregroundStyle(Theme.Stopwatch.targetColor)
                             .lineStyle(StrokeStyle(lineWidth: Theme.Stopwatch.chartLineWidth,
                                                    dash: Theme.Stopwatch.targetDash))

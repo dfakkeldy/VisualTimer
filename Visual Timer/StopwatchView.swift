@@ -270,6 +270,9 @@ struct StopwatchView: View {
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Text(model.isReviewSaved ? Theme.Stopwatch.saved : Theme.Stopwatch.notSaved)
                 .font(.subheadline.weight(.semibold))
+            if model.isNewRoutine && model.isReviewSaved {
+                Text(Theme.Stopwatch.savedNewRoutineHint).font(.caption)
+            }
             StopwatchComparisonView(rows: model.reviewRows)
         } header: { Text(Theme.Stopwatch.review) }
         .listRowBackground(Theme.ColorValue.surface)
