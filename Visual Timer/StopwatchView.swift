@@ -173,7 +173,7 @@ struct StopwatchView: View {
     private func planStepRow(index: Int, step: StopwatchSource.Step) -> some View {
         if model.isNewRoutine {
             HStack {
-                TextField(Theme.Stopwatch.stepName,
+                TextField(Theme.Stopwatch.stepName(index + 1),
                           text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
                     .accessibilityLabel(Theme.Stopwatch.stepName(index + 1))
                 Menu {
@@ -261,14 +261,17 @@ struct StopwatchView: View {
         } label: {
             Label(session.phase == .paused ? Theme.Stopwatch.resume : Theme.Stopwatch.pause,
                   systemImage: session.phase == .paused ? Theme.Stopwatch.resumeSymbol : Theme.Stopwatch.pauseSymbol)
+                .foregroundStyle(Theme.ColorValue.textPrimary)
         }
         .disabled(model.hasReachedStepLimit)
         .buttonStyle(.bordered)
         Button { model.next(stepID: step.id) } label: {
             Label(session.index == model.source.steps.count - 1 ? Theme.Stopwatch.finish : Theme.Stopwatch.next,
                   systemImage: session.index == model.source.steps.count - 1 ? Theme.Symbol.checkmark : Theme.Stopwatch.nextSymbol)
+                .foregroundStyle(Theme.ColorValue.textPrimary)
         }
         .buttonStyle(.borderedProminent)
+        .tint(Theme.Stopwatch.prominentTint)
         .accessibilityIdentifier(session.index == model.source.steps.count - 1 ? Theme.Stopwatch.finishIdentifier : Theme.Stopwatch.nextIdentifier)
     }
 

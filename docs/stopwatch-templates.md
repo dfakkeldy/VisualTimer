@@ -82,12 +82,17 @@ to the first measured step if the selection is no longer available. History rows
 disabled with an explanation while plan edits remain unkept; **Undo plan edits** asks
 for confirmation and undoes those edits without closing the stopwatch.
 
-Comparison bars and dated per-step trends use neutral target/actual language. Every
-chart has visible text alternatives and duration-formatted axes. Comparison bars
-are distinguished by position, legend, and text rows. In the trend chart, target
+Comparison bars and dated per-step trends use neutral target/actual language. At
+standard text sizes, charts have visible text alternatives and duration-formatted
+axes. Comparison bars are distinguished by position, legend, and text rows. In the trend chart, target
 and actual series differ in shape and dashed versus solid stroke: circles show
 actuals, while squares mark captured targets. A no-target comparison omits Target
-from its legend. Longer or shorter time has no success/failure meaning. Free history
+from its legend. At accessibility text sizes, both charts give way to the wrapping
+text rows: comparison rows retain step names, targets, actuals, differences and any
+minimum template duration; trend rows retain dates, step names, actuals and original
+targets. The trend hint describes those dated values without referring to hidden
+chart symbols. Each comparison or trend row remains one combined accessibility
+element. Longer or shorter time has no success/failure meaning. Free history
 shows the five most recent stopwatch recordings across routines; filtering by
 routine happens after that limit. Pro exposes full retained history using the existing limit and
 paywall. All recordings remain on this device,
@@ -121,13 +126,22 @@ clean drafts and first autosave, and editor application/save policy.
 Two focused XCUITests use the existing reset-persisted-state launch flow to exercise
 Finish early Cancel/confirm and Apply-as-new replacement Cancel/confirm through the
 actual view buttons. They require no additional app fixture infrastructure.
+A third UI test requests the largest accessibility text size, verifies the override
+through rendered label geometry, and audits an early-finish review for clipped text,
+including the five-second minimum-duration hint. It saves rendered and accessibility
+context and excludes only clipping issues verified to belong to the background
+editor. Its regression result remains unverified until an unfixed/fixed audit pair
+completes; full accessibility labels alone do not establish that text is visible.
 Apple build/test execution uses the Mac build-slot scheduler. On 2026-11-08,
 the iOS app, embedded Watch app, and iOS test targets compiled. All 182 unit
 tests passed, including 52 stopwatch tests, and both confirmation UI tests
 passed on the iPhone 17 Pro simulator with iOS 27.0. The tests exercise native
 popover dismissal when the platform omits a cancel-role row. Source parsing,
 whitespace, plist and StoreKit configuration checks also passed.
-Rendered chart, large-text and spoken VoiceOver evidence remains outstanding;
-compilation and tests do not establish those behaviors. Hill-climb findings
+Fresh rendered chart, large-text, recording-button contrast and icon evidence remains
+outstanding for the accessibility-size text alternative. A clipping audit cannot
+prove chart layout because the charts are hidden from accessibility. Spoken
+VoiceOver evidence also remains outstanding; compilation, labels and audit results
+do not establish spoken announcements, focus or reading order. Hill-climb findings
 and evidence are recorded separately. No physical-device acceptance or release
 is claimed.

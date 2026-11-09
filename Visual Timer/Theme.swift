@@ -342,6 +342,7 @@ extension Theme {
         static let chartLineWidth: CGFloat = 2
         static let targetDash: [CGFloat] = [5, 4]
         static let actualColor = Color.cyan
+        static let prominentTint = Color(red: 0, green: 0.40, blue: 0.85)
         static let targetColor = ColorValue.textSecondary
         static let symbol = "stopwatch"
         static let planSymbol = "list.bullet.rectangle"
@@ -436,6 +437,7 @@ extension Theme {
         static let emptyHint = "Finish and save a recording to compare this routine over time."
         static let trendEmpty = "No saved measurements for this step yet."
         static let onePointHint = "One recording so far. Record again to see how time changes."
+        static let accessibilityTrendHint = "Each recording's date, actual time and original target are listed below."
         static let trendHint = "Circles show actual time. Squares and the dashed target line show each recording's original target. Dates and values are listed below."
         static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
         static let historyBlockedByPlan = "Save a recording of your edited plan, or undo the plan edits, before opening local recordings."

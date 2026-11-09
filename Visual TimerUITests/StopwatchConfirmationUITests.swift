@@ -97,6 +97,80 @@ final class StopwatchConfirmationUITests: XCTestCase {
     }
 
     @MainActor
+    func testEarlyReviewTextClippingAtLargestAccessibilitySize() throws {
+        // Measure the same rendered label before and after the launch override;
+        // launch arguments alone do not prove Dynamic Type reached the app.
+        let standardApp = launchTemplates(arguments: [
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryL",
+        ])
+        reveal(standardApp.buttons["Time this template"], in: standardApp)
+        standardApp.buttons["Time this template"].tap()
+        let standardTarget = standardApp.staticTexts["Target: 1m 0s"].firstMatch
+        XCTAssertTrue(standardTarget.waitForExistence(timeout: 5))
+        let standardHeight = standardTarget.frame.height
+        standardApp.terminate()
+
+        let app = launchTemplates(arguments: [
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+        ])
+        reveal(app.buttons["Time this template"], in: app)
+        app.buttons["Time this template"].tap()
+        let accessibilityTarget = app.staticTexts["Target: 1m 0s"].firstMatch
+        reveal(accessibilityTarget, in: app)
+        let accessibilityHeight = accessibilityTarget.frame.height
+        print("Dynamic Type target-label heights: standard=\(standardHeight), AX5=\(accessibilityHeight)")
+        XCTAssertGreaterThan(accessibilityHeight, standardHeight * 1.5, "The content-size override must change rendered app geometry")
+
+        let start = app.buttons["stopwatch.start"]
+        reveal(start, in: app)
+        start.tap()
+        app.buttons["stopwatch.finishEarly"].tap()
+        let confirm = app.buttons.matching(NSPredicate(format: "label == %@ AND identifier != %@", "Finish early", "stopwatch.finishEarly")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3))
+        confirm.tap()
+        XCTAssertTrue(app.staticTexts["Review measurements"].waitForExistence(timeout: 5))
+
+        // Bind the presented List by index while its header is on screen. A
+        // containing(header) query can stop matching when scrolling unloads it.
+        let reviewList = app.collectionViews.element(boundBy: app.collectionViews.count - 1)
+        XCTAssertTrue(reviewList.staticTexts["Review measurements"].exists)
+        let comparison = reviewList.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "1. Alice")).firstMatch
+        reveal(comparison, in: app)
+        XCTAssertTrue(comparison.label.contains("Template duration: 5s"), "Record below the template minimum to exercise the extra wrapping hint")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "AX5 early-review comparison"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let context = XCTAttachment(string: app.debugDescription)
+        context.name = "AX5 early-review accessibility and geometry"
+        context.lifetime = .keepAlways
+        add(context)
+
+        // The editor behind the sheet has pre-existing clipping outside this
+        // feature. Match audit elements to the review List's actual subtree,
+        // keeping every issue in that subtree (including combined text rows).
+        let sheetElements = [reviewList] + reviewList.descendants(matching: .any).allElementsBoundByIndex
+        let backgroundElements = app.collectionViews.allElementsBoundByIndex.dropLast().flatMap {
+            [$0] + $0.descendants(matching: .any).allElementsBoundByIndex
+        } + app.navigationBars["Templates"].descendants(matching: .any).allElementsBoundByIndex
+            + app.tabBars.descendants(matching: .any).allElementsBoundByIndex
+        try app.performAccessibilityAudit(for: [.textClipped]) { issue in
+            guard let element = issue.element else { return false }
+            let inSheet = sheetElements.contains {
+                $0.elementType == element.elementType && $0.identifier == element.identifier
+                    && $0.label == element.label && $0.frame == element.frame
+            }
+            let inBackground = backgroundElements.contains {
+                $0.elementType == element.elementType && $0.identifier == element.identifier
+                    && $0.label == element.label && $0.frame == element.frame
+            }
+            print("Text-clipping audit: inStopwatchSheet=\(inSheet), verifiedBackground=\(inBackground), \(issue.detailedDescription), element=\(element)")
+            // Never suppress an unclassified issue just because matching failed.
+            return inBackground && !inSheet
+        }
+    }
+
+    @MainActor
     private func cancelConfirmation(in app: XCUIApplication, label: String) {
         let cancel = app.buttons[label]
         if cancel.waitForExistence(timeout: 2) {
@@ -111,7 +185,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchTemplates() -> XCUIApplication {
+    private func launchTemplates(arguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-resetPersistedState", "YES",
@@ -120,6 +194,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
             "-timerAlertsOffered", "YES", "-timerAlertsEnabled", "NO",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_CA",
         ]
+        app.launchArguments += arguments
         app.launch()
         let templates = app.tabBars.buttons["Templates"]
         XCTAssertTrue(templates.waitForExistence(timeout: 5))

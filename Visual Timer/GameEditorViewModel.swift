@@ -299,20 +299,21 @@ final class GameEditorViewModel: ObservableObject {
             guard recording.source.templateID == stopwatchTemplateID,
                   Set(rounds.map(\.id)).count == rounds.count,
                   recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else {
-                let id = recording.source.templateID
-                let savedTitle = (try? templateLibrary.loadDocument(id: id))
-                    .flatMap { $0.templateID == id ? $0.title : nil }
+                let savedTitle = savedTemplateTitle(recording.source.templateID)
                 return .changedTemplate(savedTitle ?? recording.source.title)
             }
         case .newTemplate:
             guard recording.isComplete else { return .invalidRecording }
-            let id = recording.source.templateID
-            if let savedTitle = (try? templateLibrary.loadDocument(id: id))
-                .flatMap({ $0.templateID == id ? $0.title : nil }) {
+            if let savedTitle = savedTemplateTitle(recording.source.templateID) {
                 return .changedTemplate(savedTitle)
             }
         }
         return nil
+    }
+
+    private func savedTemplateTitle(_ id: UUID) -> String? {
+        (try? templateLibrary.loadDocument(id: id))
+            .flatMap { $0.templateID == id ? $0.title : nil }
     }
 
     /// Applies only to the same template and enabled step identities. No save,
