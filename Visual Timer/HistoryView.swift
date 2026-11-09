@@ -195,9 +195,9 @@ struct HistoryView: View {
 
     /// The rounds as they ran, in their colours and sized by time.
     private func colorSegments(_ record: GameRecord) -> [SequenceSegment] {
-        guard record.roundColors != nil else { return [] }
-        return SessionTimeline(record: record).items.enumerated().compactMap { index, item in
-            guard let length = item.length, let color = record.color(forRound: item.name) else { return nil }
+        let timeline = SessionTimeline(record: record)
+        return timeline.items.enumerated().compactMap { index, item in
+            guard let length = item.length, let color = timeline.color(for: item, in: record) else { return nil }
             return SequenceSegment(id: index, color: color, seconds: max(length, 1))
         }
     }
