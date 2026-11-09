@@ -40,6 +40,9 @@ final class GameViewModel: ObservableObject {
     /// Plays the finish sound when rounds complete.
     weak var soundManager: SoundManager?
 
+    /// Set while a stale restored session is untouched: when it really ended.
+    private var staleSessionEnd: Date?
+
     private let historyStore: HistoryStore
     private let onHistoryRecordSaved: ((GameRecord) -> Void)?
 
@@ -178,9 +181,11 @@ final class GameViewModel: ObservableObject {
 
     // MARK: - Game Lifecycle
 
+    /// Loading over a session in progress ends it the way End does, so it
+    /// reaches History rather than vanishing.
     func loadGame(_ game: GameSequence) {
-        resetSession(clearState: true, saveRecord: false)
         guard !game.activeRounds.isEmpty else { return }
+        endGame(clearState: true)
         gameSequence = game
         currentRoundIndex = 0
         gamePhase = .ready
@@ -298,7 +303,10 @@ final class GameViewModel: ObservableObject {
 
     private func recordSessionEnd(saveRecord: Bool) {
         guard gameStartDate != nil else { return }
-        sessionEvents.append(.gameEnded(timestamp: Date()))
+        // A stale session nobody touched since restoring ended when it was
+        // last saved, not days later when the next one replaced it.
+        sessionEvents.append(.gameEnded(timestamp: staleSessionEnd ?? Date()))
+        staleSessionEnd = nil
         stopElapsedTimer()
         if saveRecord {
             saveGameRecord()
@@ -334,6 +342,7 @@ final class GameViewModel: ObservableObject {
     /// Saves the playing session so it survives the app being closed.
     func saveSession() {
         resumeNote = nil
+        staleSessionEnd = nil
         guard let sessionStore, gamePhase == .playing, let game = gameSequence,
               let gameStartDate else { return }
         sessionStore.save(ActiveSessionSnapshot(
@@ -376,6 +385,7 @@ final class GameViewModel: ObservableObject {
         gamePhase = .playing
         let savedAt = snapshot.savedAt ?? snapshot.gameStartDate
         let isStale = now.timeIntervalSince(savedAt) > Self.staleSessionAge
+        staleSessionEnd = isStale ? savedAt : nil
         var progress = snapshot.timerProgress
         var state = snapshot.timerState.timerState
         if isStale && state == .running {

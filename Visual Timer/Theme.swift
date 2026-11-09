@@ -326,7 +326,12 @@ enum Theme {
             static let digitMinTarget: CGFloat = 38
             static let controlIconSpacing: CGFloat = 2
             static let quickDialMaxSize: CGFloat = 120
-            static let quickPieSize: CGFloat = 92
+            static let quickPieSize: CGFloat = 104
+            static let quickPieMinSize: CGFloat = 68
+            /// The gap, the 44 pt readout row and the crown cue beneath the dial.
+            static let quickBelowDialHeight: CGFloat = 66
+            static let dialLabelledDiscRatio: CGFloat = 0.62
+            static let pausedDialOpacity: Double = 0.55
             static let sessionDialSize: CGFloat = 76
             static let dialLineWidth: CGFloat = 8
             static let selectionCornerRadius: CGFloat = 6

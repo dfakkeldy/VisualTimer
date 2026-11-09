@@ -6,14 +6,16 @@ starter templates for common timed sessions.
 
 ## Status
 
-Documentation audited 2026-10-24. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
-is live and installable. The iPhone and iPad app is in public beta on
-[TestFlight](https://testflight.apple.com/join/s7w4YGWU). The Apple app includes the quick timer, sequences,
-Pro, CloudKit sync, widgets, and embedded Watch companion in source promoted
-through `weekly` to `main` on October 17. Main upload **1.0 (77)** succeeded;
-current App Review and public App Store availability have not been rechecked.
-See the [readiness ledger](docs/app-store/readiness.md) for dated receipts and
-remaining verification, and [Roadmap](Roadmap.md) for the current priorities.
+Documentation audited 2026-11-08. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
+is live and installable. Turn Timer **1.0** is live on the
+[App Store](https://apps.apple.com/ca/app/turn-timer/id6771073144) and free.
+The Apple app includes the quick timer, sequences, Pro, CloudKit sync, widgets,
+and embedded Watch companion in source promoted through `weekly` to `main` on
+October 17. Main upload **1.0 (77)** succeeded; public version 1.0 was confirmed
+on 2026-11-08. Early builds remain available on
+[TestFlight](https://testflight.apple.com/join/s7w4YGWU). See the
+[readiness ledger](docs/app-store/readiness.md) for dated receipts and remaining
+verification, and [Roadmap](Roadmap.md) for the current priorities.
 
 Useful docs:
 
@@ -81,9 +83,10 @@ Useful docs:
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
-These scope bullets describe implemented source, not signed-device acceptance
-or App Store live state. None of the iPhone alerts, rim drag, session restore,
-or Watch dial-tap behavior has been verified on a physical iPhone or Watch.
+These scope bullets describe implemented source, not signed-device acceptance.
+Public App Store 1.0 availability is recorded in Status and the readiness
+ledger. None of the iPhone alerts, rim drag, session restore, or Watch
+dial-tap behavior has been verified on a physical iPhone or Watch.
 Production sync, saved Watch-template transfer and timer lock/background
 behavior still need the focused checks in the readiness ledger. No
 background-alarm guarantee is implied.

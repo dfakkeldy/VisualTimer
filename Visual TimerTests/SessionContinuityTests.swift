@@ -81,6 +81,43 @@ final class SessionContinuityTests: XCTestCase {
         XCTAssertEqual(second.sessionEvents.count, first.sessionEvents.count)
     }
 
+    /// Restores a session as if days had passed, and returns what History gets
+    /// when a new template replaces it, plus the instant before the restore.
+    private func replaceStaleSession(touching touch: (GameViewModel) -> Void) throws -> (ended: Date?, beforeRestore: Date) {
+        let sessionStore = ActiveSessionStore(directory: try temporaryDirectory())
+        let history = HistoryStore(documentsDirectory: try temporaryDirectory())
+
+        let first = GameViewModel(timerViewModel: TimerViewModel())
+        first.sessionStore = sessionStore
+        first.loadGame(routine())
+        first.startGame()
+        let beforeRestore = Date()
+
+        let second = GameViewModel(timerViewModel: TimerViewModel(), historyStore: history)
+        second.sessionStore = sessionStore
+        XCTAssertTrue(second.restoreSavedSession(now: Date().addingTimeInterval(5 * 24 * 60 * 60)))
+        touch(second)
+        second.loadGame(routine())
+
+        let ended = history.loadAll().first?.session.events.compactMap { event -> Date? in
+            if case .gameEnded(let timestamp) = event { return timestamp }
+            return nil
+        }.first
+        return (ended, beforeRestore)
+    }
+
+    func testReplacingAStaleSessionEndsItWhenItWasLastSaved() throws {
+        let result = try replaceStaleSession(touching: { _ in })
+        let ended = try XCTUnwrap(result.ended)
+        XCTAssertLessThanOrEqual(ended, result.beforeRestore)
+    }
+
+    func testReplacingAStaleSessionAfterResumingEndsItNow() throws {
+        let result = try replaceStaleSession(touching: { $0.recordResume() })
+        let ended = try XCTUnwrap(result.ended)
+        XCTAssertGreaterThan(ended, result.beforeRestore)
+    }
+
     func testRestoreNeverReplacesASessionInProgress() throws {
         let store = ActiveSessionStore(directory: try temporaryDirectory())
         let saver = GameViewModel(timerViewModel: TimerViewModel())
