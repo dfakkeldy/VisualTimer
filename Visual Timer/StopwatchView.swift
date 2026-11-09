@@ -6,7 +6,6 @@ struct StopwatchView: View {
     @ObservedObject var model: StopwatchViewModel
     let replacesUnsavedEdits: Bool
     let onApply: (StopwatchRecording) throws -> Void
-    let applyBlocker: (StopwatchRecording) -> StopwatchError?
     let onClose: () -> Void
     let onRequestPro: (ProFeature) -> Void
 
@@ -14,6 +13,7 @@ struct StopwatchView: View {
     @AccessibilityFocusState private var focusedElement: FocusTarget?
 
     @State private var showDiscard = false
+    @State private var showUndoPlanEdits = false
     @State private var showDelete = false
     @State private var showReplace = false
     @State private var showFinishEarly = false
@@ -54,6 +54,11 @@ struct StopwatchView: View {
                 }
                 Button(model.isRecording ? Theme.Stopwatch.keepRecording : Theme.Stopwatch.cancel, role: .cancel) {}
             } message: { Text(model.discardHint) }
+            .confirmationDialog(Theme.Stopwatch.undoPlanEditsTitle,
+                                isPresented: $showUndoPlanEdits, titleVisibility: .visible) {
+                Button(Theme.Stopwatch.undoPlanEdits, role: .destructive) { model.discardUnkeptWork() }
+                Button(Theme.Stopwatch.cancel, role: .cancel) {}
+            } message: { Text(Theme.Stopwatch.discardPlanHint) }
             .confirmationDialog(Theme.Stopwatch.finishEarlyTitle,
                                 isPresented: $showFinishEarly,
                                 titleVisibility: .visible) {
@@ -256,7 +261,7 @@ struct StopwatchView: View {
 
     @ViewBuilder
     private func reviewSections(record: StopwatchRecording) -> some View {
-        let blocker = model.canApply ? applyBlocker(record) : nil
+        let blocker = model.applyBlockerMessage
         Section {
             Text(record.source.title).font(.title2.weight(.bold))
                 .accessibilityAddTraits(.isHeader)
@@ -281,7 +286,7 @@ struct StopwatchView: View {
             .disabled(!model.canApply || blocker != nil)
             .accessibilityIdentifier(Theme.Stopwatch.applyIdentifier)
             if let blocker {
-                Text(blocker.localizedDescription).font(.subheadline)
+                Text(blocker).font(.subheadline)
             } else if model.needsSourceTemplate {
                 Text(model.openSourceHint).font(.subheadline)
             }
@@ -302,6 +307,7 @@ struct StopwatchView: View {
         Section {
             if model.hasUnkeptPlan {
                 Text(Theme.Stopwatch.historyBlockedByPlan).font(.caption)
+                Button(Theme.Stopwatch.undoPlanEdits, role: .destructive) { showUndoPlanEdits = true }
             }
             if model.visibleRecords.isEmpty {
                 ContentUnavailableView(model.hasOlderRecords ? Theme.Stopwatch.noRecentRecordings : Theme.Stopwatch.emptyTitle, systemImage: Theme.Stopwatch.emptySymbol,
@@ -327,6 +333,8 @@ struct StopwatchView: View {
             if model.unreadableCount > 0 {
                 Text(Theme.Stopwatch.unreadableFiles(model.unreadableCount))
                     .font(.caption)
+            }
+            if model.unreadableCount > 0 || model.hasLoadFailure {
                 Button(Theme.Stopwatch.retryLoading, action: model.reload)
             }
             if model.hasOlderRecords {
@@ -341,7 +349,8 @@ struct StopwatchView: View {
 
         if !model.isLibrary && !model.visibleRecords.isEmpty {
             Section {
-                Picker(Theme.Stopwatch.chooseStep, selection: $model.selectedTrendStepID) {
+                Picker(Theme.Stopwatch.chooseStep, selection: Binding(
+                    get: { model.trendSelection }, set: { model.selectedTrendStepID = $0 })) {
                     ForEach(model.trendSteps) { step in Text(model.trendStepLabel(step)).tag(Optional(step.id)) }
                 }
                 StopwatchTrendView(points: model.trendPoints)
@@ -351,11 +360,6 @@ struct StopwatchView: View {
     }
 
     private func apply() {
-        guard let record = model.reviewRecord else { return }
-        if let blocker = applyBlocker(record) {
-            model.errorMessage = blocker.localizedDescription
-            return
-        }
         if model.applyReview(onApply) { onClose() }
     }
 }

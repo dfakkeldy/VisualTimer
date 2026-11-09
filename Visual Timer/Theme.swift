@@ -405,8 +405,9 @@ extension Theme {
         static let finish = "Finish & review"
         static let finishEarly = "Finish early"
         static let finishEarlyTitle = "Finish before all steps are measured?"
-        static func finishEarlyHint(count: Int, isNewRoutine: Bool) -> String {
-            let remaining = count == 1 ? "1 step won't be measured." : "\(count) steps won't be measured."
+        static func finishEarlyHint(current: String?, count: Int, isNewRoutine: Bool) -> String {
+            let partial = current.map { "“\($0)” keeps its time so far. " } ?? ""
+            let remaining = partial + (count == 1 ? "1 later step won't be measured." : "\(count) later steps won't be measured.")
             return isNewRoutine ? remaining + " " + partialNewHint : remaining
         }
         static let pause = "Pause"
@@ -418,7 +419,7 @@ extension Theme {
         static let saveRecording = "Save recording"
         static let apply = "Apply durations"
         static let applyNew = "Apply as new template"
-        static let applyHint = "Applying saves this recording and edits the template. Save in the editor, or start the timer, to keep the template changes. Durations round to whole seconds, with a \(StopwatchLimits.minimumTemplateSeconds)-second minimum."
+        static let applyHint = "Applying saves this recording and edits the template. Save in the editor to keep the template changes. Starting the timer also saves a template that's already saved. Durations round to whole seconds, with a \(StopwatchLimits.minimumTemplateSeconds)-second minimum."
         static let partialNewHint = "This recording ended early. Record every step to create a template. You can still save these measurements."
         static let partialHint = "Only measured steps will change. Other template durations stay as they are."
         static let neutralHint = "More or less time is information, not a score."
@@ -436,7 +437,9 @@ extension Theme {
         static let onePointHint = "One recording so far. Record again to see how time changes."
         static let trendHint = "Circles show actual time. Squares and the dashed target line show each recording's original target. Dates and values are listed below."
         static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
-        static let historyBlockedByPlan = "Save a recording of your edited plan, or discard the plan edits, before opening local recordings."
+        static let historyBlockedByPlan = "Save a recording of your edited plan, or undo the plan edits, before opening local recordings."
+        static let undoPlanEdits = "Undo plan edits"
+        static let undoPlanEditsTitle = "Undo plan edits?"
         static let unlockHistory = "See full history"
         static let close = "Close"
         static let returnToStopwatch = "Return to stopwatch"
@@ -476,12 +479,16 @@ extension Theme {
         static let moveDown = "Move down"
         static let deleteStep = "Delete step"
         static func missingStepName(_ position: Int) -> String { "Step \(position) needs a name" }
+        static func fixInTemplateEditor(_ problem: String) -> String {
+            "\(problem.hasSuffix(".") ? problem : problem + ".") Change it in the template editor."
+        }
+        static func saveFirst(_ detail: String) -> String { "Save this recording first. \(detail)" }
         static func stepName(_ position: Int) -> String { "Step \(position) name" }
         static func stepOptions(_ position: Int) -> String { "Step \(position) options" }
         static func stepAnnouncement(position: Int, count: Int, name: String) -> String {
             "Step \(position) of \(count), \(name)"
         }
-        static func earlierStep(_ name: String) -> String { "\(name) (earlier step)" }
+        static func earlierStep(_ name: String) -> String { "\(name) (not in current plan)" }
         static func setsDuration(_ seconds: Int) -> String { "Template duration: \(seconds)s" }
         static let invalidSource = "Add named steps before recording. Each target must be between 1 second and 24 hours."
         static let invalidRecording = "This stopwatch recording is invalid or uses an unsupported format."

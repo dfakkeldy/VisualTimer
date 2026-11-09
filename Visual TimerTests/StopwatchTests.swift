@@ -222,7 +222,10 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(second.trendPoints.map(\.step.targetSeconds), [30])
         XCTAssertEqual(second.trendPoints.map(\.step.name), ["Prepare"])
         second.selectedTrendStepID = modifiedSteps[1].id
-        XCTAssertTrue(second.trendPoints.isEmpty, "Matching names cannot join different step identities")
+        XCTAssertFalse(second.trendSteps.contains { $0.id == modifiedSteps[1].id },
+                       "Matching names cannot join different step identities")
+        XCTAssertEqual(second.trendSelection, source.steps[0].id)
+        XCTAssertEqual(second.trendPoints.map(\.step.id), [source.steps[0].id])
         XCTAssertEqual(store.records.first, oldRecord)
     }
 
@@ -250,6 +253,89 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(store.records.count, 1)
         XCTAssertEqual(store.records.first?.id, id)
         XCTAssertFalse(model.applyReview { _ in XCTFail("Repeated Apply must be ignored") })
+    }
+
+    func testPartialNewPlanSkipsApplyPreflight() {
+        let source = source(targets: [nil, nil])
+        let store = MemoryStopwatchStore()
+        let clock = TestClock()
+        var preflightCount = 0
+        let model = StopwatchViewModel(source: source, mode: .newPlan, isProUnlocked: false,
+            applyPreflight: { _, _ in
+                preflightCount += 1
+                return .invalidRecording
+            }, store: store, now: { clock.time }, date: { self.epoch }, automaticallyRefresh: false)
+        model.start()
+        clock.time = 12
+        model.finish(stepID: source.steps[0].id)
+        XCTAssertFalse(model.canApply)
+        XCTAssertNil(model.applyBlocker)
+        XCTAssertNil(model.applyBlockerMessage)
+        XCTAssertFalse(model.applyReview { _ in XCTFail("Partial plans cannot apply") })
+        XCTAssertEqual(preflightCount, 0)
+        XCTAssertEqual(store.saveCount, 0)
+        XCTAssertNil(model.errorMessage)
+    }
+
+    func testChangedTemplatePreflightBlocksBeforeSaveAndExplainsSaveFirst() {
+        let source = source(targets: [30])
+        let store = MemoryStopwatchStore()
+        let clock = TestClock()
+        let blocker = StopwatchError.changedTemplate(source.title)
+        var preflightRecords: [StopwatchRecording] = []
+        let model = StopwatchViewModel(source: source, isProUnlocked: false,
+            applyPreflight: { record, kind in
+                preflightRecords.append(record)
+                XCTAssertEqual(kind, .existingTemplate)
+                return blocker
+            }, store: store, now: { clock.time }, date: { self.epoch }, automaticallyRefresh: false)
+        model.start()
+        clock.time = 12
+        model.finish(stepID: source.steps[0].id)
+        XCTAssertTrue(model.canApply)
+        XCTAssertEqual(model.applyBlockerMessage, "Save this recording first. " + blocker.localizedDescription)
+        XCTAssertFalse(model.applyReview { _ in XCTFail("A blocked review cannot apply") })
+        XCTAssertEqual(model.errorMessage, blocker.localizedDescription)
+        XCTAssertEqual(store.saveCount, 0)
+        XCTAssertFalse(model.isReviewSaved)
+        XCTAssertTrue(preflightRecords.allSatisfy { $0 == model.reviewRecord })
+        XCTAssertFalse(preflightRecords.isEmpty)
+        XCTAssertTrue(model.saveReview())
+        XCTAssertEqual(model.applyBlockerMessage, blocker.localizedDescription)
+        XCTAssertFalse(model.applyReview { _ in XCTFail("Saving does not clear the editor blocker") })
+        XCTAssertEqual(store.saveCount, 1)
+    }
+
+    func testClearLiveApplyPreflightSavesAndAppliesCompleteNewPlan() {
+        let source = source(targets: [nil])
+        let store = MemoryStopwatchStore()
+        let clock = TestClock()
+        var blocker: StopwatchError? = .changedTemplate(source.title)
+        var preflightCount = 0
+        let model = StopwatchViewModel(source: source, mode: .newPlan, isProUnlocked: false,
+            applyPreflight: { record, kind in
+                preflightCount += 1
+                XCTAssertEqual(record.source, source)
+                XCTAssertEqual(kind, .newTemplate)
+                return blocker
+            }, store: store, now: { clock.time }, date: { self.epoch }, automaticallyRefresh: false)
+        model.start()
+        clock.time = 12
+        model.finish(stepID: source.steps[0].id)
+        XCTAssertNotNil(model.applyBlocker)
+        blocker = nil
+        var applied: StopwatchRecording?
+        XCTAssertTrue(model.applyReview {
+            XCTAssertEqual(store.records, [$0], "Apply must receive an already-saved recording")
+            applied = $0
+        })
+        XCTAssertEqual(preflightCount, 2)
+        XCTAssertEqual(store.saveCount, 1)
+        XCTAssertNotNil(applied)
+        XCTAssertEqual(applied, model.reviewRecord)
+        XCTAssertTrue(model.isReviewSaved)
+        XCTAssertTrue(model.isApplied)
+        XCTAssertNil(model.errorMessage)
     }
 
     func testViewModelClockRefreshCapsAndPausesWithoutAffectingStoredSnapshots() {
@@ -534,11 +620,13 @@ final class StopwatchTests: XCTestCase {
         model.reload()
         XCTAssertEqual(model.records, [saved])
         XCTAssertEqual(model.unreadableCount, 1)
+        XCTAssertTrue(model.hasLoadFailure)
         XCTAssertNotNil(model.errorMessage)
         store.failLoad = false
         model.reload()
         XCTAssertTrue(model.records.isEmpty)
         XCTAssertEqual(model.unreadableCount, 0)
+        XCTAssertFalse(model.hasLoadFailure)
     }
 
     func testPlanBaselineProtectsEditsAndMovesOnlyAfterSuccessfulSave() {
@@ -575,6 +663,8 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(model.source.title, baseline.title)
         XCTAssertEqual(model.source.steps[0].name, "Changed step")
         XCTAssertFalse(model.hasUnkeptWork)
+        model.show(store.records[0])
+        XCTAssertEqual(model.reviewRecord, store.records.first)
     }
 
     func testDeletingOnlySavedNewPlanRetainsEditsAcrossDismissal() {
@@ -595,8 +685,13 @@ final class StopwatchTests: XCTestCase {
         XCTAssertFalse(model.deleteReview())
         XCTAssertNotNil(model.reviewRecord)
         store.failDelete = false
+        model.errorMessage = nil
+        store.failLoad = true
         XCTAssertTrue(model.deleteReview())
+        store.failLoad = false
+        XCTAssertNotNil(model.errorMessage)
         XCTAssertTrue(model.records.isEmpty)
+        XCTAssertTrue(store.records.isEmpty)
         XCTAssertTrue(model.hasUnkeptPlan)
         XCTAssertEqual(model.source, edited)
         workspace.isPresented = false
@@ -790,12 +885,12 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(model.unmeasuredStepCount, 0)
         model.start()
         XCTAssertEqual(model.unmeasuredStepCount, 2)
-        XCTAssertEqual(model.finishEarlyHint, "2 steps won't be measured. " + Theme.Stopwatch.partialNewHint)
+        XCTAssertEqual(model.finishEarlyHint, "“Prepare” keeps its time so far. 2 later steps won't be measured. " + Theme.Stopwatch.partialNewHint)
         model.pause()
         XCTAssertEqual(model.unmeasuredStepCount, 2)
         model.next(stepID: source.steps[0].id)
         XCTAssertEqual(model.unmeasuredStepCount, 1)
-        XCTAssertTrue(model.finishEarlyHint.hasPrefix("1 step won't be measured."))
+        XCTAssertEqual(model.finishEarlyHint, "“Focus” keeps its time so far. 1 later step won't be measured. " + Theme.Stopwatch.partialNewHint)
         model.finish(stepID: source.steps[1].id)
         XCTAssertEqual(model.reviewRecord?.measurements.count, 2)
         XCTAssertEqual(model.unmeasuredStepCount, 0)
@@ -864,16 +959,19 @@ final class StopwatchTests: XCTestCase {
             ])
             let model = StopwatchViewModel(source: invalid, mode: mode, isProUnlocked: false,
                 store: MemoryStopwatchStore(), automaticallyRefresh: false)
-            XCTAssertEqual(model.startBlocker, "Add a routine name")
+            XCTAssertEqual(model.startBlocker, mode == .template
+                ? "Add a routine name. Change it in the template editor." : "Add a routine name")
             XCTAssertFalse(model.canStart)
             let named = StopwatchSource(templateID: id, title: "Routine", steps: invalid.steps)
             let namedModel = StopwatchViewModel(source: named, mode: mode, isProUnlocked: false,
                 store: MemoryStopwatchStore(), automaticallyRefresh: false)
-            XCTAssertEqual(namedModel.startBlocker, "Step 2 needs a name")
+            XCTAssertEqual(namedModel.startBlocker, mode == .template
+                ? "Step 2 needs a name. Change it in the template editor." : "Step 2 needs a name")
             XCTAssertFalse(namedModel.canStart)
             let empty = StopwatchViewModel(source: .init(templateID: id, title: "Routine", steps: []),
                 mode: mode, isProUnlocked: false, store: MemoryStopwatchStore(), automaticallyRefresh: false)
-            XCTAssertEqual(empty.startBlocker, "Add at least one step")
+            XCTAssertEqual(empty.startBlocker, mode == .template
+                ? "Add at least one step. Change it in the template editor." : "Add at least one step")
         }
         let model = viewModel(source: source(), store: MemoryStopwatchStore(), clock: TestClock())
         XCTAssertNil(model.startBlocker)
@@ -890,7 +988,7 @@ final class StopwatchTests: XCTestCase {
         store.records = [recording(source: oldSource, durations: [15])]
         let model = viewModel(source: current, store: store, clock: TestClock())
         XCTAssertEqual(model.trendStepLabel(current.steps[1]), "Focus")
-        XCTAssertEqual(model.trendStepLabel(replaced), "Focus (earlier step)")
+        XCTAssertEqual(model.trendStepLabel(replaced), "Focus (not in current plan)")
         model.selectedTrendStepID = replaced.id
         XCTAssertEqual(model.trendPoints.map(\.seconds), [15])
         let other = source()
@@ -903,6 +1001,30 @@ final class StopwatchTests: XCTestCase {
             store: store, automaticallyRefresh: false)
         fallback.show(store.records[0])
         XCTAssertEqual(fallback.openSourceHint, "Open “Old routine” in Templates to apply this recording's measurements.")
+    }
+
+    func testTrendOmitsUnmeasuredNewStepAndFallsBackToMeasuredSelection() {
+        let source = source(targets: [nil, nil])
+        let store = MemoryStopwatchStore()
+        let clock = TestClock()
+        let model = StopwatchViewModel(source: source, mode: .newPlan, isProUnlocked: false,
+            store: store, now: { clock.time }, date: { self.epoch }, automaticallyRefresh: false)
+        model.start()
+        clock.time = 10
+        model.next(stepID: source.steps[0].id)
+        clock.time = 20
+        model.finish(stepID: source.steps[1].id)
+        XCTAssertTrue(model.saveReview())
+        model.backToPlan()
+        model.addStep()
+        XCTAssertEqual(model.source.steps.last?.name, "")
+        XCTAssertEqual(model.trendSteps, source.steps)
+        model.selectedTrendStepID = model.source.steps.last?.id
+        XCTAssertEqual(model.trendSelection, source.steps[0].id)
+        XCTAssertEqual(model.trendPoints.map(\.seconds), [10])
+        model.selectedTrendStepID = source.steps[1].id
+        XCTAssertEqual(model.trendSelection, source.steps[1].id)
+        XCTAssertEqual(model.trendPoints.map(\.step.id), [source.steps[1].id])
     }
 
     func testCleanStarterDraftRestoresTemplateAndStepIdentities() throws {

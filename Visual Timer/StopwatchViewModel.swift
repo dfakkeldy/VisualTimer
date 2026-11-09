@@ -46,6 +46,7 @@ final class StopwatchViewModel: ObservableObject {
     @Published private(set) var isApplied = false
     @Published private(set) var displaySeconds: TimeInterval = 0
     @Published private(set) var unreadableCount = 0
+    @Published private(set) var hasLoadFailure = false
     @Published var errorMessage: String?
     @Published var selectedTrendStepID: UUID?
     @Published var isProUnlocked: Bool
@@ -53,10 +54,12 @@ final class StopwatchViewModel: ObservableObject {
     private let store: StopwatchRecordingStorage
     private let now: () -> TimeInterval
     private let date: () -> Date
+    private let applyPreflight: (StopwatchRecording, ApplyKind) -> StopwatchError?
     private var ticker: AnyCancellable?
 
     init(source: StopwatchSource, mode: Mode = .template, isProUnlocked: Bool,
          savedTemplateTitles: [UUID: String] = [:],
+         applyPreflight: @escaping (StopwatchRecording, ApplyKind) -> StopwatchError? = { _, _ in nil },
          store: StopwatchRecordingStorage = StopwatchRecordingStore(),
          now: @escaping () -> TimeInterval = StopwatchClock.now,
          date: @escaping () -> Date = Date.init,
@@ -66,6 +69,7 @@ final class StopwatchViewModel: ObservableObject {
         self.planBaseline = source
         self.mode = mode
         self.savedTemplateTitles = savedTemplateTitles
+        self.applyPreflight = applyPreflight
         self.isProUnlocked = isProUnlocked
         self.store = store
         self.now = now
@@ -102,7 +106,7 @@ final class StopwatchViewModel: ObservableObject {
             : (isRecording ? Theme.Stopwatch.discardTitle : Theme.Stopwatch.discardReviewTitle)
     }
     var discardHint: String {
-        if hasUnsavedPlanEdits && hasUnkeptRecording { return Theme.Stopwatch.discardPlanAndRecordingHint }
+        if canDiscardRecordingKeepingPlan { return Theme.Stopwatch.discardPlanAndRecordingHint }
         return hasUnkeptPlan ? Theme.Stopwatch.discardPlanHint
             : (isRecording ? Theme.Stopwatch.discardHint : Theme.Stopwatch.discardReviewHint)
     }
@@ -111,7 +115,8 @@ final class StopwatchViewModel: ObservableObject {
         return max(0, session.source.steps.count - session.index - 1)
     }
     var finishEarlyHint: String {
-        Theme.Stopwatch.finishEarlyHint(count: unmeasuredStepCount, isNewRoutine: isNewRoutine)
+        Theme.Stopwatch.finishEarlyHint(current: session?.currentStep?.name,
+                                       count: unmeasuredStepCount, isNewRoutine: isNewRoutine)
     }
     var hasReachedStepLimit: Bool { displaySeconds >= StopwatchLimits.maximumStepSeconds }
     var currentStepAnnouncement: String? {
@@ -129,13 +134,18 @@ final class StopwatchViewModel: ObservableObject {
     }
     var hasOlderRecords: Bool { visibleRecords.count < routineRecords.count }
     var startBlocker: String? {
-        if source.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return Theme.Stopwatch.missingRoutineName }
-        if source.steps.isEmpty { return Theme.Stopwatch.missingSteps }
-        if let index = source.steps.firstIndex(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
-            return Theme.Stopwatch.missingStepName(index + 1)
+        let problem: String
+        if source.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            problem = Theme.Stopwatch.missingRoutineName
+        } else if source.steps.isEmpty {
+            problem = Theme.Stopwatch.missingSteps
+        } else if let index = source.steps.firstIndex(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            problem = Theme.Stopwatch.missingStepName(index + 1)
+        } else {
+            do { try source.validate(); return nil }
+            catch { problem = error.localizedDescription }
         }
-        do { try source.validate(); return nil }
-        catch { return error.localizedDescription }
+        return mode == .template ? Theme.Stopwatch.fixInTemplateEditor(problem) : problem
     }
     var applyKind: ApplyKind {
         isNewRoutine || (isLibrary && reviewRecord?.source.templateID != source.templateID) ? .newTemplate : .existingTemplate
@@ -152,15 +162,33 @@ final class StopwatchViewModel: ObservableObject {
         guard let reviewRecord, !isApplied, !needsSourceTemplate else { return false }
         return applyKind == .existingTemplate || reviewRecord.isComplete
     }
+    var applyBlocker: StopwatchError? {
+        guard canApply, let reviewRecord else { return nil }
+        return applyPreflight(reviewRecord, applyKind)
+    }
+    var applyBlockerMessage: String? {
+        guard let blocker = applyBlocker else { return nil }
+        if case .changedTemplate = blocker, !isReviewSaved {
+            return Theme.Stopwatch.saveFirst(blocker.localizedDescription)
+        }
+        return blocker.localizedDescription
+    }
     func trendStepLabel(_ step: StopwatchSource.Step) -> String {
         source.steps.contains(where: { $0.id == step.id }) ? step.name : Theme.Stopwatch.earlierStep(step.name)
     }
     var trendSteps: [StopwatchSource.Step] {
+        let measuredIDs = Set(visibleRecords.flatMap { $0.measurements.map(\.stepID) })
         var seen = Set<UUID>()
-        return (source.steps + visibleRecords.flatMap { $0.source.steps }).filter { seen.insert($0.id).inserted }
+        return (source.steps + visibleRecords.flatMap { $0.source.steps }).filter {
+            measuredIDs.contains($0.id) && seen.insert($0.id).inserted
+        }
+    }
+    var trendSelection: UUID? {
+        let steps = trendSteps
+        return steps.contains(where: { $0.id == selectedTrendStepID }) ? selectedTrendStepID : steps.first?.id
     }
     var trendPoints: [TrendPoint] {
-        guard let selectedTrendStepID else { return [] }
+        guard let selectedTrendStepID = trendSelection else { return [] }
         return visibleRecords.reversed().compactMap { record in
             guard let step = record.source.steps.first(where: { $0.id == selectedTrendStepID }),
                   let measurement = record.measurements.first(where: { $0.stepID == selectedTrendStepID }) else { return nil }
@@ -295,7 +323,12 @@ final class StopwatchViewModel: ObservableObject {
 
     @discardableResult
     func applyReview(_ apply: (StopwatchRecording) throws -> Void) -> Bool {
-        guard canApply, let reviewRecord, saveReview() else { return false }
+        guard canApply, let reviewRecord else { return false }
+        if let blocker = applyBlocker {
+            errorMessage = blocker.localizedDescription
+            return false
+        }
+        guard saveReview() else { return false }
         do {
             try apply(reviewRecord)
             isApplied = true
@@ -332,7 +365,11 @@ final class StopwatchViewModel: ObservableObject {
             let loaded = try store.load()
             records = loaded.records
             unreadableCount = loaded.unreadableFiles.count
-        } catch { errorMessage = Theme.Stopwatch.loadError(error.localizedDescription) }
+            hasLoadFailure = false
+        } catch {
+            hasLoadFailure = true
+            errorMessage = Theme.Stopwatch.loadError(error.localizedDescription)
+        }
     }
 }
 

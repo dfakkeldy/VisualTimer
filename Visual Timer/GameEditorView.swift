@@ -184,7 +184,6 @@ struct GameEditorView: View {
                 if let model = stopwatchWorkspace.model {
                     StopwatchView(model: model, replacesUnsavedEdits: editor.hasUnsavedChanges,
                                   onApply: { try editor.applyStopwatchRecording($0, kind: model.applyKind) },
-                                  applyBlocker: { editor.stopwatchApplyBlocker($0, kind: model.applyKind) },
                                   onClose: { stopwatchWorkspace.isPresented = false },
                                   onRequestPro: stopwatchWorkspace.requestPro)
                 }
@@ -454,7 +453,8 @@ struct GameEditorView: View {
         editor.persistDraft()
         stopwatchWorkspace.open(StopwatchViewModel(
             source: source, mode: mode, isProUnlocked: proAccess.isProUnlocked,
-            savedTemplateTitles: Dictionary(uniqueKeysWithValues: editor.savedTemplates.map { ($0.id, $0.title) })))
+            savedTemplateTitles: Dictionary(uniqueKeysWithValues: editor.savedTemplates.map { ($0.id, $0.title) }),
+            applyPreflight: { [editor] in editor.stopwatchApplyBlocker($0, kind: $1) }))
     }
 
     private func saveGame() {
