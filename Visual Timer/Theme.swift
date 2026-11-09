@@ -335,17 +335,23 @@ extension Theme {
     enum Stopwatch {
         static let spacing: CGFloat = 16
         static let smallSpacing: CGFloat = 8
-        static let cornerRadius: CGFloat = 18
         static let chartHeight: CGFloat = 220
         static let chartRowHeight: CGFloat = 52
         static let chartMinimumHeight: CGFloat = 140
         static let chartLineWidth: CGFloat = 2
         static let targetDash: [CGFloat] = [5, 4]
-        static let contentWidth: CGFloat = 720
         static let actualColor = Color.cyan
         static let targetColor = ColorValue.textSecondary
         static let symbol = "stopwatch"
         static let planSymbol = "list.bullet.rectangle"
+        static let completedSymbol = "checkmark.circle.fill"
+        static let currentSymbol = "record.circle"
+        static let upcomingSymbol = "circle"
+        static let closeSymbol = "xmark"
+        static let optionsSymbol = "ellipsis"
+        static let moveUpSymbol = "arrow.up"
+        static let moveDownSymbol = "arrow.down"
+        static let deleteSymbol = "trash"
         static let nextSymbol = "forward.end.fill"
         static let pauseSymbol = "pause.fill"
         static let resumeSymbol = "play.fill"
@@ -360,7 +366,7 @@ extension Theme {
         static let completed = "Completed"
         static let currentStep = "Current step"
         static let upcoming = "Upcoming"
-        static let retryLoading = "Retry loading"
+        static let retryLoading = "Check again"
         static let allRecordings = "All local recordings"
         static func progress(position: Int, count: Int, isPaused: Bool) -> String {
             "Step \(position) of \(count) · \(isPaused ? paused : recording)"
@@ -375,19 +381,20 @@ extension Theme {
             "\(count) local recording file(s) couldn't be read. The files were kept for recovery."
         }
         static let recordingsEntry = "Local stopwatch recordings"
-        static let openSourceHint = "Open this recording's saved template in Templates to apply its measurements."
+        static func openSourceHint(_ title: String) -> String {
+            "Open “\(title)” in Templates to apply this recording's measurements."
+        }
         static let navigationTitle = "Routine stopwatch"
         static let planTitle = "Plan your routine"
         static let routineName = "Routine name"
         static let stepName = "Step name"
         static let addStep = "Add step"
-        static let planHint = "Give each step a name. You don't need durations yet. Touch and hold to reorder."
+        static let planHint = "Give each step a name. You don't need durations yet. Use a step's options to move or delete it. You can also drag to reorder or swipe to delete."
         static let existingHint = "One pass through enabled steps. Repeat count and start-paused settings don't apply here."
         static let newHint = "Your first recording has no targets. Apply a complete recording to create an editable template."
         static let localHint = "Recordings stay on this device. They don't sync to iCloud or Apple Watch."
         static let sourceHint = "Save the template to return to this routine's recordings from the template picker."
         static let start = "Start recording"
-        static let ready = "Ready to record"
         static let recording = "Recording"
         static let paused = "Paused"
         static let pausedHint = "Paused time is excluded. Next starts the next step immediately."
@@ -395,13 +402,18 @@ extension Theme {
         static let limitHint = "24-hour step limit reached. Choose Next or Finish to review."
         static let next = "Next step"
         static let finish = "Finish & review"
+        static let finishEarly = "Finish early"
+        static let finishEarlyTitle = "Finish before all steps are measured?"
+        static func finishEarlyHint(count: Int, isNewRoutine: Bool) -> String {
+            let remaining = count == 1 ? "1 step won't be measured." : "\(count) steps won't be measured."
+            return isNewRoutine ? remaining + " " + partialNewHint : remaining
+        }
         static let pause = "Pause"
         static let resume = "Resume"
         static let review = "Review measurements"
         static let actual = "Actual"
         static let target = "Target"
         static let seconds = "Seconds"
-        static let noTarget = "No target"
         static let saveRecording = "Save recording"
         static let apply = "Apply durations"
         static let applyNew = "Apply as new template"
@@ -411,6 +423,7 @@ extension Theme {
         static let neutralHint = "More or less time is information, not a score."
         static let notSaved = "Not saved yet"
         static let saved = "Saved on this device"
+        static let savedAction = "Saved"
         static let recordAgain = "Back to routine"
         static let history = "Local recordings"
         static let trend = "Step over time"
@@ -424,6 +437,15 @@ extension Theme {
         static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
         static let unlockHistory = "See full history"
         static let close = "Close"
+        static let returnToStopwatch = "Return to stopwatch"
+        static let unsavedPlan = "Unsaved plan"
+        static let unsavedReview = "Unsaved review"
+        static let retainedWorkspaceHint = "Return to your stopwatch to keep or discard its work before opening another stopwatch."
+        static let discardPlanTitle = "Discard this plan?"
+        static let discardPlanHint = "Your unsaved routine name and step edits will be lost."
+        static let discardPlan = "Discard plan"
+        static let discardReviewTitle = "Discard these measurements?"
+        static let discardReviewHint = "This review hasn't been saved. Its measurements will be lost."
         static let discardTitle = "Discard this recording?"
         static let discardHint = "Unkept measurements will be lost. Saved recordings stay on this device."
         static let discard = "Discard recording"
@@ -441,5 +463,32 @@ extension Theme {
         static let nextIdentifier = "stopwatch.next"
         static let finishIdentifier = "stopwatch.finish"
         static let elapsedIdentifier = "stopwatch.elapsed"
+        static let missingRoutineName = "Add a routine name"
+        static let missingSteps = "Add at least one step"
+        static let moveUp = "Move up"
+        static let moveDown = "Move down"
+        static let deleteStep = "Delete step"
+        static func missingStepName(_ position: Int) -> String { "Step \(position) needs a name" }
+        static func stepName(_ position: Int) -> String { "Step \(position) name" }
+        static func stepOptions(_ position: Int) -> String { "Step \(position) options" }
+        static func stepAnnouncement(position: Int, count: Int, name: String) -> String {
+            "Step \(position) of \(count), \(name)"
+        }
+        static func earlierStep(_ name: String) -> String { "\(name) (earlier step)" }
+        static func setsDuration(_ seconds: Int) -> String { "Sets duration to \(seconds)s" }
+        static let invalidSource = "Add named steps before recording. Each target must be between 1 second and 24 hours."
+        static let invalidRecording = "This stopwatch recording is invalid or uses an unsupported format."
+        static let changedTemplate = "The template or its enabled steps have changed. Measurements were kept, but no durations were applied."
+        static func saveError(_ detail: String) -> String {
+            "Recording could not be saved on this device: \(detail) Try again before closing."
+        }
+        static func deleteError(_ detail: String) -> String { "Recording could not be deleted: \(detail)" }
+        static func loadError(_ detail: String) -> String { "Local recordings could not be loaded: \(detail)" }
+        static func comparison(target: String?, actual: String, difference: Double?) -> String {
+            guard let target, let difference else { return "Actual \(actual) · No target" }
+            let delta = abs(difference) < 0.5 ? "matches target"
+                : "\(StopwatchText.duration(abs(difference))) \(difference > 0 ? "over" : "under") target"
+            return "Target \(target) · Actual \(actual) · \(delta)"
+        }
     }
 }

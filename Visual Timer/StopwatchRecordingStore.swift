@@ -6,7 +6,7 @@ struct StopwatchLoadResult {
 }
 
 protocol StopwatchRecordingStorage {
-    func load(templateID: UUID?) throws -> StopwatchLoadResult
+    func load() throws -> StopwatchLoadResult
     func save(_ recording: StopwatchRecording) throws
     func delete(id: UUID) throws
 }
@@ -24,7 +24,7 @@ final class StopwatchRecordingStore: StopwatchRecordingStorage {
             .appendingPathComponent("StopwatchRecordings", isDirectory: true)
     }
 
-    func load(templateID: UUID?) throws -> StopwatchLoadResult {
+    func load() throws -> StopwatchLoadResult {
         guard fileManager.fileExists(atPath: directory.path) else {
             return StopwatchLoadResult(records: [], unreadableFiles: [])
         }
@@ -40,7 +40,7 @@ final class StopwatchRecordingStore: StopwatchRecordingStorage {
                 guard url.deletingPathExtension().lastPathComponent == record.id.uuidString else {
                     throw StopwatchError.invalidRecording
                 }
-                if templateID == nil || record.source.templateID == templateID { records.append(record) }
+                records.append(record)
             } catch {
                 failures.append(url.lastPathComponent)
             }

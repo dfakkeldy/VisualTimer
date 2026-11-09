@@ -10,7 +10,8 @@ final class GameEditorViewModel: ObservableObject {
     @Published var rounds: [Round] = []
     @Published var roundCount: Int = 1
     /// Shared by local stopwatch recordings and the eventual saved template.
-    @Published private(set) var stopwatchTemplateID = UUID()
+    @Published private var unsavedTemplateID = UUID()
+    var stopwatchTemplateID: UUID { currentSavedTemplateID ?? unsavedTemplateID }
     @Published var expandedRoundId: UUID?
     @Published private(set) var savedTemplates: [SavedTemplate] = []
     /// Round colours of each saved template, for the picker cards.
@@ -87,7 +88,7 @@ final class GameEditorViewModel: ObservableObject {
         rounds = draft.current.rounds
         roundCount = draft.current.roundCount
         currentStarterID = draft.starterID
-        stopwatchTemplateID = draft.stopwatchTemplateID ?? currentSavedTemplateID ?? UUID()
+        unsavedTemplateID = draft.stopwatchTemplateID ?? currentSavedTemplateID ?? UUID()
         if draft.stopwatchTemplateID != nil {
             lastTemplateID = draft.savedTemplateID?.uuidString ?? ""
         }
@@ -237,7 +238,7 @@ final class GameEditorViewModel: ObservableObject {
         roundCount = game.roundCount
         expandedRoundId = nil
         lastTemplateID = ""
-        stopwatchTemplateID = UUID()
+        unsavedTemplateID = UUID()
         currentStarterID = template.id
         markClean()
     }
@@ -281,6 +282,13 @@ final class GameEditorViewModel: ObservableObject {
             })
     }
 
+    func applyStopwatchRecording(_ recording: StopwatchRecording, kind: StopwatchViewModel.ApplyKind) throws {
+        switch kind {
+        case .existingTemplate: try applyStopwatchMeasurements(recording)
+        case .newTemplate: try applyNewStopwatchRoutine(recording)
+        }
+    }
+
     /// Applies only to the same template and enabled step identities. No save,
     /// CloudKit publication, or clean-state update occurs here.
     func applyStopwatchMeasurements(_ recording: StopwatchRecording) throws {
@@ -313,7 +321,7 @@ final class GameEditorViewModel: ObservableObject {
         let durations = Dictionary(uniqueKeysWithValues: recording.measurements.map { ($0.stepID, $0.templateSeconds) })
         lastTemplateID = ""
         currentStarterID = nil
-        stopwatchTemplateID = recording.source.templateID
+        unsavedTemplateID = recording.source.templateID
         gameTitle = recording.source.title
         rounds = recording.source.steps.enumerated().map { index, step in
             Round(id: step.id, name: step.name, color: .palette(index: index % Theme.ColorValue.timerPalette.count),
@@ -369,7 +377,6 @@ final class GameEditorViewModel: ObservableObject {
         do {
             let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID ?? stopwatchTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
-            stopwatchTemplateID = savedTemplate.id
             lastGameFileName = ""
             currentStarterID = nil
             refreshSavedTemplates()
@@ -393,7 +400,6 @@ final class GameEditorViewModel: ObservableObject {
         do {
             let savedTemplate = try templateLibrary.save(game: game, templateID: existingTemplateID ?? stopwatchTemplateID)
             lastTemplateID = savedTemplate.id.uuidString
-            stopwatchTemplateID = savedTemplate.id
             lastGameFileName = ""
             currentStarterID = nil
             refreshSavedTemplates()
@@ -539,7 +545,6 @@ final class GameEditorViewModel: ObservableObject {
 
     private func applyDocument(_ document: TurnTimerTemplateDocument) {
         applyGame(document.game, title: document.title)
-        stopwatchTemplateID = document.templateID
         lastTemplateID = document.templateID.uuidString
         markClean()
     }
@@ -548,7 +553,7 @@ final class GameEditorViewModel: ObservableObject {
         var game = game
         game.normalizeTemplateFields()
         lastTemplateID = ""
-        stopwatchTemplateID = UUID()
+        unsavedTemplateID = UUID()
         gameTitle = title
         rounds = game.rounds
         roundCount = game.roundCount

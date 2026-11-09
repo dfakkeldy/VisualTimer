@@ -15,7 +15,7 @@ struct GameEditorView: View {
     @State private var showImportPicker = false
     @State private var shareItem: TemplateShareItem?
     @State private var pendingReplacement: PendingReplacement?
-    @State private var stopwatchWorkspace: StopwatchWorkspace?
+    @StateObject private var stopwatchWorkspace = StopwatchWorkspace()
     @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
     @State private var alertsDenied = false
 
@@ -92,20 +92,30 @@ struct GameEditorView: View {
                 }
 
                 Section {
-                    Button { openStopwatch(newRoutine: false) } label: {
+                    if stopwatchWorkspace.hasUnkeptWork, let model = stopwatchWorkspace.model {
+                        Button(action: stopwatchWorkspace.returnToStopwatch) {
+                            VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
+                                Label(Theme.Stopwatch.returnToStopwatch, systemImage: Theme.Stopwatch.symbol)
+                                Text(model.workspaceStatus).font(.subheadline)
+                            }
+                        }
+                    }
+                    Button { openStopwatch(mode: .template) } label: {
                         Label(Theme.Stopwatch.timeTemplate, systemImage: Theme.Stopwatch.symbol)
                     }
-                    .disabled(!editor.canSaveOrStartTemplate)
-                    Button { openStopwatch(newRoutine: true) } label: {
+                    .disabled(!editor.canSaveOrStartTemplate || stopwatchWorkspace.hasUnkeptWork)
+                    Button { openStopwatch(mode: .newPlan) } label: {
                         Label(Theme.Stopwatch.planRoutine, systemImage: Theme.Stopwatch.planSymbol)
                     }
-                    Button { openStopwatch(newRoutine: false, library: true) } label: {
+                    .disabled(stopwatchWorkspace.hasUnkeptWork)
+                    Button { openStopwatch(mode: .library) } label: {
                         Label(Theme.Stopwatch.recordingsEntry, systemImage: Theme.Stopwatch.emptySymbol)
                     }
+                    .disabled(stopwatchWorkspace.hasUnkeptWork)
                 } header: {
                     sectionHeader(Theme.Stopwatch.title)
                 } footer: {
-                    Text(Theme.Stopwatch.editorHint)
+                    Text(stopwatchWorkspace.hasUnkeptWork ? Theme.Stopwatch.retainedWorkspaceHint : Theme.Stopwatch.editorHint)
                 }
                 .listRowBackground(Theme.ColorValue.surface)
             }
@@ -165,21 +175,22 @@ struct GameEditorView: View {
             } message: {
                 Text(saveAlertMessage)
             }
-            .sheet(item: $stopwatchWorkspace) { workspace in
-                StopwatchView(model: workspace.model, proAccess: proAccess,
-                              replacesUnsavedEdits: editor.hasUnsavedChanges,
-                              onApply: { recording in
-                    if workspace.model.appliesAsNewRoutine {
-                        try editor.applyNewStopwatchRoutine(recording)
-                    } else {
-                        try editor.applyStopwatchMeasurements(recording)
-                    }
-                }, onClose: { stopwatchWorkspace = nil })
+            .sheet(isPresented: $stopwatchWorkspace.isPresented, onDismiss: {
+                if let feature = stopwatchWorkspace.sheetDidDismiss() { requestedProFeature = feature }
+            }) {
+                if let model = stopwatchWorkspace.model {
+                    StopwatchView(model: model, replacesUnsavedEdits: editor.hasUnsavedChanges,
+                                  onApply: { try editor.applyStopwatchRecording($0, kind: model.applyKind) },
+                                  onClose: { stopwatchWorkspace.isPresented = false },
+                                  onRequestPro: stopwatchWorkspace.requestPro)
+                }
             }
             .sheet(item: $shareItem) { item in
                 ShareSheet(items: [item.url])
             }
-            .sheet(item: $requestedProFeature) { feature in
+            .sheet(item: $requestedProFeature, onDismiss: {
+                stopwatchWorkspace.paywallDidDismiss(isProUnlocked: proAccess.isProUnlocked)
+            }) { feature in
                 ProPaywallView(feature: feature, proAccess: proAccess)
             }
             .sheet(item: Binding(
@@ -429,16 +440,17 @@ struct GameEditorView: View {
 
     // MARK: - Helpers
 
-    private func openStopwatch(newRoutine: Bool, library: Bool = false) {
+    private func openStopwatch(mode: StopwatchViewModel.Mode) {
+        guard !stopwatchWorkspace.hasUnkeptWork else { return }
         titleFocused = false
-        let source = newRoutine
+        let source = mode == .newPlan
             ? StopwatchSource(templateID: UUID(), title: Theme.Stopwatch.newRoutine,
                 steps: [.init(id: UUID(), name: "", targetSeconds: nil)])
             : editor.stopwatchSource()
         editor.persistDraft()
-        stopwatchWorkspace = StopwatchWorkspace(model: StopwatchViewModel(
-            source: source, isNewRoutine: newRoutine, isProUnlocked: proAccess.isProUnlocked,
-            isLibrary: library, savedTemplateIDs: Set(editor.savedTemplates.map(\.id))))
+        stopwatchWorkspace.open(StopwatchViewModel(
+            source: source, mode: mode, isProUnlocked: proAccess.isProUnlocked,
+            savedTemplateTitles: Dictionary(uniqueKeysWithValues: editor.savedTemplates.map { ($0.id, $0.title) })))
     }
 
     private func saveGame() {

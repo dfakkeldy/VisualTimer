@@ -1,23 +1,19 @@
 import SwiftUI
 
-struct StopwatchWorkspace: Identifiable {
-    let id = UUID()
-    let model: StopwatchViewModel
-}
-
 /// Feature container for a name-only plan or the current template's stopwatch.
 /// All timing, persistence, projections, and editing decisions belong to models.
 struct StopwatchView: View {
     @ObservedObject var model: StopwatchViewModel
-    @ObservedObject var proAccess: ProAccessViewModel
     let replacesUnsavedEdits: Bool
     let onApply: (StopwatchRecording) throws -> Void
     let onClose: () -> Void
+    let onRequestPro: (ProFeature) -> Void
 
     @State private var showDiscard = false
     @State private var showDelete = false
     @State private var showReplace = false
-    @State private var requestedProFeature: ProFeature?
+    @State private var showFinishEarly = false
+    @State private var earlyFinishStepID: UUID?
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -35,23 +31,29 @@ struct StopwatchView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .background(Theme.ColorValue.appBackground)
-            .navigationTitle(Theme.Stopwatch.navigationTitle)
+            .navigationTitle(model.isLibrary ? Theme.Stopwatch.recordingsEntry : Theme.Stopwatch.navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(Theme.Stopwatch.close) {
-                        if model.hasUnkeptRecording { showDiscard = true } else { onClose() }
-                    }
+                    closeButton
                 }
             }
-            .interactiveDismissDisabled(model.hasUnkeptRecording)
-            .confirmationDialog(Theme.Stopwatch.discardTitle, isPresented: $showDiscard, titleVisibility: .visible) {
-                Button(Theme.Stopwatch.discard, role: .destructive) {
-                    model.discardUnkeptRecording()
+            .confirmationDialog(model.discardTitle, isPresented: $showDiscard, titleVisibility: .visible) {
+                Button(model.hasUnkeptPlan ? Theme.Stopwatch.discardPlan : Theme.Stopwatch.discard, role: .destructive) {
+                    model.discardUnkeptWork()
                     onClose()
                 }
-                Button(Theme.Stopwatch.keepRecording, role: .cancel) {}
-            } message: { Text(Theme.Stopwatch.discardHint) }
+                Button(model.isRecording ? Theme.Stopwatch.keepRecording : Theme.Stopwatch.cancel, role: .cancel) {}
+            } message: { Text(model.discardHint) }
+            .confirmationDialog(Theme.Stopwatch.finishEarlyTitle,
+                                isPresented: $showFinishEarly,
+                                titleVisibility: .visible) {
+                Button(Theme.Stopwatch.finishEarly) {
+                    if let stepID = earlyFinishStepID { model.finish(stepID: stepID) }
+                    earlyFinishStepID = nil
+                }
+                Button(Theme.Stopwatch.keepRecording, role: .cancel) { earlyFinishStepID = nil }
+            } message: { Text(model.finishEarlyHint) }
             .confirmationDialog(Theme.Stopwatch.deleteTitle, isPresented: $showDelete, titleVisibility: .visible) {
                 Button(Theme.Stopwatch.deleteRecording, role: .destructive) { model.deleteReview() }
                 Button(Theme.Stopwatch.cancel, role: .cancel) {}
@@ -64,14 +66,42 @@ struct StopwatchView: View {
                    isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
                 Button(Theme.Stopwatch.ok) { model.errorMessage = nil }
             } message: { Text(model.errorMessage ?? "") }
-            .sheet(item: $requestedProFeature) { feature in
-                ProPaywallView(feature: feature, proAccess: proAccess)
+            .onChange(of: model.session?.index) { _, _ in
+                if let message = model.currentStepAnnouncement { announce(message) }
             }
-            .onChange(of: proAccess.isProUnlocked) { _, value in model.isProUnlocked = value }
+            .onChange(of: model.session?.phase) { _, phase in
+                if phase == .paused { announce(Theme.Stopwatch.paused) }
+                if phase == .running { announce(Theme.Stopwatch.recording) }
+            }
+            .onChange(of: model.isReviewSaved) { _, saved in
+                if saved { announce(Theme.Stopwatch.savedAction) }
+            }
+            .onChange(of: model.hasReachedStepLimit) { _, reached in
+                if reached { announce(Theme.Stopwatch.limitHint) }
+            }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { model.refreshTime() }
             }
         }
+    }
+
+    private func announce(_ message: String) {
+        AccessibilityNotification.Announcement(message).post()
+    }
+
+    @ViewBuilder
+    private var closeButton: some View {
+        if #available(iOS 26.0, *) {
+            Button(role: .close, action: requestClose) { Image(systemName: Theme.Stopwatch.closeSymbol) }
+                .accessibilityLabel(Theme.Stopwatch.close)
+        } else {
+            Button(action: requestClose) { Image(systemName: Theme.Stopwatch.closeSymbol) }
+                .accessibilityLabel(Theme.Stopwatch.close)
+        }
+    }
+
+    private func requestClose() {
+        if model.hasUnkeptWork { showDiscard = true } else { onClose() }
     }
 
     @ViewBuilder
@@ -81,8 +111,10 @@ struct StopwatchView: View {
                 TextField(Theme.Stopwatch.routineName,
                           text: Binding(get: { model.source.title }, set: model.setTitle))
                     .font(.title2.weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
             } else {
                 Text(model.source.title).font(.title2.weight(.bold))
+                    .accessibilityAddTraits(.isHeader)
             }
             Text(model.isNewRoutine ? Theme.Stopwatch.newHint : Theme.Stopwatch.existingHint)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
@@ -95,11 +127,20 @@ struct StopwatchView: View {
         .listRowBackground(Theme.ColorValue.surface)
 
         Section {
-            ForEach(model.source.steps) { step in
+            ForEach(Array(model.source.steps.enumerated()), id: \.element.id) { index, step in
                 if model.isNewRoutine {
-                    TextField(Theme.Stopwatch.stepName,
-                              text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
-                        .accessibilityLabel(Theme.Stopwatch.stepName)
+                    HStack {
+                        TextField(Theme.Stopwatch.stepName,
+                                  text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
+                            .accessibilityLabel(Theme.Stopwatch.stepName(index + 1))
+                        Menu {
+                            stepActions(index: index)
+                        } label: {
+                            Image(systemName: Theme.Stopwatch.optionsSymbol)
+                        }
+                        .accessibilityLabel(Theme.Stopwatch.stepOptions(index + 1))
+                    }
+                    .accessibilityActions { stepActions(index: index) }
                 } else {
                     VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
                         Text(step.name).font(.headline)
@@ -120,13 +161,29 @@ struct StopwatchView: View {
                 .font(.headline)
                 .disabled(!model.canStart)
                 .accessibilityIdentifier(Theme.Stopwatch.startIdentifier)
-            if !model.isNewRoutine, let message = model.sourceValidationMessage {
+                .accessibilityHint(model.startBlocker ?? "")
+            if let message = model.startBlocker {
                 Text(message).font(.caption)
             }
         } footer: {
             Text(model.isNewRoutine ? Theme.Stopwatch.planHint : Theme.Stopwatch.sourceHint)
         }
         .listRowBackground(Theme.ColorValue.surface)
+    }
+
+    @ViewBuilder
+    private func stepActions(index: Int) -> some View {
+        Button {
+            model.moveSteps(from: IndexSet(integer: index), to: index - 1)
+        } label: { Label(Theme.Stopwatch.moveUp, systemImage: Theme.Stopwatch.moveUpSymbol) }
+            .disabled(index == 0)
+        Button {
+            model.moveSteps(from: IndexSet(integer: index), to: index + 2)
+        } label: { Label(Theme.Stopwatch.moveDown, systemImage: Theme.Stopwatch.moveDownSymbol) }
+            .disabled(index == model.source.steps.count - 1)
+        Button(role: .destructive) {
+            model.removeSteps(at: IndexSet(integer: index))
+        } label: { Label(Theme.Stopwatch.deleteStep, systemImage: Theme.Stopwatch.deleteSymbol) }
     }
 
     @ViewBuilder
@@ -142,7 +199,10 @@ struct StopwatchView: View {
                 VStack(spacing: Theme.Stopwatch.spacing) { recordingControls(session: session, step: step) }
             }
             if session.index < model.source.steps.count - 1 {
-                Button(Theme.Stopwatch.finish) { model.finish(stepID: step.id) }
+                Button(Theme.Stopwatch.finishEarly) {
+                    earlyFinishStepID = step.id
+                    showFinishEarly = true
+                }
                     .accessibilityIdentifier(Theme.Stopwatch.finishIdentifier)
             }
         } footer: {
@@ -152,7 +212,8 @@ struct StopwatchView: View {
 
         Section {
             ForEach(Array(model.source.steps.enumerated()), id: \.element.id) { index, item in
-                Label(item.name, systemImage: index < session.index ? Theme.Symbol.checkmark : Theme.Stopwatch.planSymbol)
+                Label(item.name, systemImage: index < session.index ? Theme.Stopwatch.completedSymbol
+                      : (index == session.index ? Theme.Stopwatch.currentSymbol : Theme.Stopwatch.upcomingSymbol))
                     .foregroundStyle(index == session.index ? Theme.ColorValue.textPrimary : Theme.ColorValue.textSecondary)
                     .accessibilityValue(index < session.index ? Theme.Stopwatch.completed : (index == session.index ? Theme.Stopwatch.currentStep : Theme.Stopwatch.upcoming))
             }
@@ -162,18 +223,14 @@ struct StopwatchView: View {
 
     @ViewBuilder
     private func recordingControls(session: StopwatchSession, step: StopwatchSource.Step) -> some View {
-        if session.phase == .paused {
-            Button(action: model.resume) {
-                Label(Theme.Stopwatch.resume, systemImage: Theme.Stopwatch.resumeSymbol)
-            }
-            .disabled(model.displaySeconds >= StopwatchLimits.maximumStepSeconds)
-            .buttonStyle(.bordered)
-        } else {
-            Button(action: model.pause) {
-                Label(Theme.Stopwatch.pause, systemImage: Theme.Stopwatch.pauseSymbol)
-            }
-            .buttonStyle(.bordered)
+        Button {
+            if session.phase == .paused { model.resume() } else { model.pause() }
+        } label: {
+            Label(session.phase == .paused ? Theme.Stopwatch.resume : Theme.Stopwatch.pause,
+                  systemImage: session.phase == .paused ? Theme.Stopwatch.resumeSymbol : Theme.Stopwatch.pauseSymbol)
         }
+        .disabled(model.hasReachedStepLimit)
+        .buttonStyle(.bordered)
         Button { model.next(stepID: step.id) } label: {
             Label(session.index == model.source.steps.count - 1 ? Theme.Stopwatch.finish : Theme.Stopwatch.next,
                   systemImage: session.index == model.source.steps.count - 1 ? Theme.Symbol.checkmark : Theme.Stopwatch.nextSymbol)
@@ -186,6 +243,7 @@ struct StopwatchView: View {
     private func reviewSections(record: StopwatchRecording) -> some View {
         Section {
             Text(record.source.title).font(.title2.weight(.bold))
+                .accessibilityAddTraits(.isHeader)
             Text(record.startedAt.formatted(date: .abbreviated, time: .standard))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Text(model.isReviewSaved ? Theme.Stopwatch.saved : Theme.Stopwatch.notSaved)
@@ -195,20 +253,19 @@ struct StopwatchView: View {
         .listRowBackground(Theme.ColorValue.surface)
 
         Section {
-            if !model.isReviewSaved {
-                Button(Theme.Stopwatch.saveRecording) { model.saveReview() }
-            }
-            Button(model.appliesAsNewRoutine ? Theme.Stopwatch.applyNew : Theme.Stopwatch.apply) {
-                if model.appliesAsNewRoutine && replacesUnsavedEdits { showReplace = true } else { apply() }
+            Button(model.isReviewSaved ? Theme.Stopwatch.savedAction : Theme.Stopwatch.saveRecording) { model.saveReview() }
+                .disabled(model.isReviewSaved)
+            Button(model.applyKind == .newTemplate ? Theme.Stopwatch.applyNew : Theme.Stopwatch.apply) {
+                if model.applyKind == .newTemplate && replacesUnsavedEdits { showReplace = true } else { apply() }
             }
             .font(.headline)
             .disabled(!model.canApply)
             .accessibilityIdentifier(Theme.Stopwatch.applyIdentifier)
             if model.needsSourceTemplate {
-                Text(Theme.Stopwatch.openSourceHint).font(.subheadline)
+                Text(model.openSourceHint).font(.subheadline)
             }
             if !record.isComplete {
-                Text(model.appliesAsNewRoutine ? Theme.Stopwatch.partialNewHint : Theme.Stopwatch.partialHint)
+                Text(model.applyKind == .newTemplate ? Theme.Stopwatch.partialNewHint : Theme.Stopwatch.partialHint)
                     .font(.subheadline)
             }
             if model.isReviewSaved {
@@ -224,7 +281,7 @@ struct StopwatchView: View {
         Section {
             if model.visibleRecords.isEmpty {
                 ContentUnavailableView(model.hasOlderRecords ? Theme.Stopwatch.noRecentRecordings : Theme.Stopwatch.emptyTitle, systemImage: Theme.Stopwatch.emptySymbol,
-                                       description: Text(Theme.Stopwatch.emptyHint))
+                                       description: Text(model.hasOlderRecords ? Theme.Stopwatch.historyLimit : Theme.Stopwatch.emptyHint))
             } else {
                 ForEach(model.visibleRecords) { record in
                     Button { model.show(record) } label: {
@@ -249,7 +306,7 @@ struct StopwatchView: View {
             }
             if model.hasOlderRecords {
                 Text(Theme.Stopwatch.historyLimit).font(.caption)
-                Button(Theme.Stopwatch.unlockHistory) { requestedProFeature = .fullHistory }
+                Button(Theme.Stopwatch.unlockHistory) { onRequestPro(.fullHistory) }
             }
         } header: { Text(Theme.Stopwatch.history) } footer: { Text(Theme.Stopwatch.localHint) }
         .listRowBackground(Theme.ColorValue.surface)
@@ -257,7 +314,7 @@ struct StopwatchView: View {
         if !model.isLibrary && !model.visibleRecords.isEmpty {
             Section {
                 Picker(Theme.Stopwatch.chooseStep, selection: $model.selectedTrendStepID) {
-                    ForEach(model.trendSteps) { step in Text(step.name).tag(Optional(step.id)) }
+                    ForEach(model.trendSteps) { step in Text(model.trendStepLabel(step)).tag(Optional(step.id)) }
                 }
                 StopwatchTrendView(points: model.trendPoints)
             } header: { Text(Theme.Stopwatch.trend) }
@@ -284,11 +341,13 @@ private struct StopwatchLiveDisplay: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.ColorValue.textSecondary)
             Text(step.name).font(.largeTitle.weight(.bold))
+                .accessibilityAddTraits(.isHeader)
             Text(StopwatchText.elapsed(seconds))
                 .font(.largeTitle.monospacedDigit().weight(.semibold))
                 .foregroundStyle(Theme.Stopwatch.actualColor)
                 .accessibilityLabel(Theme.Stopwatch.elapsed(StopwatchText.duration(seconds)))
                 .accessibilityIdentifier(Theme.Stopwatch.elapsedIdentifier)
+                .accessibilityAddTraits(.updatesFrequently)
             if let target = step.targetSeconds {
                 Text("\(Theme.Stopwatch.target): \(StopwatchText.duration(Double(target)))")
                     .font(.subheadline)

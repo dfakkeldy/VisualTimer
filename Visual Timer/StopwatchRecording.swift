@@ -75,11 +75,11 @@ enum StopwatchError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidSource:
-            return "Add named steps before recording. Each target must be between 1 second and 24 hours."
+            return Theme.Stopwatch.invalidSource
         case .invalidRecording:
-            return "This stopwatch recording is invalid or uses an unsupported format."
+            return Theme.Stopwatch.invalidRecording
         case .changedTemplate:
-            return "The template or its enabled steps have changed. Measurements were kept, but no durations were applied."
+            return Theme.Stopwatch.changedTemplate
         }
     }
 }
@@ -209,9 +209,8 @@ enum StopwatchText {
     }
 
     static func comparison(step: StopwatchSource.Step, actual: TimeInterval) -> String {
-        guard let target = step.targetSeconds else { return "Actual \(duration(actual)) · No target" }
-        let difference = actual - Double(target)
-        let delta = abs(difference) < 0.5 ? "matches target" : "\(duration(abs(difference))) \(difference > 0 ? "over" : "under") target"
-        return "Target \(duration(Double(target))) · Actual \(duration(actual)) · \(delta)"
+        Theme.Stopwatch.comparison(target: step.targetSeconds.map { duration(Double($0)) },
+                                   actual: duration(actual),
+                                   difference: step.targetSeconds.map { actual - Double($0) })
     }
 }

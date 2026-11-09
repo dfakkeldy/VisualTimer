@@ -22,7 +22,15 @@ struct StopwatchComparisonView: View {
             .chartForegroundStyleScale(domain: [Theme.Stopwatch.target, Theme.Stopwatch.actual],
                                        range: [Theme.Stopwatch.targetColor, Theme.Stopwatch.actualColor])
             .chartYScale(domain: Array(rows.map(\.label).reversed()))
-            .chartXAxisLabel(Theme.Stopwatch.seconds)
+            .chartXAxis {
+                AxisMarks { value in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel {
+                        if let seconds = value.as(Double.self) { Text(StopwatchText.duration(seconds)) }
+                    }
+                }
+            }
             .frame(height: max(Theme.Stopwatch.chartMinimumHeight, CGFloat(rows.count) * Theme.Stopwatch.chartRowHeight))
             .accessibilityHidden(true)
 
@@ -32,6 +40,9 @@ struct StopwatchComparisonView: View {
                     Text(row.summary)
                         .font(.subheadline)
                         .foregroundStyle(Theme.ColorValue.textSecondary)
+                    if let hint = row.appliedDurationHint {
+                        Text(hint).font(.caption)
+                    }
                 }
                 .accessibilityElement(children: .combine)
             }
@@ -76,7 +87,15 @@ struct StopwatchTrendView: View {
                     }
                 }
                 .chartYScale(domain: .automatic(includesZero: true))
-                .chartYAxisLabel(Theme.Stopwatch.seconds)
+                .chartYAxis {
+                    AxisMarks { value in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel {
+                            if let seconds = value.as(Double.self) { Text(StopwatchText.duration(seconds)) }
+                        }
+                    }
+                }
                 .frame(height: Theme.Stopwatch.chartHeight)
                 .accessibilityHidden(true)
 
