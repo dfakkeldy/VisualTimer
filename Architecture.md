@@ -98,9 +98,8 @@ Support (tests may inject another directory):
 | `StopwatchRecordings/<id>.json` | `StopwatchRecordingStore` | Explicitly saved stopwatch recordings (schema v1), device-only and never CloudKit. Malformed/unreadable files are kept for recovery while valid neighbours load. |
 
 These files stay on the device. They are not CloudKit records and are not
-widget snapshots. Watch playback still lives in `WatchAppModel` memory: leaving
-a Watch screen does not stop a countdown, but terminating the Watch app does
-not restore it.
+widget snapshots. Live Watch routine playback is restored through `LiveRoutine.json`; see the live
+routine synchronization section. Watch quick-timer recovery remains separate.
 
 The private CloudKit container is `iCloud.Dan.Visual-Timer`:
 
@@ -164,3 +163,36 @@ The app has no developer-run accounts, advertising, or analytics SDKs. Each
 Apple executable has a privacy manifest. Manifest presence, archive reports,
 App Store questionnaire answers, and live service behavior need their own
 evidence; the [privacy page](docs/privacy.html) describes the data paths.
+
+## Live routine synchronization
+
+`LiveRoutineSession` is the versioned, immutable-plan state machine shared by both
+Apple targets. The starting device is the sole writer. Commands from the paired
+replica carry a session UUID, expected revision and step occurrence. The writer
+reconciles one overdue step before validating a command and replies with an
+explicit command acknowledgement. Offline commands are not queued. Replica completion alerts are suppressed on both
+platforms; the authority owns completion feedback. A disconnected
+replica can leave locally; it cannot take authority or end the other device's run.
+
+`LiveRoutineController` persists `LiveRoutine.json` atomically, including current
+state, independent-session conflicts, terminal identities and history receipts.
+`RoutineDeviceID` stores device identity separately. A persisted join marker distinguishes a joined routine from an available remote
+routine, so it cannot replace a restored quick timer. Only the owner writes History,
+using the session UUID as the record identity. A local terminal receipt prevents
+relaunch from recreating a deleted record. Legacy phone sessions retain their
+existing path until they end. Watch sessions now recover from this journal.
+
+The existing `WatchTemplateConnectivity` delegate routes both channels. Context
+composition keeps template and live payloads independent; wire snapshots omit history events and bound terminal markers; payloads above 24 KB
+travel as files and revisions reject delayed deliveries. Reachability and foreground
+activation trigger an identity/state handshake. Small round-trip uncertainty lets
+the replica render from owner time; until calibrated it freezes the last sampled
+state and disables remote controls. Process-local timing uses the sleep-inclusive Darwin continuous clock,
+with Date anchors for persistence and relaunch. Recovery across process death uses
+the persisted wall-clock anchors and advances at most one overdue step.
+
+Selecting another plan joins an active routine by default. The playback screen
+offers explicit End-and-start. Two independent offline runs remain separate until
+the user selects the other run; ending a local owner still records its history.
+No backend, authority takeover, quick-timer sync or stopwatch sync is involved.
+Implementation and tests do not establish paired hardware behavior.

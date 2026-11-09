@@ -55,12 +55,13 @@ struct GamePlaybackView: View {
             )
         }
         .confirmationDialog("End this session?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("End and save to History", role: .destructive) {
+            Button(gameViewModel.isReplica ? Theme.LiveRoutine.endConnected : "End and save to History", role: .destructive) {
                 gameViewModel.endGame()
             }
+            .disabled(gameViewModel.isLiveSession && !gameViewModel.canControlRoutine)
             Button("Keep going", role: .cancel) {}
         } message: {
-            Text("What you've done so far is saved to History.")
+            Text(gameViewModel.isReplica ? Theme.LiveRoutine.savedOnOwner : "What you've done so far is saved to History.")
         }
         .onChange(of: timerViewModel.state) { _, _ in
             onTimerStateChange()
@@ -84,6 +85,7 @@ struct GamePlaybackView: View {
 
     /// One pending alert for the running countdown's end; none otherwise.
     private func scheduleEndAlert(_ progress: TimerVisualProgress) {
+        if gameViewModel.isReplica { TimerAlertScheduler.update(finishDate: nil, title: "", body: ""); return }
         if inSession, let round = gameViewModel.currentRound {
             let name = round.emoji.isEmpty ? round.name : "\(round.emoji) \(round.name)"
             let next = gameViewModel.nextRound.map { "Next: \($0.name)" } ?? "That was the last one."
@@ -105,6 +107,7 @@ struct GamePlaybackView: View {
 
     private var portraitContent: some View {
         VStack(spacing: 0) {
+            liveRoutineStatus
             topRow
                 .padding(.top, Theme.Dimension.gearTopPadding)
 
@@ -118,6 +121,7 @@ struct GamePlaybackView: View {
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
             controlRow
+                .disabled(gameViewModel.isLiveSession && gameViewModel.gamePhase == .playing && !gameViewModel.canControlRoutine)
                 .padding(.top, Theme.Dimension.sectionSpacingSmall)
 
             Spacer(minLength: Theme.Dimension.sectionSpacingSmall)
@@ -132,14 +136,28 @@ struct GamePlaybackView: View {
             dial
                 .frame(maxWidth: Theme.Dimension.landscapeTimerCircleMaxSize)
             VStack(spacing: Theme.Dimension.sectionSpacingSmall) {
+                liveRoutineStatus
                 topRow
                 readout
                 controlRow
+                    .disabled(gameViewModel.isLiveSession && gameViewModel.gamePhase == .playing && !gameViewModel.canControlRoutine)
                 progressFooter
             }
             .frame(maxWidth: .infinity)
         }
         .padding(.vertical, Theme.Dimension.compactContentVerticalPadding)
+    }
+
+    private var liveRoutineStatus: some View {
+        LiveRoutineStatusView(status: gameViewModel.syncStatus,
+            conflict: gameViewModel.hasSyncConflict,
+            replacement: gameViewModel.pendingReplacement?.title, canReplace: gameViewModel.canControlRoutine,
+            available: gameViewModel.availableRemoteRoutine, replica: gameViewModel.isReplica,
+            onJoin: { gameViewModel.joinRemoteRoutine() },
+            onOther: { gameViewModel.resolveSyncConflict() },
+            onReplace: { gameViewModel.confirmReplacement() },
+            onCancel: { gameViewModel.cancelReplacement() },
+            onLeave: { gameViewModel.leaveLiveRoutine() })
     }
 
     // MARK: - Top row
@@ -245,7 +263,7 @@ struct GamePlaybackView: View {
         } else {
             done = gameViewModel.countingPlayerCount > 0 ? "Everyone had a turn" : "Every step done"
         }
-        let receipt = gameViewModel.lastRecordSaved ? "saved to History" : "couldn't save to History"
+        let receipt = gameViewModel.isReplica ? Theme.LiveRoutine.savedOnOwner : gameViewModel.lastRecordSaved ? "saved to History" : "couldn't save to History"
         return "\(done) · \(receipt)"
     }
 
@@ -315,7 +333,7 @@ struct GamePlaybackView: View {
         // tap that starts it. Taps (under 12 pt of movement) still reach the button.
         .highPriorityGesture(rimDrag, isEnabled: showsDurationControls)
         .sensoryFeedback(.selection, trigger: timerViewModel.totalDuration)
-        .disabled(!isTimerCircleEnabled)
+        .disabled(!isTimerCircleEnabled || (gameViewModel.isLiveSession && !gameViewModel.canControlRoutine))
         .accessibilityLabel(timerCircleAccessibilityLabel)
     }
 
@@ -381,7 +399,8 @@ struct GamePlaybackView: View {
     }
 
     private func handleCircleTap() {
-        guard isTimerCircleEnabled else { return }
+        guard isTimerCircleEnabled, !gameViewModel.isLiveSession || gameViewModel.canControlRoutine else { return }
+        if gameViewModel.isLiveSession { gameViewModel.toggleLiveRoutine(); return }
         let wasPaused = timerViewModel.state == .paused
 
         switch timerViewModel.state {
