@@ -52,7 +52,7 @@ final class StopwatchViewModel: ObservableObject {
     @Published var isProUnlocked: Bool
 
     private let store: StopwatchRecordingStorage
-    private let now: () -> TimeInterval
+    private let now: @MainActor () -> TimeInterval
     private let date: () -> Date
     private let applyPreflight: (StopwatchRecording, ApplyKind) -> StopwatchError?
     private var ticker: AnyCancellable?
@@ -61,7 +61,7 @@ final class StopwatchViewModel: ObservableObject {
          savedTemplateTitles: [UUID: String] = [:],
          applyPreflight: @escaping (StopwatchRecording, ApplyKind) -> StopwatchError? = { _, _ in nil },
          store: StopwatchRecordingStorage = StopwatchRecordingStore(),
-         now: @escaping () -> TimeInterval = StopwatchClock.now,
+         now: @escaping @MainActor () -> TimeInterval = StopwatchClock.now,
          date: @escaping () -> Date = Date.init,
          automaticallyRefresh: Bool = true) {
         self.source = source

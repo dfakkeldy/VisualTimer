@@ -139,34 +139,18 @@ struct StopwatchView: View {
 
         Section {
             ForEach(Array(model.source.steps.enumerated()), id: \.element.id) { index, step in
-                if model.isNewRoutine {
-                    HStack {
-                        TextField(Theme.Stopwatch.stepName,
-                                  text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
-                            .accessibilityLabel(Theme.Stopwatch.stepName(index + 1))
-                        Menu {
-                            stepActions(index: index)
-                        } label: {
-                            Image(systemName: Theme.Stopwatch.optionsSymbol)
-                                .frame(minWidth: Theme.Stopwatch.minimumTarget, minHeight: Theme.Stopwatch.minimumTarget)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel(Theme.Stopwatch.stepOptions(index + 1))
-                    }
-                    .accessibilityActions { stepActions(index: index) }
-                } else {
-                    VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
-                        Text(step.name).font(.headline)
-                        if let target = step.targetSeconds {
-                            Text("\(Theme.Stopwatch.target): \(StopwatchText.duration(Double(target)))")
-                                .font(.subheadline)
-                                .foregroundStyle(Theme.ColorValue.textSecondary)
-                        }
-                    }
-                }
+                planStepRow(index: index, step: step)
             }
-            .onDelete(perform: model.isNewRoutine ? model.removeSteps : nil)
-            .onMove(perform: model.isNewRoutine ? model.moveSteps : nil)
+            .onDelete { offsets in
+                guard model.isNewRoutine else { return }
+                model.removeSteps(at: offsets)
+            }
+            .onMove { offsets, destination in
+                guard model.isNewRoutine else { return }
+                model.moveSteps(from: offsets, to: destination)
+            }
+            .deleteDisabled(!model.isNewRoutine)
+            .moveDisabled(!model.isNewRoutine)
             if model.isNewRoutine {
                 Button(action: model.addStep) { Label(Theme.Stopwatch.addStep, systemImage: Theme.Stopwatch.addSymbol) }
             }
@@ -183,6 +167,35 @@ struct StopwatchView: View {
             Text(model.isNewRoutine ? Theme.Stopwatch.planHint : Theme.Stopwatch.sourceHint)
         }
         .listRowBackground(Theme.ColorValue.surface)
+    }
+
+    @ViewBuilder
+    private func planStepRow(index: Int, step: StopwatchSource.Step) -> some View {
+        if model.isNewRoutine {
+            HStack {
+                TextField(Theme.Stopwatch.stepName,
+                          text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
+                    .accessibilityLabel(Theme.Stopwatch.stepName(index + 1))
+                Menu {
+                    stepActions(index: index)
+                } label: {
+                    Image(systemName: Theme.Stopwatch.optionsSymbol)
+                        .frame(minWidth: Theme.Stopwatch.minimumTarget, minHeight: Theme.Stopwatch.minimumTarget)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(Theme.Stopwatch.stepOptions(index + 1))
+            }
+            .accessibilityActions { stepActions(index: index) }
+        } else {
+            VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
+                Text(step.name).font(.headline)
+                if let target = step.targetSeconds {
+                    Text("\(Theme.Stopwatch.target): \(StopwatchText.duration(Double(target)))")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                }
+            }
+    }
     }
 
     @ViewBuilder
