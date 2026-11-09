@@ -144,8 +144,8 @@ Rendered iPhone captures verify the accessibility-size text alternative, standar
 charts, recording-button contrast and visible Next icon. iPad captures cover portrait
 and landscape sheets and the landscape accessibility-size review. Charts suppress
 their accessibility children so the combined text rows provide the spoken values;
-the resulting standard-size accessibility tree still needs verification. A clipping
-audit cannot prove chart layout. Spoken
+standard-size comparison and trend snapshots confirm their chart elements are absent
+while the combined text rows remain. A clipping audit cannot prove chart layout. Spoken
 VoiceOver evidence also remains outstanding; compilation, labels and audit results
 do not establish spoken announcements, focus or reading order. Hill-climb findings
 and evidence are recorded separately. No physical-device acceptance or release
