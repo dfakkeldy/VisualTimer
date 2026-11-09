@@ -138,8 +138,11 @@ final class StopwatchConfirmationUITests: XCTestCase {
 
         // Bind the presented List by index while its header is on screen. A
         // containing(header) query can stop matching when scrolling unloads it.
-        let reviewList = app.collectionViews.element(boundBy: app.collectionViews.count - 1)
-        XCTAssertTrue(reviewList.staticTexts["Review measurements"].exists)
+        let collections = app.collectionViews.allElementsBoundByIndex
+        let reviewIndex = try XCTUnwrap(collections.firstIndex {
+            $0.staticTexts["Review measurements"].exists
+        }, "The presented review list must contain its visible header")
+        let reviewList = app.collectionViews.element(boundBy: reviewIndex)
         let comparison = reviewList.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", "1. Alice", "Actual")).firstMatch
         reveal(comparison, in: app)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
@@ -156,8 +159,8 @@ final class StopwatchConfirmationUITests: XCTestCase {
         // feature. Match audit elements to the review List's actual subtree,
         // keeping every issue in that subtree (including combined text rows).
         let sheetElements = [reviewList] + reviewList.descendants(matching: .any).allElementsBoundByIndex
-        let backgroundElements = app.collectionViews.allElementsBoundByIndex.dropLast().flatMap {
-            [$0] + $0.descendants(matching: .any).allElementsBoundByIndex
+        let backgroundElements = collections.enumerated().filter { $0.offset != reviewIndex }.flatMap {
+            [$0.element] + $0.element.descendants(matching: .any).allElementsBoundByIndex
         } + app.navigationBars["Templates"].descendants(matching: .any).allElementsBoundByIndex
             + app.tabBars.descendants(matching: .any).allElementsBoundByIndex
         let sheetKeys = Set(sheetElements.map { auditKey($0) })
