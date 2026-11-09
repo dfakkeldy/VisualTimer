@@ -502,6 +502,8 @@ extension Theme {
         static let saveRecording = "Save recording"
         static let apply = "Apply durations"
         static let applyNew = "Apply as new template"
+        static let appliedAnnouncement = "Durations applied. Save the template to keep them."
+        static let appliedNewAnnouncement = "New template created. Save it to keep it."
         static let applyHint = "Applying saves this recording and edits the template. Save in the editor to keep the template changes. Starting the timer also saves a template that's already saved. Durations round to whole seconds, with a \(TimerMechanic.minimumDuration)-second minimum."
         static let partialNewHint = "This recording ended early. Record every step to create a template. You can still save these measurements."
         static let partialHint = "Only measured steps will change. Other template durations stay as they are."
@@ -510,7 +512,8 @@ extension Theme {
         static let saved = "Saved on this device"
         static let savedNewRoutineHint = "Find it later in \(recordingsEntry)."
         static let savedAction = "Saved"
-        static let recordAgain = "Back to routine"
+        static let backToRoutine = "Back to routine"
+        static let editSymbol = "pencil"
         static let history = "Local recordings"
         static let trend = "Step over time"
         static let chooseStep = "Step"
@@ -520,7 +523,7 @@ extension Theme {
         static let trendEmpty = "No saved measurements for this step yet."
         static let onePointHint = "One recording so far. Record again to see how time changes."
         static let accessibilityTrendHint = "Each recording's date, actual time and original target are listed below."
-        static let trendHint = "Circles show actual time. Squares and the dashed target line show each recording's original target. Dates and values are listed below."
+        static let trendHint = "Circles show actual time. Squares and the dashed target line show each recording's original target. Dates and values are listed below. Recordings are evenly spaced, oldest on the left, in the same order as the list below."
         static let historyLimit = "Older recordings are kept. Unlock Pro to see full history."
         static let historyBlockedByPlan = "Save a recording of your edited plan, or undo the plan edits, before opening local recordings."
         static let undoPlanEdits = "Undo plan edits"
@@ -575,7 +578,7 @@ extension Theme {
             "Step \(position) of \(count), \(name)"
         }
         static func earlierStep(_ name: String) -> String { "\(name) (not in current plan)" }
-        static func setsDuration(_ seconds: Int) -> String { "Template duration: \(seconds)s" }
+        static func setsDuration(_ seconds: Int) -> String { "Template duration: \(seconds)s (shortest allowed)" }
         static let invalidSource = "Add named steps before recording. Each target must be between 1 second and 24 hours."
         static let invalidRecording = "This stopwatch recording is invalid or uses an unsupported format."
         static func changedTemplate(_ title: String) -> String {

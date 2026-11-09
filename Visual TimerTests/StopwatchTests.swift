@@ -140,6 +140,23 @@ final class StopwatchTests: XCTestCase {
         XCTAssertThrowsError(try outOfOrder.validate())
     }
 
+    func testSourceStepCountValidationAtLimit() {
+        let accepted = source(targets: Array(repeating: nil, count: 1_000))
+        XCTAssertNoThrow(try accepted.validate())
+        let rejected = StopwatchSource(templateID: accepted.templateID, title: accepted.title,
+            steps: accepted.steps + [.init(id: UUID(), name: "Extra step", targetSeconds: nil)])
+        XCTAssertThrowsError(try rejected.validate())
+    }
+
+    func testSourceTargetValidationAtBounds() {
+        for target in [1, 86_400] {
+            XCTAssertNoThrow(try source(targets: [target]).validate(), "Target \(target) must be accepted")
+        }
+        for target in [0, 86_401] {
+            XCTAssertThrowsError(try source(targets: [target]).validate(), "Target \(target) must be rejected")
+        }
+    }
+
     func testPersistenceRoundTripIsolationIdempotentRetryAndDeletion() throws {
         let directory = try temporaryDirectory()
         let store = StopwatchRecordingStore(directory: directory)
@@ -189,6 +206,44 @@ final class StopwatchTests: XCTestCase {
         XCTAssertEqual(loaded.records, [record])
         XCTAssertEqual(loaded.unreadableFiles, ["broken.json"])
         XCTAssertTrue(FileManager.default.fileExists(atPath: malformed.path))
+    }
+
+    func testOversizedFileReportedAndPreservedAlongsideReadableRecords() throws {
+        let directory = try temporaryDirectory()
+        let store = StopwatchRecordingStore(directory: directory)
+        let neighbor = recording(source: source(), durations: [12])
+        try store.save(neighbor)
+        let oversizedRecord = recording(source: source(), durations: [15])
+        let oversized = directory.appendingPathComponent(oversizedRecord.id.uuidString).appendingPathExtension("json")
+        var data = try JSONEncoder().encode(oversizedRecord)
+        data.append(Data(repeating: 0x20, count: 2_000_001 - data.count))
+        XCTAssertEqual(data.count, 2_000_001)
+        XCTAssertEqual(try JSONDecoder().decode(StopwatchRecording.self, from: data), oversizedRecord)
+        try data.write(to: oversized)
+
+        let loaded = try store.load()
+        XCTAssertEqual(loaded.records, [neighbor])
+        XCTAssertEqual(loaded.unreadableFiles, [oversized.lastPathComponent])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: oversized.path))
+        XCTAssertEqual(try Data(contentsOf: oversized), data)
+    }
+
+    func testMismatchedFilenameReportedAndPreservedAlongsideReadableRecords() throws {
+        let directory = try temporaryDirectory()
+        let store = StopwatchRecordingStore(directory: directory)
+        let neighbor = recording(source: source(), durations: [12])
+        try store.save(neighbor)
+        let mismatchedRecord = recording(source: source(), durations: [15])
+        try mismatchedRecord.validate()
+        let mismatched = directory.appendingPathComponent("mismatched.json")
+        let data = try JSONEncoder().encode(mismatchedRecord)
+        try data.write(to: mismatched)
+
+        let loaded = try store.load()
+        XCTAssertEqual(loaded.records, [neighbor])
+        XCTAssertEqual(loaded.unreadableFiles, [mismatched.lastPathComponent])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: mismatched.path))
+        XCTAssertEqual(try Data(contentsOf: mismatched), data)
     }
 
     func testStoreSaveAndLoadErrorsAreThrown() throws {
@@ -481,15 +536,45 @@ final class StopwatchTests: XCTestCase {
         let source = editor.stopwatchSource()
         let measured = recording(source: source, durations: [11, 22])
         editor.toggleActive(id: source.steps[1].id)
-        let before = editor.rounds
+        let disabledRounds = editor.rounds
+        let disabledTitle = editor.gameTitle
+        let disabledTemplateID = editor.stopwatchTemplateID
+        let disabledSavedTemplateID = editor.currentSavedTemplateID
+        let disabledDirty = editor.hasUnsavedChanges
         XCTAssertThrowsError(try editor.applyStopwatchMeasurements(measured))
-        XCTAssertEqual(editor.rounds, before)
+        XCTAssertEqual(editor.rounds, disabledRounds)
+        XCTAssertEqual(editor.gameTitle, disabledTitle)
+        XCTAssertEqual(editor.stopwatchTemplateID, disabledTemplateID)
+        XCTAssertEqual(editor.currentSavedTemplateID, disabledSavedTemplateID)
+        XCTAssertEqual(editor.hasUnsavedChanges, disabledDirty)
+
         editor.toggleActive(id: source.steps[1].id)
         editor.deleteRound(id: source.steps[1].id)
         editor.addRound()
+        let replacedRounds = editor.rounds
+        let replacedTitle = editor.gameTitle
+        let replacedTemplateID = editor.stopwatchTemplateID
+        let replacedSavedTemplateID = editor.currentSavedTemplateID
+        let replacedDirty = editor.hasUnsavedChanges
         XCTAssertThrowsError(try editor.applyStopwatchMeasurements(measured))
+        XCTAssertEqual(editor.rounds, replacedRounds)
+        XCTAssertEqual(editor.gameTitle, replacedTitle)
+        XCTAssertEqual(editor.stopwatchTemplateID, replacedTemplateID)
+        XCTAssertEqual(editor.currentSavedTemplateID, replacedSavedTemplateID)
+        XCTAssertEqual(editor.hasUnsavedChanges, replacedDirty)
+
         editor.applyStarterTemplate(StarterTemplateLibrary.templates[1])
+        let switchedRounds = editor.rounds
+        let switchedTitle = editor.gameTitle
+        let switchedTemplateID = editor.stopwatchTemplateID
+        let switchedSavedTemplateID = editor.currentSavedTemplateID
+        let switchedDirty = editor.hasUnsavedChanges
         XCTAssertThrowsError(try editor.applyStopwatchMeasurements(measured))
+        XCTAssertEqual(editor.rounds, switchedRounds)
+        XCTAssertEqual(editor.gameTitle, switchedTitle)
+        XCTAssertEqual(editor.stopwatchTemplateID, switchedTemplateID)
+        XCTAssertEqual(editor.currentSavedTemplateID, switchedSavedTemplateID)
+        XCTAssertEqual(editor.hasUnsavedChanges, switchedDirty)
     }
 
     @MainActor
@@ -580,6 +665,7 @@ final class StopwatchTests: XCTestCase {
         let model = viewModel(source: changed, store: store, clock: TestClock())
         XCTAssertEqual(model.trendPoints.map(\.id), [earlier.id, later.id])
         XCTAssertEqual(model.trendPoints.map(\.date), [epoch, epoch.addingTimeInterval(86_400)])
+        XCTAssertEqual(model.trendPoints.map(\.order), [0, 1])
         XCTAssertEqual(model.trendPoints.map(\.seconds), [32, 70])
         XCTAssertEqual(model.trendPoints.map { $0.step.targetSeconds }, [30, 90])
         model.show(earlier)
@@ -629,11 +715,20 @@ final class StopwatchTests: XCTestCase {
         }
         XCTAssertEqual(StopwatchText.comparison(step: source(targets: [nil]).steps[0], actual: 7), "Actual 7s · No target")
         let row = StopwatchViewModel.ComparisonRow(step: step, measurement: .init(stepID: step.id, seconds: 0.2), position: 1)
-        XCTAssertEqual(row.appliedDurationHint, "Template duration: 5s")
+        XCTAssertEqual(row.appliedDurationHint, "Template duration: 5s (shortest allowed)")
         XCTAssertTrue(row.measurement.adjustsForTemplate)
         let rounded = StopwatchViewModel.ComparisonRow(step: step, measurement: .init(stepID: step.id, seconds: 7.6), position: 1)
         XCTAssertNil(rounded.appliedDurationHint)
         XCTAssertFalse(rounded.measurement.adjustsForTemplate)
+    }
+
+    func testDurationHourRoundingAndComparison() {
+        XCTAssertEqual(StopwatchText.duration(3599.4), "59m 59s")
+        XCTAssertEqual(StopwatchText.duration(3599.5), "1h 0m 0s")
+        XCTAssertEqual(StopwatchText.duration(86400), "24h 0m 0s")
+        let step = source(targets: [3_600]).steps[0]
+        XCTAssertEqual(StopwatchText.comparison(step: step, actual: 7_201),
+                       "Target 1h 0m 0s · Actual 2h 0m 1s · 1h 0m 1s over target")
     }
 
     func testShowAndBackToPlanCannotReplaceRunningOrUnsavedReview() {

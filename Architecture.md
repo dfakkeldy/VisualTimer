@@ -46,6 +46,7 @@ portability boundary.
 | Sound | `TimerSound`, `SoundManager` | Audio session and synthesized WAV tones |
 | Sequence | `GameViewModel`, `GameSequence`, `Round`, `ActiveSessionStore` | Ordered rounds, repeats, skip, restart, do-over, turn progress, in-progress session restore |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Editing, built-ins, persistence, import/export, legacy reads, unsaved editor draft |
+| Stopwatch | `StopwatchViewModel`, `StopwatchSession`, `StopwatchRecordingStore`, `StopwatchWorkspace` | Guarded step timing, immutable source snapshots, device-local recordings, review/Apply projections and retained in-memory workspace; see [stopwatch templates](docs/stopwatch-templates.md) |
 | History | `HistoryViewModel`, `GameRecord`, `SessionEvent`, `SessionTimeline` | Local session storage, review, export; proportional session timeline and By name totals; `GameRecord.roundColors` is optional, with palette fallbacks for older records |
 | iCloud | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, record mappers, `UbiquitousSettingsStore` | Pro private-database sync and sound preferences |
 | Pro | `ProAccessViewModel`, `ProFeature`, access policies | Verified StoreKit entitlement, purchase/restore, feature gates |
@@ -85,14 +86,15 @@ Apple templates are JSON at
 Imports assign a new local identity and conflict-safe title instead of
 replacing an existing document. The web codec uses the same portable shape.
 
-In-progress iPhone state uses small Codable JSON files in Application Support
-(tests may inject another directory):
+iPhone state and saved stopwatch recordings use Codable JSON files in Application
+Support (tests may inject another directory):
 
 | File | Owner | Restored when |
 |---|---|---|
 | `ActiveSession.json` | `ActiveSessionStore` / `GameViewModel` | A playing session after an app close. Snapshots older than four hours come back paused at the saved round. Malformed files are discarded. |
 | `QuickTimer.json` | `QuickTimerStore` | A running or paused quick timer. Snapshots older than four hours, or malformed files, are discarded. |
-| `TemplateDraft.json` | `GameEditorViewModel` | Unsaved template edits. Malformed drafts are discarded. |
+| `TemplateDraft.json` | `GameEditorViewModel` | Unsaved editor edits and clean sources not yet saved as templates, including current/clean snapshots, starter identity, `stopwatchTemplateID`, `savedTemplateID` and `pendingStopwatchApplication`. Malformed drafts are discarded. |
+| `StopwatchRecordings/<id>.json` | `StopwatchRecordingStore` | Explicitly saved stopwatch recordings (schema v1), device-only and never CloudKit. Malformed/unreadable files are kept for recovery while valid neighbours load. |
 
 These files stay on the device. They are not CloudKit records and are not
 widget snapshots. Watch playback still lives in `WatchAppModel` memory: leaving

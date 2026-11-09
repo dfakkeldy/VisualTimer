@@ -121,9 +121,16 @@ struct StopwatchView: View {
     private var planSections: some View {
         Section {
             if model.isNewRoutine {
-                TextField(Theme.Stopwatch.routineName,
-                          text: Binding(get: { model.source.title }, set: model.setTitle))
-                    .font(.title2.weight(.bold))
+                HStack {
+                    TextField(Theme.Stopwatch.routineName,
+                              text: Binding(get: { model.source.title }, set: model.setTitle),
+                              prompt: Text(Theme.Stopwatch.routineName).foregroundStyle(Theme.ColorValue.textSecondary))
+                        .font(.title2.weight(.bold))
+                        .accessibilityLabel(Theme.Stopwatch.routineName)
+                    Image(systemName: Theme.Stopwatch.editSymbol)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                        .accessibilityHidden(true)
+                }
             } else {
                 Text(model.source.title).font(.title2.weight(.bold))
                     .accessibilityAddTraits(.isHeader)
@@ -175,7 +182,8 @@ struct StopwatchView: View {
         if model.isNewRoutine {
             HStack {
                 TextField(Theme.Stopwatch.stepName(index + 1),
-                          text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }))
+                          text: Binding(get: { step.name }, set: { model.renameStep(id: step.id, name: $0) }),
+                          prompt: Text(Theme.Stopwatch.stepName(index + 1)).foregroundStyle(Theme.ColorValue.textSecondary))
                     .accessibilityLabel(Theme.Stopwatch.stepName(index + 1))
                 Menu {
                     stepActions(index: index)
@@ -315,7 +323,7 @@ struct StopwatchView: View {
                     .font(.subheadline)
             }
             if model.isReviewSaved {
-                Button(model.isLibrary ? Theme.Stopwatch.allRecordings : Theme.Stopwatch.recordAgain, action: model.backToPlan)
+                Button(model.isLibrary ? Theme.Stopwatch.allRecordings : Theme.Stopwatch.backToRoutine, action: model.backToPlan)
                 Button(Theme.Stopwatch.deleteRecording, role: .destructive) { showDelete = true }
             }
         } footer: { Text(Theme.Stopwatch.applyHint) }
@@ -380,7 +388,10 @@ struct StopwatchView: View {
     }
 
     private func apply() {
-        if model.applyReview(onApply) { onClose() }
+        if model.applyReview(onApply) {
+            announce(model.applyKind == .newTemplate ? Theme.Stopwatch.appliedNewAnnouncement : Theme.Stopwatch.appliedAnnouncement)
+            onClose()
+        }
     }
 }
 

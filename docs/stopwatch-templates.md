@@ -48,7 +48,9 @@ to the template editor for those edits. VoiceOver announcements follow step,
 recording/pause, saved, and 24-hour-limit transitions; display ticks do not announce.
 Review transitions request VoiceOver focus on the review heading; Back and successful
 Delete request focus on Start or the library history heading. Successful Delete
-announces “Recording deleted”. Step-options labels have a minimum 44-point target.
+announces “Recording deleted”. Successful Apply posts “Durations applied. Save the template
+to keep them.” for an existing template, or “New template created. Save it to keep it.”
+for a new template, before closing the sheet. Step-options labels have a minimum 44-point target.
 Pause/Resume and the disabled Saved row keep stable controls in the view structure.
 
 Finish opens review; it does not save or alter a template. Save recording writes an
@@ -58,8 +60,8 @@ those template changes. Starting the timer also saves a template that's already 
 Existing template save limits and Pro gates remain.
 Measurements round to whole seconds, with the existing five-second template minimum;
 review compares the rounded whole-second values and names the template duration
-when the minimum changes the rounded measurement. Existing-template partial
-recordings change only measured, still-enabled steps. A new routine requires every
+with “(shortest allowed)” when the minimum changes the rounded measurement.
+Existing-template partial recordings change only measured, still-enabled steps. A new routine requires every
 step to be measured.
 
 Recordings retain immutable source names, targets, and identities. Renaming/reordering
@@ -84,10 +86,12 @@ for confirmation and undoes those edits without closing the stopwatch.
 
 Comparison bars and dated per-step trends use neutral target/actual language. At
 standard text sizes, charts appear above always-visible text rows with duration-formatted
-axes. Comparison bars are distinguished by position, legend, and text rows. In the trend chart, target
+time axes. Comparison bars are distinguished by position, legend, and text rows. In the trend chart, target
 and actual series differ in shape and dashed versus solid stroke: circles show
-actuals, while squares mark captured targets. A no-target comparison omits Target
-from its legend. At accessibility text sizes, both charts give way to the wrapping
+actuals, while squares mark captured targets and the target line steps at the recording
+carrying the new target. Recordings are evenly spaced, oldest on the left, in the
+same order as the full dated rows below; the chart's x-axis labels are hidden.
+A no-target comparison omits Target from its legend. At accessibility text sizes, both charts give way to the wrapping
 text rows: comparison rows retain step names, targets, actuals, differences and any
 minimum template duration; trend rows retain dates, step names, actuals and original
 targets. The trend hint describes those dated values without referring to hidden
@@ -152,6 +156,7 @@ carrying chart values;
 standard-size comparison and trend snapshots confirm their chart elements are absent
 while the combined text rows remain. A clipping audit cannot prove chart layout. Spoken
 VoiceOver evidence also remains outstanding; compilation, labels and audit results
-do not establish spoken announcements, focus or reading order. Hill-climb findings
-and evidence are recorded separately. No physical-device acceptance or release
+do not establish spoken announcements, focus or reading order. The Apply
+announcement may be pre-empted by the dismissal; its spoken result remains a follow-up.
+Hill-climb findings and evidence are recorded separately. No physical-device acceptance or release
 is claimed.

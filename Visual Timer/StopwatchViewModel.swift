@@ -8,6 +8,7 @@ final class StopwatchViewModel: ObservableObject {
     struct TrendPoint: Identifiable {
         let id: UUID
         let date: Date
+        let order: Int
         let step: StopwatchSource.Step
         let seconds: TimeInterval
     }
@@ -192,11 +193,13 @@ final class StopwatchViewModel: ObservableObject {
     }
     var trendPoints: [TrendPoint] {
         guard let selectedTrendStepID = trendSelection else { return [] }
-        return visibleRecords.reversed().compactMap { record in
+        var points: [TrendPoint] = []
+        for record in visibleRecords.reversed() {
             guard let step = record.source.steps.first(where: { $0.id == selectedTrendStepID }),
-                  let measurement = record.measurements.first(where: { $0.stepID == selectedTrendStepID }) else { return nil }
-            return TrendPoint(id: record.id, date: record.startedAt, step: step, seconds: measurement.seconds)
+                  let measurement = record.measurements.first(where: { $0.stepID == selectedTrendStepID }) else { continue }
+            points.append(TrendPoint(id: record.id, date: record.startedAt, order: points.count, step: step, seconds: measurement.seconds))
         }
+        return points
     }
 
     func setTitle(_ title: String) {

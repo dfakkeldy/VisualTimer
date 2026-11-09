@@ -72,6 +72,7 @@ struct GameEditorView: View {
                                 Text(model.workspaceStatus).font(.subheadline)
                             }
                         }
+                        Text(Theme.Stopwatch.retainedWorkspaceHint).font(.caption)
                     }
                     Button { openStopwatch(mode: .template) } label: {
                         Label(Theme.Stopwatch.timeTemplate, systemImage: Theme.Stopwatch.symbol)
@@ -88,7 +89,7 @@ struct GameEditorView: View {
                 } header: {
                     sectionHeader(Theme.Stopwatch.title)
                 } footer: {
-                    Text(stopwatchWorkspace.hasUnkeptWork ? Theme.Stopwatch.retainedWorkspaceHint : Theme.Stopwatch.editorHint)
+                    Text(Theme.Stopwatch.editorHint)
                 }
                 .listRowBackground(Theme.ColorValue.surface)
 

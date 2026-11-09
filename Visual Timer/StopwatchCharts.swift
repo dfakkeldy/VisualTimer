@@ -78,28 +78,30 @@ struct StopwatchTrendView: View {
             } else {
                 if !dynamicTypeSize.isAccessibilitySize {
                     Chart(points) { point in
-                        LineMark(x: .value(Theme.Stopwatch.history, point.date),
+                        LineMark(x: .value(Theme.Stopwatch.history, point.order),
                                  y: .value(Theme.Stopwatch.seconds, point.seconds),
                                  series: .value(Theme.Stopwatch.review, Theme.Stopwatch.actual))
                             .foregroundStyle(Theme.Stopwatch.actualColor)
-                        PointMark(x: .value(Theme.Stopwatch.history, point.date),
+                        PointMark(x: .value(Theme.Stopwatch.history, point.order),
                                   y: .value(Theme.Stopwatch.seconds, point.seconds))
                             .foregroundStyle(Theme.Stopwatch.actualColor)
                             .symbol(.circle)
                         if let target = point.step.targetSeconds {
-                            LineMark(x: .value(Theme.Stopwatch.history, point.date),
+                            LineMark(x: .value(Theme.Stopwatch.history, point.order),
                                      y: .value(Theme.Stopwatch.seconds, target),
                                      series: .value(Theme.Stopwatch.review, Theme.Stopwatch.target))
                                 .interpolationMethod(.stepEnd)
                                 .foregroundStyle(Theme.Stopwatch.targetColor)
                                 .lineStyle(StrokeStyle(lineWidth: Theme.Stopwatch.chartLineWidth,
                                                        dash: Theme.Stopwatch.targetDash))
-                            PointMark(x: .value(Theme.Stopwatch.history, point.date),
+                            PointMark(x: .value(Theme.Stopwatch.history, point.order),
                                       y: .value(Theme.Stopwatch.seconds, target))
                                 .foregroundStyle(Theme.Stopwatch.targetColor)
                                 .symbol(.square)
                         }
                     }
+                    .chartXScale(domain: -0.5...(Double(points.count) - 0.5))
+                    .chartXAxis(.hidden)
                     .chartYScale(domain: .automatic(includesZero: true))
                     .chartYAxis {
                         AxisMarks { value in
