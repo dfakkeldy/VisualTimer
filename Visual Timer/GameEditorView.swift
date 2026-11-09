@@ -15,6 +15,7 @@ struct GameEditorView: View {
     @State private var showImportPicker = false
     @State private var shareItem: TemplateShareItem?
     @State private var pendingReplacement: PendingReplacement?
+    @StateObject private var stopwatchWorkspace = StopwatchWorkspace()
     @AppStorage(TimerAlertScheduler.enabledKey) private var alertsEnabled = false
     @State private var alertsDenied = false
 
@@ -62,6 +63,35 @@ struct GameEditorView: View {
                         .listRowBackground(Color.clear)
                         .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 12, trailing: 20))
                 }
+
+                Section {
+                    if stopwatchWorkspace.hasUnkeptWork, let model = stopwatchWorkspace.model {
+                        Button(action: stopwatchWorkspace.returnToStopwatch) {
+                            VStack(alignment: .leading, spacing: Theme.Stopwatch.smallSpacing) {
+                                Label(Theme.Stopwatch.returnToStopwatch, systemImage: Theme.Stopwatch.symbol)
+                                Text(model.workspaceStatus).font(.subheadline)
+                            }
+                        }
+                        Text(Theme.Stopwatch.retainedWorkspaceHint).font(.caption)
+                    }
+                    Button { openStopwatch(mode: .template) } label: {
+                        Label(Theme.Stopwatch.timeTemplate, systemImage: Theme.Stopwatch.symbol)
+                    }
+                    .disabled(!editor.canSaveOrStartTemplate || stopwatchWorkspace.hasUnkeptWork)
+                    Button { openStopwatch(mode: .newPlan) } label: {
+                        Label(Theme.Stopwatch.planRoutine, systemImage: Theme.Stopwatch.planSymbol)
+                    }
+                    .disabled(stopwatchWorkspace.hasUnkeptWork)
+                    Button { openStopwatch(mode: .library) } label: {
+                        Label(Theme.Stopwatch.recordingsEntry, systemImage: Theme.Stopwatch.emptySymbol)
+                    }
+                    .disabled(stopwatchWorkspace.hasUnkeptWork)
+                } header: {
+                    sectionHeader(Theme.Stopwatch.title)
+                } footer: {
+                    Text(Theme.Stopwatch.editorHint)
+                }
+                .listRowBackground(Theme.ColorValue.surface)
 
                 Section {
                     ForEach(editor.rounds) { round in
@@ -135,6 +165,9 @@ struct GameEditorView: View {
             .onAppear {
                 editor.loadInitialTemplateIfNeeded()
             }
+            .onChange(of: proAccess.isProUnlocked) { _, unlocked in
+                stopwatchWorkspace.updateProAccess(unlocked)
+            }
             .fileImporter(
                 isPresented: $showImportPicker,
                 allowedContentTypes: [.turnTimerTemplate],
@@ -146,10 +179,22 @@ struct GameEditorView: View {
             } message: {
                 Text(saveAlertMessage)
             }
+            .sheet(isPresented: $stopwatchWorkspace.isPresented, onDismiss: {
+                if let feature = stopwatchWorkspace.sheetDidDismiss() { requestedProFeature = feature }
+            }) {
+                if let model = stopwatchWorkspace.model {
+                    StopwatchView(model: model, replacesUnsavedEdits: editor.hasUnsavedChanges,
+                                  onApply: { try editor.applyStopwatchRecording($0, kind: model.applyKind) },
+                                  onClose: { stopwatchWorkspace.isPresented = false },
+                                  onRequestPro: stopwatchWorkspace.requestPro)
+                }
+            }
             .sheet(item: $shareItem) { item in
                 ShareSheet(items: [item.url])
             }
-            .sheet(item: $requestedProFeature) { feature in
+            .sheet(item: $requestedProFeature, onDismiss: {
+                stopwatchWorkspace.paywallDidDismiss(isProUnlocked: proAccess.isProUnlocked)
+            }) { feature in
                 ProPaywallView(feature: feature, proAccess: proAccess)
             }
             .sheet(item: Binding(
@@ -398,6 +443,19 @@ struct GameEditorView: View {
     }
 
     // MARK: - Helpers
+
+    private func openStopwatch(mode: StopwatchViewModel.Mode) {
+        guard !stopwatchWorkspace.hasUnkeptWork else { return }
+        titleFocused = false
+        let source = mode == .newPlan
+            ? StopwatchSource.newPlan(title: Theme.Stopwatch.newRoutine)
+            : editor.stopwatchSource()
+        editor.persistDraft()
+        stopwatchWorkspace.open(StopwatchViewModel(
+            source: source, mode: mode, isProUnlocked: proAccess.isProUnlocked,
+            savedTemplateTitles: Dictionary(editor.savedTemplates.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first }),
+            applyPreflight: { [editor] in editor.stopwatchApplyBlocker($0, kind: $1) }))
+    }
 
     private func saveGame() {
         let result = editor.saveToDocuments(isProUnlocked: proAccess.isProUnlocked)
