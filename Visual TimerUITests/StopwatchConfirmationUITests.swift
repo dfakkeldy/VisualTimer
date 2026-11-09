@@ -53,7 +53,10 @@ final class StopwatchConfirmationUITests: XCTestCase {
         XCTAssertNotEqual(plannedTitle, priorTitle)
         let step = app.textFields["Step 1 name"]
         step.tap()
-        step.typeText("Solo step\n")
+        step.typeText("Solo step")
+        XCTAssertEqual(step.value as? String, "Solo step", "Typing must keep the complete step name")
+        step.typeText("\n")
+        XCTAssertEqual(step.value as? String, "Solo step", "Submitting must keep the complete step name")
         let start = app.buttons["stopwatch.start"]
         reveal(start, in: app)
         XCTAssertTrue(start.isEnabled)
@@ -91,9 +94,16 @@ final class StopwatchConfirmationUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Templates"].waitForExistence(timeout: 5))
         reveal(editorTitle, in: app, scrollingUp: false)
         XCTAssertEqual(editorTitle.value as? String, plannedTitle)
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Solo step")).firstMatch.exists)
+        let appliedEditor = XCTAttachment(screenshot: app.screenshot())
+        appliedEditor.name = "Editor after confirmed stopwatch Apply"
+        add(appliedEditor)
+        let appliedStep = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Solo step")).firstMatch
+        reveal(appliedStep, in: app)
+        XCTAssertTrue(appliedStep.exists)
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Alice")).firstMatch.exists)
-        XCTAssertTrue(app.buttons["Save"].isEnabled, "Apply leaves the new template unsaved in the editor")
+        let save = app.buttons["Save"]
+        reveal(save, in: app, scrollingUp: false)
+        XCTAssertTrue(save.isEnabled, "Apply leaves the new template unsaved in the editor")
     }
 
     @MainActor
