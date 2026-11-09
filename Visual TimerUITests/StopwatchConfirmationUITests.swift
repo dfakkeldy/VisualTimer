@@ -164,7 +164,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
         let backgroundKeys = Set(backgroundElements.map { auditKey($0) })
         try app.performAccessibilityAudit(for: [.textClipped]) { issue in
             guard let element = issue.element else { return false }
-            let key = auditKey(element)
+            let key = self.auditKey(element)
             let inSheet = sheetKeys.contains(key)
             let inBackground = backgroundKeys.contains(key)
             print("Text-clipping audit: inStopwatchSheet=\(inSheet), verifiedBackground=\(inBackground), \(issue.detailedDescription), element=\(element)")
