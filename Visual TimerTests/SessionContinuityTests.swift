@@ -4,6 +4,7 @@ import XCTest
 /// Covers what the session screens now show and keep: the next round for any
 /// sequence, time left in the session, restoring after the app closes, and
 /// the History timeline.
+@MainActor
 final class SessionContinuityTests: XCTestCase {
 
     private func routine(repeats: Int = 1) -> GameSequence {
