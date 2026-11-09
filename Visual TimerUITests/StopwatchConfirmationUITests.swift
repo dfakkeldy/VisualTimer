@@ -17,8 +17,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
         let early = app.buttons["stopwatch.finishEarly"]
         XCTAssertTrue(early.waitForExistence(timeout: 5), "The default Game Night starter has four enabled steps")
         early.tap()
-        XCTAssertTrue(app.buttons["Keep recording"].waitForExistence(timeout: 3))
-        app.buttons["Keep recording"].tap()
+        cancelConfirmation(in: app, label: "Keep recording")
         XCTAssertTrue(early.waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["stopwatch.elapsed"].exists)
         XCTAssertTrue(app.buttons["stopwatch.next"].exists)
@@ -67,7 +66,7 @@ final class StopwatchConfirmationUITests: XCTestCase {
         reveal(apply, in: app)
         apply.tap()
         XCTAssertTrue(app.staticTexts["Replace your unsaved template edits?"].waitForExistence(timeout: 3))
-        app.buttons["Cancel"].tap()
+        cancelConfirmation(in: app, label: "Cancel")
         XCTAssertTrue(apply.waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Not saved yet"].exists, "Cancel must not save or apply the recording")
 
@@ -95,6 +94,20 @@ final class StopwatchConfirmationUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Solo step")).firstMatch.exists)
         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Alice")).firstMatch.exists)
         XCTAssertTrue(app.buttons["Save"].isEnabled, "Apply leaves the new template unsaved in the editor")
+    }
+
+    @MainActor
+    private func cancelConfirmation(in app: XCUIApplication, label: String) {
+        let cancel = app.buttons[label]
+        if cancel.waitForExistence(timeout: 2) {
+            cancel.tap()
+        } else {
+            // System popover presentations omit the cancel-role row. Dismissing
+            // their native outside region is the same no-selection path.
+            let dismissRegion = app.otherElements["PopoverDismissRegion"]
+            XCTAssertTrue(dismissRegion.waitForExistence(timeout: 3))
+            dismissRegion.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.1)).tap()
+        }
     }
 
     @MainActor

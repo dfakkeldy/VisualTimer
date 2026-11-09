@@ -61,7 +61,7 @@ final class StopwatchViewModel: ObservableObject {
          savedTemplateTitles: [UUID: String] = [:],
          applyPreflight: @escaping (StopwatchRecording, ApplyKind) -> StopwatchError? = { _, _ in nil },
          store: StopwatchRecordingStorage = StopwatchRecordingStore(),
-         now: @escaping @MainActor () -> TimeInterval = StopwatchClock.now,
+         now: @escaping @MainActor () -> TimeInterval = { StopwatchClock.now() },
          date: @escaping () -> Date = Date.init,
          automaticallyRefresh: Bool = true) {
         self.source = source

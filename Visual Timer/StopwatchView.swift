@@ -195,7 +195,7 @@ struct StopwatchView: View {
                         .foregroundStyle(Theme.ColorValue.textSecondary)
                 }
             }
-    }
+        }
     }
 
     @ViewBuilder
