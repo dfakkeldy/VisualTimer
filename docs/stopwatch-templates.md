@@ -132,7 +132,9 @@ Finish early Cancel/confirm and Apply-as-new replacement Cancel/confirm through 
 actual view buttons. They require no additional app fixture infrastructure.
 A third UI test requests the largest accessibility text size, verifies the override
 through rendered label geometry, and audits an early-finish review for clipped text,
-including the five-second minimum-duration hint. It saves rendered and accessibility
+including the five-second minimum-duration hint when the measured time requires it.
+Runner latency can make that hint unnecessary; the audit still runs on the rendered
+comparison row. It saves rendered and accessibility
 context and excludes only clipping issues verified to belong to the background
 editor. The one-row audit passed an unfixed-chart probe, so it is a smoke check, not a
 proven detector for the captured three-row truncation. Full comparison visibility
