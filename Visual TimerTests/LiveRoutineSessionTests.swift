@@ -359,3 +359,74 @@ extension LiveRoutineIntegrationTests {
         XCTAssertEqual(timer.visualProgress.finishDate, finish)
     }
 }
+
+extension LiveRoutineIntegrationTests {
+    func testSuccessorResetsRevisionAndKeepsJoinedRecovery() {
+        let a = RoutineTestTransport(), b = RoutineTestTransport()
+        a.peer = b; b.peer = a
+        let owner = LiveRoutineController(directory: directory(), transport: a)
+        let folder = directory()
+        let replica = LiveRoutineController(directory: folder, transport: b)
+        owner.start(plan()); a.deliver(); replica.join(); replica.activate()
+        for _ in 0..<8 { owner.perform(.restart) }
+        a.deliver()
+        owner.perform(.end); a.deliver()
+        owner.start(plan()); a.deliver()
+        XCTAssertEqual(replica.journal.current?.revision, 1)
+        XCTAssertTrue(replica.canControl)
+        XCTAssertEqual(replica.journal.joinedSession, replica.journal.current?.id)
+        replica.perform(.pause)
+        XCTAssertEqual(owner.journal.current?.phase, .paused)
+        let restored = LiveRoutineController(directory: folder, transport: RoutineTestTransport())
+        XCTAssertEqual(restored.journal.joinedSession, owner.journal.current?.id)
+    }
+    func testConflictSwitchRetainsOwnerWhenExpiryRejectsEnd() {
+        var continuous: TimeInterval = 0
+        let a = RoutineTestTransport(), b = RoutineTestTransport()
+        a.peer = b; b.peer = a
+        let owner = LiveRoutineController(directory: directory(), transport: a,
+            clock: RoutineClock(wall: { Date(timeIntervalSince1970: 1000) }, continuous: { continuous }))
+        let other = LiveRoutineController(directory: directory(), transport: b)
+        var saved = 0
+        owner.saveHistory = { _ in saved += 1; return true }
+        owner.start(plan()); other.start(plan()); b.deliver()
+        let id = owner.journal.current?.id
+        continuous += 11
+        owner.useOtherSession()
+        XCTAssertEqual(owner.journal.current?.id, id)
+        XCTAssertEqual(owner.journal.current?.step, 1)
+        XCTAssertNotNil(owner.journal.conflict)
+        XCTAssertEqual(saved, 0)
+        owner.useOtherSession()
+        XCTAssertEqual(owner.journal.current?.id, other.journal.current?.id)
+        XCTAssertEqual(saved, 1)
+    }
+    func testJoiningRemoteEndsAndClearsRestoredLegacySession() throws {
+        let folder = directory()
+        let history = HistoryStore(documentsDirectory: folder)
+        let store = ActiveSessionStore(directory: folder)
+        let original = GameViewModel(timerViewModel: TimerViewModel(), historyStore: history)
+        original.sessionStore = store
+        original.loadGame(plan()); original.startGame()
+        let phone = GameViewModel(timerViewModel: TimerViewModel(), historyStore: history)
+        phone.sessionStore = store
+        XCTAssertTrue(phone.restoreSavedSession())
+        let a = RoutineTestTransport(), b = RoutineTestTransport()
+        a.peer = b; b.peer = a
+        phone.enableLiveSync(directory: folder, transport: b)
+        let owner = LiveRoutineController(directory: directory(), transport: a)
+        owner.start(plan()); a.deliver()
+        phone.joinRemoteRoutine()
+        XCTAssertNil(store.load())
+        XCTAssertTrue(phone.isLiveSession)
+        XCTAssertEqual(phone.live?.journal.joinedSession, owner.journal.current?.id)
+        let historyFiles = try FileManager.default.contentsOfDirectory(at: folder.appendingPathComponent("History"), includingPropertiesForKeys: nil)
+        XCTAssertEqual(historyFiles.count, 1)
+        let restored = GameViewModel(timerViewModel: TimerViewModel(), historyStore: history)
+        restored.sessionStore = store
+        XCTAssertFalse(restored.restoreSavedSession())
+        restored.enableLiveSync(directory: folder, transport: RoutineTestTransport())
+        XCTAssertTrue(restored.isLiveSession)
+        XCTAssertEqual(restored.live?.journal.current?.id, owner.journal.current?.id)
+    }
+}

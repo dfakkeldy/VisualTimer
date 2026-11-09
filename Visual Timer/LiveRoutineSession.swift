@@ -164,6 +164,11 @@ struct LiveRoutineJournal: Codable {
                 return false
             } else { retired.insert(current.id) }
         }
+        // Following a successor preserves a join only when the previous
+        // session was joined. Merely available routines stay unjoined.
+        if let previous = current, previous.id != incoming.id, joinedSession == previous.id {
+            joinedSession = incoming.id
+        }
         current = incoming
         return true
     }
@@ -328,7 +333,13 @@ final class LiveRoutineController {
 
     func useOtherSession() {
         guard let other = journal.conflict, !other.terminal, !journal.retired.contains(other.id) else { return }
-        if owner { perform(.end) }
+        if owner {
+            perform(.end)
+            guard storageHealthy, journal.current?.terminal == true else {
+                note = storageHealthy ? Theme.LiveRoutine.stepChanged : Theme.LiveRoutine.storageError
+                changed?(); return
+            }
+        }
         if let old = journal.current { journal.retired.insert(old.id) }
         journal.current = other; journal.conflict = nil; journal.joinedSession = other.id
         remoteSample = nil; uncertainty = nil; requiredRevision = 0; commit(); handshake()
@@ -377,8 +388,14 @@ final class LiveRoutineController {
             journal.current?.phase = .ended; journal.current?.anchor = nil
         }
         if let state = envelope.state, state.valid(), state.authority == envelope.sender, state.authority != journal.device {
-            let previousRevision = journal.current?.id == state.id ? journal.current?.revision ?? 0 : 0
-            _ = journal.receive(state)
+            let previousID = journal.current?.id
+            let previousRevision = previousID == state.id ? journal.current?.revision ?? 0 : 0
+            let adopted = journal.receive(state)
+            if adopted && previousID != state.id {
+                requiredRevision = 0
+                remoteSample = nil; uncertainty = nil; frozenRemoteDate = nil
+                if pending != nil { pending = nil; timeout?.cancel(); note = Theme.LiveRoutine.stepChanged }
+            }
             if journal.current?.id == state.id && state.revision >= previousRevision &&
                 (state.revision > previousRevision || frozenRemoteDate == nil || envelope.sentAt >= frozenRemoteDate!) {
                 frozenRemoteDate = envelope.sentAt

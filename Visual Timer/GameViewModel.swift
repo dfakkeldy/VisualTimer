@@ -56,7 +56,12 @@ final class GameViewModel: ObservableObject {
         live.perform(state.phase == .running ? .pause : .resume)
     }
 
-    func joinRemoteRoutine() { joinedLive = true; live?.join(); projectLive() }
+    func joinRemoteRoutine() {
+        // Legacy recovery has its own durable file and history boundary.
+        // Complete that boundary before projecting any remote state.
+        if gamePhase == .playing && !isLiveSession { endGame(clearState: true) }
+        joinedLive = true; live?.join(); projectLive()
+    }
     func resolveSyncConflict() { live?.useOtherSession(); joinedLive = true; projectLive() }
     func leaveLiveRoutine() { pendingReplacement = nil; replacementConfirmed = false; live?.leave(); joinedLive = false; resetSession(clearState: true, saveRecord: false) }
     func cancelReplacement() { pendingReplacement = nil; replacementConfirmed = false }
