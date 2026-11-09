@@ -225,7 +225,6 @@ struct SessionDetailView: View {
                         roundRow(
                             item,
                             trueHeight: CGFloat(trueHeights[index] ?? 0),
-                            isFirst: index == roundIndices.first,
                             gapAbove: (index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap) * timelineScale,
                             wentBackTo: wentBackTarget(after: index, in: items)
                         )
@@ -299,13 +298,14 @@ struct SessionDetailView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, isFirst: Bool, gapAbove: CGFloat, wentBackTo: String?) -> some View {
+    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, gapAbove: CGFloat, wentBackTo: String?) -> some View {
         let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
         let dimmed = item.outcome.dimsRound
         let pauses = sessionTimeline.pauseFractions(of: item)
         let pauseYs = pauseLabelOffsets(pauses, trueHeight: trueHeight, hasNote: item.outcomeNote != nil)
         let wentBackRoom: CGFloat = wentBackTo == nil ? 0 : Style.wentBackLabelHeight * timelineScale
-        let labelsEnd: CGFloat = (pauseYs.last.map { $0 + Style.pauseLabelSpacing * timelineScale } ?? CGFloat(Style.minimumRowHeight) * timelineScale)
+        let labelsEnd: CGFloat = max(pauseYs.last.map { $0 + Style.pauseLabelSpacing * timelineScale } ?? 0,
+                                     CGFloat(Style.minimumRowHeight) * timelineScale)
         let rowHeight = max(trueHeight, labelsEnd + wentBackRoom)
         return VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
