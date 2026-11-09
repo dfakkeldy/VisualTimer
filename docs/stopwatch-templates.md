@@ -100,14 +100,18 @@ without increasing that version; increase it only together with a decoder that
 continues to read older recordings. A version bump on its own would hide existing
 recordings as unreadable rather than migrate them.
 
+An unsaved starter is restored on relaunch, even when saved templates exist, so its routine and step identities stay stable before its first save.
+
 ## Remaining scope and proof
 
-This is initial implementation, pending the parent's approved review/hill-climb. It
+This initial implementation remains under hill-climb review. It
 adds no countdown capture, web/watch stopwatch, CloudKit recording sync, recording
 export, automatic target rewrites, or release changes. In-flight stopwatch sessions
 and plan edits without a saved recording are memory-only: background time is supported, but
 process termination loses an unfinished recording. Completed recordings must be
-explicitly saved or applied. Existing countdown history is unchanged.
+explicitly saved or applied. A saved partial new-plan recording can be viewed later,
+but cannot be reopened as an editable plan or resumed; only a complete recording
+can create a template through Apply. Existing countdown history is unchanged.
 
 Deterministic unit tests cover timing, transitions, partial completion, captured
 targets, comparison text, dated trend order, persistence failures and retries,

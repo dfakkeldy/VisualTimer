@@ -452,7 +452,7 @@ struct GameEditorView: View {
         editor.persistDraft()
         stopwatchWorkspace.open(StopwatchViewModel(
             source: source, mode: mode, isProUnlocked: proAccess.isProUnlocked,
-            savedTemplateTitles: Dictionary(uniqueKeysWithValues: editor.savedTemplates.map { ($0.id, $0.title) }),
+            savedTemplateTitles: Dictionary(editor.savedTemplates.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first }),
             applyPreflight: { [editor] in editor.stopwatchApplyBlocker($0, kind: $1) }))
     }
 
