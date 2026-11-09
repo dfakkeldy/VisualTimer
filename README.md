@@ -45,8 +45,16 @@ Useful docs:
   before saving the partial record. A playing session is restored after an
   app close; after four hours it comes back paused where it was saved.
 - **History** - Review completed timer sessions, with recent sessions free and
-  full local history, export, and iCloud sync available with Pro. New records
-  may store each round's colour (`roundColors`); older records omit the field.
+  full local history, export, and iCloud sync available with Pro. Session
+  detail is a proportional vertical timeline: one coloured block per turn,
+  hatched pause stretches with durations, round headings when the sequence
+  repeats, a "went back to …" marker, and a Finished/Ended end marker. A By
+  name switch offers Share (ring of each name's total time), Average (typical
+  turn and turn count), and Turns (one block per turn on a shared scale); the
+  choice is remembered. New records may store each round's colour
+  (`roundColors`); older records omit the field and use fallback palette
+  colours on the timeline and the History list ribbon. Display only; no
+  history storage or format change.
 - **Completion alerts (iPhone)** - Opt-in local notification when a countdown
   ends off screen. An Alerts capsule sits beside Start; Settings has a matching
   switch. The app reads the real notification permission and opens iOS Settings
@@ -85,8 +93,9 @@ Useful docs:
 
 These scope bullets describe implemented source, not signed-device acceptance.
 Public App Store 1.0 availability is recorded in Status and the readiness
-ledger. None of the iPhone alerts, rim drag, session restore, or Watch
-dial-tap behavior has been verified on a physical iPhone or Watch.
+ledger. None of the iPhone alerts, rim drag, session restore, History session
+timeline, or Watch dial-tap behavior has been verified on a physical iPhone
+or Watch.
 Production sync, saved Watch-template transfer and timer lock/background
 behavior still need the focused checks in the readiness ledger. No
 background-alarm guarantee is implied.
@@ -154,7 +163,7 @@ status, data formats, sync boundaries, and release-engineering notes.
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
 | Sync | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, CloudKit mappers, `UbiquitousSettingsStore` | Pro iCloud template/history sync and lightweight settings sync |
 | Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, widget timelines, and template launch URLs |
-| History | `HistoryViewModel`, session models and views | Completed session storage and review |
+| History | `HistoryViewModel`, `SessionTimeline`, session views | Completed session storage, review, proportional timeline and By name totals |
 | Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
 | Theme | `Theme` | Shared colors, symbols, labels, dimensions, and animation values |

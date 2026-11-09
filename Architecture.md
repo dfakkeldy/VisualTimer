@@ -1,7 +1,8 @@
 # Turn Timer architecture
 
 Last audited: 2026-10-24. Session restore, template drafts, and iPhone
-completion alerts (PR #138, merged 2026-11-08) are reflected below. The
+completion alerts (PR #138, merged 2026-11-08) and History session timeline
+and By name totals (PR #142, merged 2026-11-09) are reflected below. The
 public App Store 1.0 listing sentence was updated 2026-11-08; other
 sections were not re-audited.
 
@@ -45,12 +46,12 @@ portability boundary.
 | Sound | `TimerSound`, `SoundManager` | Audio session and synthesized WAV tones |
 | Sequence | `GameViewModel`, `GameSequence`, `Round`, `ActiveSessionStore` | Ordered rounds, repeats, skip, restart, do-over, turn progress, in-progress session restore |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Editing, built-ins, persistence, import/export, legacy reads, unsaved editor draft |
-| History | `HistoryViewModel`, `GameRecord`, `SessionEvent` | Local session storage, review, export; `GameRecord.roundColors` is optional |
+| History | `HistoryViewModel`, `GameRecord`, `SessionEvent`, `SessionTimeline` | Local session storage, review, export; proportional session timeline and By name totals; `GameRecord.roundColors` is optional, with palette fallbacks for older records |
 | iCloud | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, record mappers, `UbiquitousSettingsStore` | Pro private-database sync and sound preferences |
 | Pro | `ProAccessViewModel`, `ProFeature`, access policies | Verified StoreKit entitlement, purchase/restore, feature gates |
 | Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, timelines, template launch URLs |
 | Watch | `WatchTemplateConnectivity`, `WatchTemplateStore`, `WatchTimerAlertCoordinator` | Paired-template delivery, local snapshots, completion alerts |
-| Presentation | `MainTabView`, `GamePlaybackView`, `GameEditorView`, `TimerComponents`, `TimerVisualView`, leaf controls | Declarative UI, shared glass controls and time captions, observation, action callbacks |
+| Presentation | `MainTabView`, `GamePlaybackView`, `GameEditorView`, `TimerComponents`, `TimerVisualView`, `SessionDetailView`, leaf controls | Declarative UI, shared glass controls and time captions, observation, action callbacks |
 | Theme | `Theme` | Shared labels, symbols, colors, spacing, animation values |
 
 View models and storage/parser helpers own business logic. Leaf views receive
@@ -66,6 +67,16 @@ schedule one opt-in local notification for the running countdown's finish date
 
 The unused `ContentView` entry point is gone; `Visual_TimerApp` hosts
 `MainTabView`. `TimerVisualView` remains the iPhone dial.
+
+History session detail (`SessionDetailView`) draws a `SessionTimeline`: one
+block per turn on a coloured spine, hatched pause stretches, round headings
+when the sequence repeats, a went-back marker, and a Finished/Ended end
+marker. By name totals offer Share, Average, and Turns; the last choice is
+kept in `@AppStorage("historyTotalsStyle")`. Drawing lives in
+`SessionTimelineSpine.swift` and `SessionTotalsViews.swift`. Records without
+`roundColors` use fallback palette colours on the timeline and the History
+list ribbon. This is display only; history storage and CloudKit format are
+unchanged.
 
 ## Documents and sync
 

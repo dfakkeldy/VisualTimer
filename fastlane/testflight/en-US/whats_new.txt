@@ -10,6 +10,7 @@ Please test:
 - Sequence playback, repeat, skip, restart, and do-over behavior.
 - Template import/export without overwriting existing templates.
 - Recent history and Pro-gated history/export behavior.
+- History session detail: proportional vertical timeline (turns, pauses, went-back, Finished/Ended) and By name totals (Share / Average / Turns).
 - Pro unlock and Restore Purchases in TestFlight sandbox if available.
 - iCloud template/history sync after the production CloudKit schema is deployed.
 - Home Screen/Lock Screen widgets and watch playback where installed.
