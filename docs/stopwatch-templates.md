@@ -140,10 +140,15 @@ tests passed, including 52 stopwatch tests, and both confirmation UI tests
 passed on the iPhone 17 Pro simulator with iOS 27.0. The tests exercise native
 popover dismissal when the platform omits a cancel-role row. Source parsing,
 whitespace, plist and StoreKit configuration checks also passed.
+On 2026-11-09, the accessibility-layout revision also passed all 182 unit tests
+and the three focused UI tests, including the AX5 smoke audit. The later chart
+accessibility representation compiled and its comparison and trend trees were
+checked separately.
 Rendered iPhone captures verify the accessibility-size text alternative, standard-size
 charts, recording-button contrast and visible Next icon. iPad captures cover portrait
-and landscape sheets and the landscape accessibility-size review. Charts suppress
-their accessibility children so the combined text rows provide the spoken values;
+and landscape sheets and accessibility-size reviews in both orientations. Charts suppress
+their accessibility children so the text rows are the only accessibility elements
+carrying chart values;
 standard-size comparison and trend snapshots confirm their chart elements are absent
 while the combined text rows remain. A clipping audit cannot prove chart layout. Spoken
 VoiceOver evidence also remains outstanding; compilation, labels and audit results
