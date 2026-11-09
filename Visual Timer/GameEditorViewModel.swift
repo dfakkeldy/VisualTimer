@@ -293,17 +293,20 @@ final class GameEditorViewModel: ObservableObject {
     func stopwatchApplyBlocker(_ recording: StopwatchRecording, kind: StopwatchViewModel.ApplyKind) -> StopwatchError? {
         do { try recording.validate() }
         catch { return (error as? StopwatchError) ?? .invalidRecording }
-        let savedSource = templateLibrary.listTemplates().first { $0.id == recording.source.templateID }
-        let changedSource = StopwatchError.changedTemplate(savedSource?.title ?? recording.source.title)
         switch kind {
         case .existingTemplate:
             let activeIDs = Set(rounds.filter(\.isActive).map(\.id))
             guard recording.source.templateID == stopwatchTemplateID,
                   Set(rounds.map(\.id)).count == rounds.count,
-                  recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else { return changedSource }
+                  recording.measurements.allSatisfy({ activeIDs.contains($0.stepID) }) else {
+                let savedSource = templateLibrary.listTemplates().first { $0.id == recording.source.templateID }
+                return .changedTemplate(savedSource?.title ?? recording.source.title)
+            }
         case .newTemplate:
             guard recording.isComplete else { return .invalidRecording }
-            guard savedSource == nil else { return changedSource }
+            if let savedSource = templateLibrary.listTemplates().first(where: { $0.id == recording.source.templateID }) {
+                return .changedTemplate(savedSource.title)
+            }
         }
         return nil
     }

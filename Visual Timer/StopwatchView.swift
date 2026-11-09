@@ -256,7 +256,7 @@ struct StopwatchView: View {
 
     @ViewBuilder
     private func reviewSections(record: StopwatchRecording) -> some View {
-        let blocker = applyBlocker(record)
+        let blocker = model.canApply ? applyBlocker(record) : nil
         Section {
             Text(record.source.title).font(.title2.weight(.bold))
                 .accessibilityAddTraits(.isHeader)

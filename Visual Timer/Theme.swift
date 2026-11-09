@@ -444,7 +444,7 @@ extension Theme {
         static let unsavedReview = "Unsaved review"
         static let retainedWorkspaceHint = "Return to your stopwatch to keep or discard its work before opening another stopwatch."
         static let discardPlanTitle = "Discard this plan?"
-        static let discardPlanAndRecordingHint = "Your measurements and unsaved plan edits will be lost. Saved recordings stay on this device."
+        static let discardPlanAndRecordingHint = "Discard just the measurements to keep editing your plan, or discard both the recording and plan. Saved recordings stay on this device."
         static let discardPlanHint = "Your unsaved routine name and step edits will be lost."
         static let discardPlan = "Discard plan"
         static let discardReviewTitle = "Discard these measurements?"
