@@ -76,7 +76,7 @@ struct RoundTile: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
-            .fill(round.color.swiftUIColor.opacity(0.4))
+            .fill(round.color.swiftUIColor)
             .overlay {
                 if round.emoji.isEmpty {
                     Circle().fill(round.color.swiftUIColor).frame(width: size * 0.32)
