@@ -16,5 +16,6 @@ Please test:
 - iCloud template/history sync after the production CloudKit schema is deployed.
 - Home Screen/Lock Screen widgets and watch playback where installed.
 - Watch: tap the dial to start/pause; End confirmation.
+- Live iPhone/Watch routine: start a sequence on one device, join and control it from the other; conflict/replace prompt if both run independently; recovery after relaunch. Quick timers and stopwatch recordings stay on this device. Both apps need this update.
 
 Report install, launch, sync, purchase, widget, and watch issues with screenshots when possible.

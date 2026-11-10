@@ -89,28 +89,34 @@ Useful docs:
   (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
   saved templates are sent to the paired Watch as full snapshots through
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
-  iPhone library. Signed TestFlight now includes the Watch companion; physical
-  paired-Watch acceptance is not yet verified. Watch timers show live remaining
-  time and keep running while you move between screens. The Watch dial uses the
-  same emptying pie as the phone; tap it to start or pause. Template rows show
-  duration-weighted colour ribbons. A session screen shows Next, time left, and
-  End with confirmation. On screen, a finished
-  timer plays the selected sound with a haptic.
-  If you allow alerts, a local notification covers completion while the app
-  is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
-  tested on a physical Watch. Watch playback is not restored after the Watch
-  app is terminated.
+  iPhone library. A running routine can be joined and controlled from the
+  paired iPhone or Watch: the device that starts it stays the sole authority,
+  and connected controls use acknowledged commands. Quick timers and stopwatch
+  recordings stay on the device that created them. Both devices need this
+  update; mixed-version live payloads fail closed with guidance to update.
+  Joined routine playback is restored after an app close from device-local
+  `LiveRoutine.json`. A Watch quick timer is not restored after the Watch app
+  is terminated. Signed TestFlight now includes the Watch companion;
+  physical paired-Watch acceptance is not yet verified. Watch timers show live
+  remaining time and keep running while you move between screens. The Watch
+  dial uses the same emptying pie as the phone; tap it to start or pause.
+  Template rows show duration-weighted colour ribbons. A session screen shows
+  Next, time left, and End with confirmation. On screen, a finished timer plays
+  the selected sound with a haptic. If you allow alerts, a local notification
+  covers completion while the app is off screen
+  ([plan](docs/watch-quality-plan.md)). None of this has been tested on a
+  physical Watch.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
 These scope bullets describe implemented source, not signed-device acceptance.
 Public App Store 1.0 availability is recorded in Status and the readiness
 ledger. None of the iPhone alerts, rim drag, session restore, History session
-timeline, routine stopwatch, or Watch dial-tap behavior has been verified on
-a physical iPhone or Watch.
-Production sync, saved Watch-template transfer and timer lock/background
-behavior still need the focused checks in the readiness ledger. No
-background-alarm guarantee is implied.
+timeline, routine stopwatch, Watch dial-tap, or live iPhone/Watch routine
+control has been verified on a physical iPhone or Watch.
+Production sync, saved Watch-template transfer, live iPhone/Watch routine
+control, and timer lock/background behavior still need the focused checks in
+the readiness ledger. No background-alarm guarantee is implied.
 
 ## Core Features
 
@@ -121,10 +127,12 @@ background-alarm guarantee is implied.
   the rim sets duration. Controls use Liquid Glass on
   iOS 26+, with material fallbacks on iOS 18 and accessibility alternatives for
   reduced motion, reduced transparency, and increased contrast.
-- **On-device snapshots** - A playing session, a started quick timer, and
-  unsaved template edits are stored as small JSON files in Application Support
-  (`ActiveSession.json`, `QuickTimer.json`, `TemplateDraft.json`). Malformed
-  files are discarded rather than restored.
+- **On-device snapshots** - A playing session, a started quick timer, unsaved
+  template edits, and live iPhone/Watch routine playback are stored as small
+  files in Application Support (`ActiveSession.json`, `QuickTimer.json`
+  (iPhone only),
+  `TemplateDraft.json`, `LiveRoutine.json`, and `RoutineDeviceID`). Malformed
+  snapshot and journal files are discarded rather than restored.
 - **Stopwatch recordings** - Explicitly saved measurements are JSON files in
   Application Support (`StopwatchRecordings/<id>.json`). They stay on the
   device and are not CloudKit records. Malformed files are kept for recovery
@@ -177,6 +185,7 @@ status, data formats, sync boundaries, and release-engineering notes.
 |---|---|---|
 | Timer core | `TimerViewModel`, `TimerState`, `TimerSound`, `SoundManager` | Countdown state, audio, sleep prevention |
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
+| Live routine | `LiveRoutineSession`, `LiveRoutineController`, `WatchTemplateConnectivity` | iPhone/Watch playback; starting device is authority; device-local journal |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
 | Stopwatch | `StopwatchViewModel`, `StopwatchSession`, `StopwatchRecordingStore`, `StopwatchWorkspace` | Guarded step timing, device-local recordings, review/Apply |
 | Sync | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, CloudKit mappers, `UbiquitousSettingsStore` | Pro iCloud template/history sync and lightweight settings sync |
