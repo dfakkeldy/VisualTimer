@@ -95,7 +95,8 @@ Useful docs:
   recordings stay on the device that created them. Both devices need this
   update; mixed-version live payloads fail closed with guidance to update.
   Joined routine playback is restored after an app close from device-local
-  `LiveRoutine.json`. Signed TestFlight now includes the Watch companion;
+  `LiveRoutine.json`. A Watch quick timer is not restored after the Watch app
+  is terminated. Signed TestFlight now includes the Watch companion;
   physical paired-Watch acceptance is not yet verified. Watch timers show live
   remaining time and keep running while you move between screens. The Watch
   dial uses the same emptying pie as the phone; tap it to start or pause.
@@ -128,7 +129,8 @@ the readiness ledger. No background-alarm guarantee is implied.
   reduced motion, reduced transparency, and increased contrast.
 - **On-device snapshots** - A playing session, a started quick timer, unsaved
   template edits, and live iPhone/Watch routine playback are stored as small
-  files in Application Support (`ActiveSession.json`, `QuickTimer.json`,
+  files in Application Support (`ActiveSession.json`, `QuickTimer.json`
+  (iPhone only),
   `TemplateDraft.json`, `LiveRoutine.json`, and `RoutineDeviceID`). Malformed
   snapshot and journal files are discarded rather than restored.
 - **Stopwatch recordings** - Explicitly saved measurements are JSON files in
