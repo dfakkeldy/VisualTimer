@@ -16,7 +16,118 @@ enum GamePhase {
 
 // MARK: - Game View Model
 
+@MainActor
 final class GameViewModel: ObservableObject {
+
+    private(set) var live: LiveRoutineController?
+    @Published private(set) var syncStatus: String?
+    @Published private(set) var hasSyncConflict = false
+    @Published private(set) var canControlRoutine = true
+    @Published private(set) var pendingReplacement: GameSequence?
+    @Published private(set) var availableRemoteRoutine = false
+    private var replacementConfirmed = false
+    private var joinedLive = false
+    private var projectingLive = false
+    var isLiveSession: Bool { joinedLive && live?.journal.current != nil }
+    var isReplica: Bool { isLiveSession && live?.owner == false }
+
+    func enableLiveSync(directory: URL? = nil, transport: (any LiveRoutineTransport)? = nil, clock: RoutineClock = RoutineClock()) {
+        guard live == nil, transport != nil || WatchTemplateConnectivity.supportsLiveRoutine else { return }
+        let controller = LiveRoutineController(directory: directory, transport: transport ?? WatchTemplateConnectivity.shared, clock: clock)
+        live = controller
+        controller.saveHistory = { [weak self] state in self?.saveLiveHistory(state) ?? false }
+        controller.changed = { [weak self] in self?.projectLive() }
+        controller.expired = { [weak self] in self?.timerViewModel.onFinish?() }
+        timerViewModel.liveTick = { [weak self] in
+            guard let self, self.isLiveSession else { return false }
+            controller.tick()
+            self.updateLiveTimer()
+            return true
+        }
+        // A persisted owner or replica resumes here. Legacy restore runs first.
+        joinedLive = controller.journal.current?.id == controller.journal.joinedSession && controller.journal.current != nil && gamePhase == .idle
+        projectLive()
+        controller.commitHistoryIfNeeded()
+        controller.activate()
+    }
+
+    func toggleLiveRoutine() {
+        guard isLiveSession, let live, let state = live.journal.current else { return }
+        live.perform(state.phase == .running ? .pause : .resume)
+    }
+
+    func joinRemoteRoutine() {
+        // Legacy recovery has its own durable file and history boundary.
+        // Complete that boundary before projecting any remote state.
+        if gamePhase == .playing && !isLiveSession { endGame(clearState: true) }
+        joinedLive = true; live?.join(); projectLive()
+    }
+    func resolveSyncConflict() { live?.useOtherSession(); joinedLive = true; projectLive() }
+    func leaveLiveRoutine() { pendingReplacement = nil; replacementConfirmed = false; live?.leave(); joinedLive = false; resetSession(clearState: true, saveRecord: false) }
+    func cancelReplacement() { pendingReplacement = nil; replacementConfirmed = false }
+    func confirmReplacement() {
+        guard pendingReplacement != nil, let live else { return }
+        guard live.canControl else { return }
+        replacementConfirmed = true
+        live.perform(.end)
+        if live.pending == nil, live.journal.current?.terminal == false { replacementConfirmed = false }
+    }
+
+    private func projectLive() {
+        guard let live else { return }
+        if replacementConfirmed, live.pending == nil, live.note == nil, live.journal.current?.terminal == true, let plan = pendingReplacement {
+            replacementConfirmed = false; pendingReplacement = nil
+            joinedLive = true; live.start(plan); return
+        }
+        if replacementConfirmed, live.pending == nil, live.journal.current?.terminal == false { replacementConfirmed = false }
+        hasSyncConflict = live.journal.conflict != nil
+        canControlRoutine = live.canControl
+        availableRemoteRoutine = !joinedLive && live.journal.current?.terminal == false
+        syncStatus = live.journal.current == nil ? nil : live.note ?? (live.owner ? Theme.LiveRoutine.owner : (live.canControl ? Theme.LiveRoutine.connected : Theme.LiveRoutine.lastSynced))
+        guard joinedLive, let state = live.journal.current else { return }
+        projectingLive = true
+        defer { projectingLive = false }
+        gameSequence = state.plan
+        currentRoundIndex = state.step
+        currentOverallRound = state.repetition
+        totalRoundCount = state.plan.roundCount
+        sessionEvents = state.events
+        currentRound = state.terminal ? nil : state.round
+        gamePhase = state.terminal ? .gameOver : .playing
+        gameStartDate = state.startedAt
+        gameElapsedTime = max(0, live.renderDate.timeIntervalSince(state.startedAt))
+        timerViewModel.stopAndReset()
+        let running = state.phase == .running && !live.isEstimating
+        let progress = displayProgress(state, live: live)
+        timerViewModel.restore(totalDuration: state.round.durationSeconds, progress: progress,
+            state: running ? .running : (state.phase == .waiting ? .notStarted : .paused), color: state.round.color.swiftUIColor)
+        if state.terminal { timerViewModel.stopAndReset(); lastRecordSaved = live.owner && live.journal.historyCommitted.contains(state.id) }
+    }
+
+    private func displayProgress(_ state: LiveRoutineSession, live: LiveRoutineController) -> TimerVisualProgress {
+        let now = Date()
+        let progress = TimerVisualProgress(totalDuration: state.round.durationSeconds)
+            .running(from: now.addingTimeInterval(-state.elapsed(at: live.renderDate)))
+        return state.phase == .running && !live.isEstimating ? progress : progress.paused(at: now)
+    }
+
+    private func updateLiveTimer() {
+        guard let live, let state = live.journal.current, !state.terminal else { return }
+        let progress = displayProgress(state, live: live)
+        timerViewModel.updateLiveDisplay(progress)
+    }
+
+    private func saveLiveHistory(_ state: LiveRoutineSession) -> Bool {
+        let rounds = state.plan.activeRounds
+        let record = GameRecord(id: state.id, gameTitle: state.plan.title, session: GameSession(events: state.events),
+            playerNames: rounds.map(\.name), playedAt: state.startedAt,
+            roundColors: Dictionary(rounds.map { ($0.name, $0.color) }, uniquingKeysWith: { first, _ in first }))
+        // A crash between history and journal persistence overwrites the same id.
+        if historyStore.load(id: state.id) != nil { return true }
+        let saved = historyStore.save(record)
+        if saved { onHistoryRecordSaved?(record) }
+        return saved
+    }
 
     // MARK: - Published State
 
@@ -146,7 +257,8 @@ final class GameViewModel: ObservableObject {
 
     /// Rounds this session ran to an end, finished or skipped.
     var stepsRunCount: Int {
-        sessionEvents.reduce(0) { count, event in
+        if isReplica, let summary = live?.journal.current?.summary { return summary.steps }
+        return sessionEvents.reduce(0) { count, event in
             switch event {
             case .roundFinished, .skipped: return count + 1
             default: return count
@@ -156,13 +268,15 @@ final class GameViewModel: ObservableObject {
 
     /// Rounds skipped in the session so far.
     var skippedCount: Int {
-        GameSession(events: sessionEvents).skipCount
+        if isReplica, let summary = live?.journal.current?.summary { return summary.skipped }
+        return GameSession(events: sessionEvents).skipCount
     }
 
     /// Wall-clock length of the session that just finished or is running,
     /// from its first to its last recorded event.
     var sessionDurationSeconds: TimeInterval {
-        GameSession(events: sessionEvents).totalElapsedSeconds
+        if isReplica, let summary = live?.journal.current?.summary { return summary.duration }
+        return GameSession(events: sessionEvents).totalElapsedSeconds
     }
 
     // MARK: - Init
@@ -185,6 +299,14 @@ final class GameViewModel: ObservableObject {
     /// reaches History rather than vanishing.
     func loadGame(_ game: GameSequence) {
         guard !game.activeRounds.isEmpty else { return }
+        if let live, !projectingLive {
+            if gamePhase == .playing && !isLiveSession { endGame(clearState: true) }
+            joinedLive = true
+            live.join()
+            if live.journal.current?.terminal == false { pendingReplacement = game; projectLive() }
+            else { live.start(game) }
+            return
+        }
         endGame(clearState: true)
         gameSequence = game
         currentRoundIndex = 0
@@ -192,6 +314,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func startGame() {
+        if isLiveSession && !projectingLive { return }
         guard let game = gameSequence,
               gamePhase == .ready,
               !game.activeRounds.isEmpty else { return }
@@ -208,6 +331,12 @@ final class GameViewModel: ObservableObject {
     }
 
     func endGame(clearState: Bool = false) {
+        if isLiveSession, let live, !projectingLive {
+            if live.journal.current?.terminal == true {
+                live.dismiss(); joinedLive = false; resetSession(clearState: clearState, saveRecord: false)
+            } else { live.perform(.end) }
+            return
+        }
         resetSession(clearState: clearState, saveRecord: true)
     }
 
@@ -215,6 +344,7 @@ final class GameViewModel: ObservableObject {
 
     /// Called by the unified onFinish handler when a round's timer hits zero.
     func handleTimerFinished() {
+        if isLiveSession, let live { live.tick(); return }
         guard gamePhase == .playing else { return }
         if let round = currentRound {
             sessionEvents.append(.roundFinished(playerName: round.name, timestamp: Date()))
@@ -240,6 +370,9 @@ final class GameViewModel: ObservableObject {
 
     /// Replays the full active-round sequence once more from the beginning.
     func addRoundDuringGameOver() {
+        if isLiveSession, let live, let plan = gameSequence, gamePhase == .gameOver {
+            live.start(plan); return
+        }
         guard gamePhase == .gameOver, !activeRounds.isEmpty else { return }
         currentOverallRound += 1
         totalRoundCount += 1
@@ -316,6 +449,7 @@ final class GameViewModel: ObservableObject {
 
     /// User taps the play button on a paused-start round.
     func startCurrentRound() {
+        if isLiveSession, let live, !projectingLive { live.perform(.resume); return }
         guard gamePhase == .playing, timerViewModel.state == .notStarted else { return }
         timerViewModel.play()
         saveSession()
@@ -368,6 +502,7 @@ final class GameViewModel: ObservableObject {
 
     @discardableResult
     func restoreSavedSession(now: Date = Date()) -> Bool {
+        if isLiveSession { return live?.journal.current?.terminal == false }
         guard gamePhase == .idle, let snapshot = sessionStore?.load() else { return false }
         let rounds = snapshot.game.activeRounds
         guard rounds.indices.contains(snapshot.currentRoundIndex) else {
@@ -427,6 +562,7 @@ final class GameViewModel: ObservableObject {
     // MARK: - Controls
 
     func doOverToPrevious() {
+        if isLiveSession, let live, !projectingLive { live.perform(.previous); return }
         guard gamePhase == .playing, currentRoundIndex > 0 else { return }
         let rounds = activeRounds
         let prevIndex = currentRoundIndex - 1
@@ -437,6 +573,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func skipCurrentRound() {
+        if isLiveSession, let live, !projectingLive { live.perform(.next); return }
         guard gamePhase == .playing else { return }
         let rounds = activeRounds
         guard currentRoundIndex < rounds.count else { return }
@@ -445,6 +582,7 @@ final class GameViewModel: ObservableObject {
     }
 
     func restartCurrentTimer() {
+        if isLiveSession, let live, !projectingLive { live.perform(.restart); return }
         guard gamePhase == .playing else { return }
         if let round = currentRound {
             sessionEvents.append(.restartTimer(playerName: round.name, timestamp: Date()))

@@ -84,6 +84,7 @@ final class WatchTimerAlertCoordinator {
     /// while suspended can remain unobserved until this app process ends;
     /// absence from a snapshot alone cannot prove a late alert will not arrive.
     private var systemOwnedNotifications: Set<String> = []
+    var notificationsEnabled: () -> Bool = { true }
     private var progressSubscription: AnyCancellable?
 
     init(
@@ -234,7 +235,7 @@ final class WatchTimerAlertCoordinator {
     }
 
     private func track(_ progress: TimerVisualProgress) {
-        let newDeadline = progress.finishDate
+        let newDeadline = notificationsEnabled() ? progress.finishDate : nil
         guard newDeadline != deadline else { return }
         cancelPendingNotification()
         deadline = newDeadline

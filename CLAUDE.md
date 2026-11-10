@@ -35,6 +35,9 @@ language; `Architecture.md` has the design.
   app. Saved templates reach it through `WatchTemplateConnectivity`
   (WatchConnectivity full snapshots); App Group files alone do not cross
   devices.
+- Live routine playback uses `LiveRoutineSession` and `LiveRoutineController` with
+  the same connectivity delegate. The starter owns authority; replicas send only
+  reachable, acknowledged commands. See `Architecture.md` for recovery and conflicts.
 - Commit messages are short and imperative: "Add template picker".
 
 ## Branches and releases

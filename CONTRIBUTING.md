@@ -156,3 +156,10 @@ and advanced customization.
 - Signed-device validation proves the pieces local builds cannot: iCloud account
   status, container entitlements, subscriptions, schema readiness, cross-device
   propagation, and widget tap behavior on real app installations.
+
+## Live routine playback
+
+Live iPhone/Watch routine playback is basic playback and stays free. The embedded
+plan is an immutable session snapshot, never a saved Watch template. Saved-template
+transfer keeps its existing Pro rules. Quick timers and stopwatch recordings do
+not participate in live routine synchronization.

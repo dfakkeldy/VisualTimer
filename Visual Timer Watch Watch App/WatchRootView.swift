@@ -14,6 +14,12 @@ struct WatchRootView: View {
     var body: some View {
         NavigationStack {
             List {
+                if model.remoteRoutineAvailable {
+                    Button(Theme.LiveRoutine.join) {
+                        model.gameViewModel.joinRemoteRoutine()
+                        presentingSession = true
+                    }
+                }
                 if let session = model.activeSession {
                     Section {
                         Button {

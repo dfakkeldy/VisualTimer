@@ -5,7 +5,8 @@ import OSLog
 /// Sends the latest saved-template snapshot across devices. App Groups only
 /// provide durable storage on each device, not a phone-to-Watch transport.
 @MainActor
-final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
+final class WatchTemplateConnectivity: NSObject, WCSessionDelegate, LiveRoutineTransport {
+    static var supportsLiveRoutine: Bool { WCSession.isSupported() }
     static let shared = WatchTemplateConnectivity()
     static let templatesChanged = Notification.Name("TurnTimerWatchTemplatesChanged")
 
@@ -14,6 +15,78 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
     private let logger = Logger(subsystem: "Dan.Visual-Timer", category: "WatchTemplates")
     private let store = WatchTemplateStore()
     private let session: WCSession?
+    static let liveKey = "turnTimerLiveRoutineV1"
+    var connectionChanged: (() -> Void)?
+    var receiveLive: ((Data) -> Void)?
+    var receiveCommand: ((Data, @escaping (Data) -> Void) -> Void)?
+    var reachable: Bool { session?.isReachable == true }
+    private var liveData: Data?
+    private var lastQueuedLive: Data?
+
+    func replayLiveContext() {
+        if let data = session?.receivedApplicationContext[Self.liveKey] as? Data { receiveLive?(data) }
+    }
+
+    func publishLive(_ data: Data) {
+        liveData = data
+        activate()
+        sendCombinedContext()
+    }
+
+    func sendLiveCommand(_ data: Data, completion: @escaping (Data?) -> Void) {
+        guard let session, session.isReachable else { completion(nil); return }
+        session.sendMessageData(data, replyHandler: { @Sendable reply in
+            Task { @MainActor in completion(reply) }
+        }, errorHandler: { @Sendable _ in Task { @MainActor in completion(nil) } })
+    }
+
+    /// Keep large template payloads on the existing file channel. A large live
+    /// journal also falls back to a file, independently of template delivery.
+    static func composedContext(templates: [String: Any]?, live: Data?) -> [String: Any] {
+        var context = templates ?? [:]
+        if let templateData = context[WatchTemplateStore.contextKey] as? Data, templateData.count > 24_000 {
+            context.removeValue(forKey: WatchTemplateStore.contextKey)
+        }
+        if let live, live.count <= 24_000 { context[liveKey] = live }
+        return context
+    }
+
+    private func queueFile(_ data: Data, marker: String) {
+        guard let session else { return }
+        do {
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TurnTimerWatchTransfers", isDirectory: true)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let file = directory.appendingPathComponent(UUID().uuidString).appendingPathExtension("json")
+            try data.write(to: file, options: .atomic)
+            session.transferFile(file, metadata: [marker: true])
+        } catch { logger.error("Unable to queue companion snapshot."); scheduleRetry() }
+    }
+
+    private func sendCombinedContext() {
+        guard let session, session.activationState == .activated else { return }
+#if os(iOS)
+        guard session.isPaired, session.isWatchAppInstalled else { return }
+#endif
+        let context = Self.composedContext(templates: deliveryState.latestContext, live: liveData)
+        do { try session.updateApplicationContext(context); deliveryState.resetRetries() }
+        catch { scheduleRetry() }
+        if let liveData, liveData.count > 24_000, liveData != lastQueuedLive {
+            lastQueuedLive = liveData; queueFile(liveData, marker: Self.liveKey)
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveMessageData messageData: Data,
+                             replyHandler: @escaping (Data) -> Void) {
+        Task { @MainActor [weak self] in
+            guard let handler = self?.receiveCommand else { replyHandler(Data()); return }
+            handler(messageData, replyHandler)
+        }
+    }
+
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Task { @MainActor [weak self] in self?.sendCombinedContext(); self?.connectionChanged?() }
+    }
+
     private var deliveryState = WatchTemplateDeliveryState()
     private var retryTask: Task<Void, Never>?
 
@@ -64,33 +137,18 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
     }
 
     private func sendPendingContext() {
+        sendCombinedContext()
 #if os(iOS)
         guard let session, session.activationState == .activated,
               session.isPaired, session.isWatchAppInstalled,
-              let context = deliveryState.latestContext,
-              let data = context[WatchTemplateStore.contextKey] as? Data else { return }
-        do {
-            // Context replaces older snapshots and does not require reachability.
-            try session.updateApplicationContext(context)
-            deliveryState.resetRetries()
-        } catch {
-            // Large snapshots exceed the context limit. File delivery retains the
-            // full payload; persisted revisions reject delayed/out-of-order files.
-            do {
-                let directory = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("TurnTimerWatchTransfers", isDirectory: true)
-                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                let file = directory.appendingPathComponent(UUID().uuidString).appendingPathExtension("json")
-                try data.write(to: file, options: .atomic)
-                session.transferFile(file, metadata: [Self.fileMarker: true])
-            } catch {
-                logger.error("Unable to queue Watch template snapshot.")
-            }
-        }
+              let data = deliveryState.latestContext?[WatchTemplateStore.contextKey] as? Data,
+              data.count > 24_000 else { return }
+        queueFile(data, marker: Self.fileMarker)
 #endif
     }
 
     private func accept(context: [String: Any]) {
+        if let data = context[Self.liveKey] as? Data { receiveLive?(data) }
 #if os(watchOS)
         do {
             if try store.applyApplicationContext(context) {
@@ -112,6 +170,7 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
         Task { @MainActor [weak self] in
             self?.accept(context: context)
             self?.sendPendingContext()
+            self?.connectionChanged?()
         }
     }
 
@@ -122,15 +181,16 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {
         // WatchConnectivity removes the temporary received file after this
         // delegate method returns. Read its bytes before crossing to MainActor.
-        guard file.metadata?["turnTimerTemplateFile"] as? Bool == true,
+        let live = file.metadata?["turnTimerLiveRoutineV1"] as? Bool == true
+        guard live || file.metadata?["turnTimerTemplateFile"] as? Bool == true,
               let data = try? Data(contentsOf: file.fileURL) else { return }
         Task { @MainActor [weak self] in
-            self?.accept(context: [WatchTemplateStore.contextKey: data])
+            self?.accept(context: [live ? Self.liveKey : WatchTemplateStore.contextKey: data])
         }
     }
 
     nonisolated func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
-        guard fileTransfer.file.metadata?["turnTimerTemplateFile"] as? Bool == true else { return }
+        guard fileTransfer.file.metadata?["turnTimerTemplateFile"] as? Bool == true || fileTransfer.file.metadata?["turnTimerLiveRoutineV1"] as? Bool == true else { return }
         let url = fileTransfer.file.fileURL
         let ownedDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("TurnTimerWatchTransfers", isDirectory: true).standardizedFileURL
@@ -138,7 +198,8 @@ final class WatchTemplateConnectivity: NSObject, WCSessionDelegate {
         try? FileManager.default.removeItem(at: url)
         if error != nil {
             Task { @MainActor [weak self] in
-                self?.logger.error("Watch template file delivery failed; retrying latest snapshot.")
+                self?.lastQueuedLive = nil
+                self?.logger.error("Companion file delivery failed; retrying latest snapshot.")
                 self?.scheduleRetry()
             }
         }

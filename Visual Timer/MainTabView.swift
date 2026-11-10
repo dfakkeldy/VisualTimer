@@ -51,6 +51,14 @@ struct MainTabView: View {
         )
         gameViewModel.sessionStore = ActiveSessionStore(directory: documentsDirectory)
         quickTimerStore = QuickTimerStore(directory: documentsDirectory)
+        _ = gameViewModel.restoreSavedSession()
+#if DEBUG
+        if DesignCouncilFixture.current == nil {
+            gameViewModel.enableLiveSync(directory: documentsDirectory)
+        }
+#else
+        gameViewModel.enableLiveSync(directory: documentsDirectory)
+#endif
         _gameViewModel = StateObject(wrappedValue: gameViewModel)
         _gameEditorViewModel = StateObject(wrappedValue: GameEditorViewModel(templateLibrary: templateLibrary, draftDirectory: documentsDirectory))
         _historyViewModel = StateObject(wrappedValue: historyViewModel)
@@ -120,6 +128,7 @@ struct MainTabView: View {
         .onOpenURL(perform: handleOpenURL)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                gameViewModel.live?.activate()
                 timerViewModel.refreshCountdown()
                 WatchTemplateConnectivity.shared.retryLatestSnapshot()
             }

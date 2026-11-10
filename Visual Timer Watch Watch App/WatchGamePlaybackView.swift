@@ -23,22 +23,31 @@ struct WatchGamePlaybackView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Watch.Dimension.contentSpacing) {
+                LiveRoutineStatusView(status: gameViewModel.syncStatus,
+                    conflict: gameViewModel.hasSyncConflict,
+                    replacement: gameViewModel.pendingReplacement?.title, canReplace: gameViewModel.canControlRoutine,
+                    available: gameViewModel.availableRemoteRoutine, replica: gameViewModel.isReplica,
+                    onJoin: { gameViewModel.joinRemoteRoutine() }, onOther: { gameViewModel.resolveSyncConflict() },
+                    onReplace: { gameViewModel.confirmReplacement() }, onCancel: { gameViewModel.cancelReplacement() },
+                    onLeave: { gameViewModel.leaveLiveRoutine(); dismiss() })
                 if gameViewModel.gamePhase == .gameOver {
                     gameOverContent
                 } else {
                     playingContent
+                        .disabled(gameViewModel.isLiveSession && !gameViewModel.canControlRoutine)
                 }
             }
         }
         .navigationTitle(gameViewModel.gameSequence?.title ?? "")
         .confirmationDialog("End this session?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("End and save", role: .destructive) {
+            Button(gameViewModel.isReplica ? Theme.LiveRoutine.endConnected : "End and save", role: .destructive) {
                 onEnd()
                 dismiss()
             }
+            .disabled(gameViewModel.isLiveSession && !gameViewModel.canControlRoutine)
             Button("Keep going", role: .cancel) {}
         } message: {
-            Text("What you've done so far is saved to History.")
+            Text(gameViewModel.isReplica ? Theme.LiveRoutine.savedOnOwner : "What you've done so far is saved to History.")
         }
     }
 
@@ -154,7 +163,7 @@ struct WatchGamePlaybackView: View {
                 .accessibilityHidden(true)
             Text(Theme.Watch.Label.sessionComplete)
                 .font(.headline)
-            Text("Total \(WatchTimeText.clock(Int(gameViewModel.sessionDurationSeconds))) · saved")
+            Text("Total \(WatchTimeText.clock(Int(gameViewModel.sessionDurationSeconds))) · \(gameViewModel.isReplica ? Theme.LiveRoutine.savedOnOwner : (gameViewModel.lastRecordSaved ? "saved" : "could not save"))")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             WatchControlButton(

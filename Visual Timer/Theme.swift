@@ -598,3 +598,24 @@ extension Theme {
         }
     }
 }
+
+// Shared live-session copy for phone and companion.
+extension Theme {
+    enum LiveRoutine {
+        static let versionMismatch = "Update both apps to sync this routine"
+        static let savedOnOwner = "Saved on the device that started it"
+        static let endConnected = "End connected routine"
+        static let storageError = "Routine could not be saved · controls unavailable"
+        static let noAcknowledgement = "No reply · check the current step before trying again"
+        static let stepChanged = "The step changed before this action arrived"
+        static let join = "Join connected routine"
+        static let leave = "Leave routine on this device"
+        static let keepCurrent = "Keep current routine"
+        static func replace(_ title: String) -> String { "End and start \(title)" }
+        static let owner = "This device controls the routine"
+        static let connected = "Connected routine"
+        static let lastSynced = "Last synced · controls unavailable"
+        static let conflict = "Another routine is running"
+        static let useOther = "End this and join other routine"
+    }
+}
