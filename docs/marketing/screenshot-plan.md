@@ -10,10 +10,10 @@ is used for capture. Screenshots are drafts until matched to Dan's selected
 
 - iPhone 17, iOS 27.2, portrait, English/Canada, 1206 × 2622.
 - iPad Pro 13-inch (M5), iOS 27.2, portrait, English/Canada, 2064 × 2752.
-- Watch: no watchOS simulator runtime on this mini. Capture and inspect a
-  consistent Watch size on a machine with a runtime or paired device before
-  submission. The Watch app is embedded; the old empty-embed-phase note is
-  obsolete.
+- Watch: Apple Watch Series 11 (46mm), watchOS 27.2. The runtime was installed
+  without account access during this preparation. Use the focused Watch
+  control test from the repository CI and export its screenshot attachments.
+  The Watch app is embedded; the old empty-embed-phase note is obsolete.
 
 The test fixture seeds generic family-game and routine data in a temporary
 folder. It renders actual native views; it does not add debug labels or draw

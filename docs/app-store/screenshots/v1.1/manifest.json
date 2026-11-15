@@ -1,0 +1,74 @@
+{
+  "sourceCommit": "3febb3abc5adc64a2f390f7b547031b5d920a266",
+  "captureTestCommit": "db6cc1c",
+  "appVersion": "1.0",
+  "appBuild": "1",
+  "intendedRelease": "1.1",
+  "capturedDate": "2026-11-15",
+  "xcode": "27.2 (27B52)",
+  "runtime": "iOS 27.2",
+  "locale": "en_CA",
+  "devices": {
+    "iphone": "iPhone 17",
+    "ipad": "iPad Pro 13-inch (M5)"
+  },
+  "captureMethod": "DesignCouncilCaptureTests; original PNG files, no image edits",
+  "images": [
+    {
+      "file": "ipad/01-timer-ready.png",
+      "width": 2064,
+      "height": 2752,
+      "alpha": false,
+      "sha256": "64520864363943c1a33edbbbadc10a015eb6a80a8297aed2dbfd12743f4032c7"
+    },
+    {
+      "file": "ipad/02-timer-paused.png",
+      "width": 2064,
+      "height": 2752,
+      "alpha": false,
+      "sha256": "5dce4511dcd97c6a84cbaded9c5e64988ab84ecd6d535fc0a73ee4f0b0747779"
+    },
+    {
+      "file": "ipad/08-history.png",
+      "width": 2064,
+      "height": 2752,
+      "alpha": false,
+      "sha256": "ebe6581e2038da8eefa7b5eaa1de3ec6321c3a23f3c3afd0fed3d1133ec46e3c"
+    },
+    {
+      "file": "ipad/13-routine-stopwatch.png",
+      "width": 2064,
+      "height": 2752,
+      "alpha": false,
+      "sha256": "ba360592f881dcc82793400dfbdfdd662a8dcdbb005070314bf3a1de44538adc"
+    },
+    {
+      "file": "iphone/01-timer-ready.png",
+      "width": 1206,
+      "height": 2622,
+      "alpha": false,
+      "sha256": "7b38094f471b752e35c5735f7f1fa0f9d580d6f7e9b9ede36a815cf431e2a60b"
+    },
+    {
+      "file": "iphone/02-timer-paused.png",
+      "width": 1206,
+      "height": 2622,
+      "alpha": false,
+      "sha256": "a5b05e641dfcec6dd6e5e032c04271c531558014f7ce4ed48c189c0ed18b9a0c"
+    },
+    {
+      "file": "iphone/08-history.png",
+      "width": 1206,
+      "height": 2622,
+      "alpha": false,
+      "sha256": "d351f7b40d3d57a8164d5d9a747bcd69fd473c9967c369a1c0e21d48832bc9bb"
+    },
+    {
+      "file": "iphone/13-routine-stopwatch.png",
+      "width": 1206,
+      "height": 2622,
+      "alpha": false,
+      "sha256": "7096baee95fc135419211624402738211cc28a6cf0011aabefab862848d54c2c"
+    }
+  ]
+}
