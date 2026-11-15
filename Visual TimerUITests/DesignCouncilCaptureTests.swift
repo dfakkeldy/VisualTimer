@@ -155,6 +155,32 @@ final class DesignCouncilCaptureTests: XCTestCase {
         capture("12-pro-sheet")
     }
 
+    @MainActor
+    func test13RoutineStopwatch() throws {
+        let app = launch("templates")
+        let timeTemplate = app.buttons["Time this template"]
+        for _ in 0..<8 {
+            if timeTemplate.exists && timeTemplate.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(timeTemplate.exists && timeTemplate.isHittable)
+        timeTemplate.tap()
+        let start = app.buttons["stopwatch.start"]
+        for _ in 0..<8 {
+            if start.exists && start.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(start.exists && start.isHittable)
+        start.tap()
+        let pause = app.buttons["Pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["stopwatch.elapsed"].exists)
+        sleep(12)
+        pause.tap()
+        XCTAssertTrue(app.buttons["Resume"].waitForExistence(timeout: 5))
+        capture("13-routine-stopwatch")
+    }
+
     // MARK: - Helpers
 
     @MainActor

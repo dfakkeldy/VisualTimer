@@ -28,8 +28,9 @@ Build once with the README's simulator `build-for-testing` command, then run
 `TEST_RUNNER_DESIGN_COUNCIL_OUT` to an absolute output directory. Select the
 existing capture tests with `-only-testing:Visual\ TimerUITests/DesignCouncilCaptureTests`.
 For a focused set select `test01TimerReady`, `test02TimerPaused`,
-`test04SessionRoutine`, `test06Templates`, `test08History`, and
-`test10SessionDetail` individually. Keep the result bundle for failure evidence.
+`test04SessionRoutine`, `test06Templates`, `test08History`,
+`test10SessionDetail`, and `test13RoutineStopwatch` individually. Keep the
+result bundle for failure evidence.
 
 Use `CODE_SIGNING_ALLOWED=NO`, `-parallel-testing-enabled NO`, and
 `-maximum-concurrent-test-simulator-destinations 1`. On the rented mini, check
@@ -43,3 +44,8 @@ See [v1.1 preparation](../app-store/v1.1-preparation.md) for actual results,
 remaining acceptance work and the committed image manifest. Version settings
 remain 1.0 (1), as release configuration changes were excluded from this task.
 No images have been uploaded to Apple.
+
+Device categories and alpha requirements were checked against
+[Apple screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
+on 2026-11-15. Confirm acceptance in the selected App Store Connect version;
+this preparation does not access that account.
