@@ -1,11 +1,12 @@
 # Fastlane Release Docs
 
-Lane documentation audited: 2026-10-24. Live release receipts and store state
+Metadata preparation updated: 2026-11-15. Lane configuration is unchanged. Live release receipts and store state
 are tracked separately in [readiness](../docs/app-store/readiness.md).
 
 Fastlane owns Turn Timer's archive, signing-profile sync, TestFlight upload, and
-App Store upload lanes. App Store copy is prepared outside automation in
-`docs/app-store/submission-draft/en-CA/`. The app-store lane skips metadata and
+App Store upload lanes. The v1.1 App Store text is in `fastlane/metadata/en-CA/`, mirrored in
+`docs/app-store/submission-draft/en-CA/` for the submission packet. These are
+review drafts; locale and selected-build acceptance remain with Dan. The app-store lane skips metadata and
 screenshots, so a binary upload does not apply those drafts.
 
 ## Local Tooling

@@ -1,27 +1,17 @@
-# App Store Copy Draft
+# App Store copy for v1.1
 
-Historical planning worksheet. Prepared details and unchecked items below are
-not a current App Store status report. The October 17 source promotion and
-build 77 upload are recorded in [readiness](../app-store/readiness.md). Recheck the selected candidate
-and store state before reusing this draft.
+Prepared 2026-11-15 against nightly `3febb3a`. Copy-ready description, release
+notes, keywords and promotional text live in
+[fastlane/metadata/en-CA](../../fastlane/metadata/en-CA/), with identical copies
+in [submission-draft/en-CA](../app-store/submission-draft/en-CA/).
+Name, subtitle, links and review notes remain in the submission draft.
 
+These files are drafts for Dan to review and apply to the selected 1.1 build.
+No metadata was uploaded. The app_store lane still skips metadata and
+screenshots. TestFlight en-US text is separate from the proposed App Store
+en-CA locale; confirm the live locale before copying.
 
-Re-checked: 2026-10-06 UTC. Status: **draft; submission blocked**.
-
-The locked name is **Turn Timer**. The proposed subtitle is **Visual rounds &
-routines**. Copy-ready name, subtitle, promotional text, description, keywords,
-release notes and review notes are now in
-[submission-draft/en-CA](../app-store/submission-draft/en-CA/).
-[Submission packet](../app-store/submission-packet.md) records fields needing
-ASC verification/owner confirmation and [readiness](../app-store/readiness.md)
-records source risks. These files replace the July alternatives as the active
-draft; no metadata was uploaded.
-
-Use generic game/routine language, no medical treatment claims, no exact price
-or subscription promise. Pro remains a non-consumable. Description matches
-implemented features; production iCloud/widget acceptance is required before
-using it. It does not promise saved iPhone-to-Watch sync or background alarms.
-No feature has been removed. Final copy must match the selected release build.
-
-Avoid publishing release automation or developer documentation as What's New.
-Confirm whether that field applies to the current ASC version.
+See [v1.1 preparation](../app-store/v1.1-preparation.md) for the change inventory,
+independent copy review, capture evidence and outstanding acceptance checks.
+Do not promise guaranteed background alerts, cross-device stopwatch recordings
+or completed physical Watch/production iCloud acceptance.

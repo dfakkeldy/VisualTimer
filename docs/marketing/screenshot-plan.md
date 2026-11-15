@@ -1,65 +1,45 @@
-# Screenshot Capture Manifest
+# Turn Timer v1.1 screenshots
 
-Historical planning worksheet. Prepared details and unchecked items below are
-not a current App Store status report. The October 17 source promotion and
-build 77 upload are recorded in [readiness](../app-store/readiness.md). Recheck the selected candidate
-and store state before reusing this draft.
+The candidate is nightly `3febb3a`, captured with the existing
+`Visual TimerUITests/DesignCouncilCaptureTests.swift`. There is no Fastlane
+snapshot lane, Snapfile or device matrix in this repository. No release lane
+is used for capture. Screenshots are drafts until matched to Dan's selected
+1.1 submission binary.
 
+## Capture matrix
 
-Re-checked: 2026-10-06 UTC. **Native images pending selected candidate**.
-App icon PNGs/SVG exist; `web/docs/design/*.png` are web design evidence and
-must not be uploaded as native screenshots. Do not fabricate screens or use
-old main UI to illustrate nightly features. No screenshots have been uploaded.
+- iPhone 17, iOS 27.2, portrait, English/Canada, 1206 × 2622.
+- iPad Pro 13-inch (M5), iOS 27.2, portrait, English/Canada, 2064 × 2752.
+- Watch: no watchOS simulator runtime on this mini. Capture and inspect a
+  consistent Watch size on a machine with a runtime or paired device before
+  submission. The Watch app is embedded; the old empty-embed-phase note is
+  obsolete.
 
-## Required sizes
+The test fixture seeds generic family-game and routine data in a temporary
+folder. It renders actual native views; it does not add debug labels or draw
+fake UI. Keep only visually inspected screens without clipping, overlays or
+misleading sample data. The Pro sheet uses local StoreKit prices and is not
+part of the customer screenshot set.
 
-Current [Apple specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
-require at least one image per required category, up to ten per size, JPEG/JPG/
-PNG with no alpha/transparency. Required for the universal iOS app; Watch set
-is conditional on an actually submitted Watch app/distribution:
+## Reproduce with project commands
 
-| Platform | Category / accepted portrait dimensions |
-|---|---|
-| iPhone | Dynamic Island medium: 1179×2556 or 1206×2622 |
-| iPad | 13-inch: 2064×2752 or 2048×2732 |
-| Watch, if submitted | Choose one consistent size: 422×514, 410×502, 416×496, 396×484, 368×448 or 312×390 |
+Build once with the README's simulator `build-for-testing` command, then run
+`test-without-building` sequentially for each device above. Set
+`TEST_RUNNER_DESIGN_COUNCIL_OUT` to an absolute output directory. Select the
+existing capture tests with `-only-testing:Visual\ TimerUITests/DesignCouncilCaptureTests`.
+For a focused set select `test01TimerReady`, `test02TimerPaused`,
+`test04SessionRoutine`, `test06Templates`, `test08History`, and
+`test10SessionDetail` individually. Keep the result bundle for failure evidence.
 
-Apple also specifies scaling fallbacks/landscape reversals. Record the actual
-ASC category's acceptance; an old large-iPhone image set is not automatically
-proof that current categories are complete. No Mac screenshots: source has no
-native Mac target.
-
-## Minimum useful launch set
-
-| File stem | Caption | Actual candidate screen |
-|---|---|---|
-| `01-visual-countdown` | Make time visible | Active quick timer with visible duration/controls |
-| `02-reusable-rounds` | Keep every turn moving | Game Night playback with current/next round |
-| `03-starter-templates` | Start with a routine | Six starter templates, including Morning Routine |
-| `04-edit-steps` | Build the steps you need | Editor with public fixture names/durations |
-| `05-pro-reuse` | Keep the setups you reuse | Real Pro screen; no price overlay or unsupported feature claim |
-| `watch-01-starter` | Start a routine on Watch | Actual Watch starter/playback, after acceptance |
-
-Capture iPhone and iPad sets using the same storyline; one real Watch image is
-sufficient if Watch is included. Current iOS release scheme has an empty Watch
-embed phase and no Watch dependency; a separate CI Watch build is not proof
-of shipment. Resolve distribution before making the Watch set a requirement. Widget/sync campaign images can follow proof;
-no saved-template Watch-sync image until its transport and result are verified.
-Optional app preview/featuring/campaign sets are not prerequisites.
-
-## Public fixture data
-
-Game Night: Player A 60s, Player B 60s, Player C 60s, Break 30s (not a turn).
-Recipe: Prep 5m, Simmer 12m, Stir 1m, Rest 5m.
-Meeting: Opening 3m, Updates 10m, Decisions 8m, Wrap 2m.
-Use generic fixtures only; no private tester/device/account content.
+Use `CODE_SIGNING_ALLOWED=NO`, `-parallel-testing-enabled NO`, and
+`-maximum-concurrent-test-simulator-destinations 1`. On the rented mini, check
+the dispatcher capacity report and active xcodebuild process count before each
+run. This session uses one Apple build/test at a time. Do not run archive,
+deliver, pilot or any upload lane.
 
 ## Capture receipt
 
-Record source/automation SHA, version/build, device/OS, locale, capture date,
-pixel dimensions and alpha check beside each delivered set. Verify text is
-legible, UI/controls are usable, no placeholder/login/splash-only image appears,
-and every caption matches the screen. Caption overlays stay under eight words.
-
-IAP review also needs an actual candidate paywall/unlocked-state screenshot.
-Do not claim it exists based on a `.storekit` file or this manifest.
+See [v1.1 preparation](../app-store/v1.1-preparation.md) for actual results,
+remaining acceptance work and the committed image manifest. Version settings
+remain 1.0 (1), as release configuration changes were excluded from this task.
+No images have been uploaded to Apple.

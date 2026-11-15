@@ -1,4 +1,4 @@
-External beta candidate for Turn Timer 1.0.
+Turn Timer 1.1 candidate testing. This text does not confirm external distribution.
 
 Please test:
 - Quick visual timer start, pause, resume, reset, and finish sound behavior.

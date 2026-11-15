@@ -6,6 +6,14 @@ starter templates for common timed sessions.
 
 ## Status
 
+**v1.1 is in preparation**, based on nightly `3febb3a`. It adds routine
+stopwatch measurements, history timelines and totals, live paired iPhone/Watch
+routine control, iPhone alerts and recovery, and updated timer/editor controls.
+See the [v1.1 submission handoff](docs/app-store/v1.1-preparation.md) for the
+release comparison, screenshots, tests and remaining checks. This is not a
+claim that 1.1 is available on the App Store. Source version settings remain
+1.0 pending an authorized release version change.
+
 Documentation audited 2026-11-08. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
 is live and installable. Turn Timer **1.0** is live on the
 [App Store](https://apps.apple.com/ca/app/turn-timer/id6771073144) and free.

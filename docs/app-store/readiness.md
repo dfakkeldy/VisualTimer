@@ -1,5 +1,10 @@
 # App Store Readiness
 
+Current preparation: [v1.1 handoff](v1.1-preparation.md), 2026-11-15. The
+receipts below remain historical evidence for 1.0. New source is ahead of the
+weekly/main release trains; do not reuse the old candidate-parity statement
+as v1.1 acceptance.
+
 Documentation audit: 2026-11-08 (public App Store listing). The table below
 preserves the October 17 release receipts, with the historical main upload
 checked October 20. Main upload **1.0 (77)** succeeded. Public App Store
