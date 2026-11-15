@@ -1,0 +1,27 @@
+{
+  "exception": {
+    "codes": "0x0000000000000000, 0x0000000000000000",
+    "rawCodes": [
+      0,
+      0
+    ],
+    "type": "EXC_CRASH",
+    "signal": "SIGKILL"
+  },
+  "termination": {
+    "code": 2343432205,
+    "flags": 6,
+    "namespace": "FRONTBOARD",
+    "reasons": [
+      "<RBSTerminateContext| domain:10 code:0x8BADF00D explanation:scene-create watchdog transgression: app<Dan.Visual-Timer-Watch-Watch-AppUITests.xctrunner((null))>:40051 exhausted real (wall clock) time allowance of 10.00 seconds",
+      "ProcessVisibility: Background",
+      "ProcessState: Running",
+      "WatchdogEvent: scene-create",
+      "WatchdogVisibility: Background",
+      "WatchdogCPUStatistics: (",
+      "\"Elapsed total CPU time (seconds): 131.270 (user 72.500, system 58.770), 99% CPU\",",
+      "\"Elapsed application CPU time (seconds): 0.219, 0% CPU\"",
+      ") reportType:CrashLog maxTerminationResistance:Interactive>"
+    ]
+  }
+}
