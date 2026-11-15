@@ -105,7 +105,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ Visual_TimerUITests (in targ
 
 SwiftCompile normal arm64 (in target 'Visual TimerUITests' from project 'Visual Timer')
     cd <REPO>
-    
+
 
 SwiftCompile normal arm64 Compiling\ DesignCouncilCaptureTests.swift <REPO>/Visual\ TimerUITests/DesignCouncilCaptureTests.swift (in target 'Visual TimerUITests' from project 'Visual Timer')
 
@@ -175,4 +175,3 @@ PruneExplicitPrecompiledModules <REPO>/.build/DerivedData/SDKExplicitPrecompiled
 PruneExplicitPrecompiledModules <REPO>/.build/DerivedData/Build/Intermediates.noindex/ExplicitPrecompiledModules
 
 ** TEST BUILD SUCCEEDED **
-

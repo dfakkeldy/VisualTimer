@@ -823,7 +823,7 @@ Test Case '-[Visual_TimerUITests.StopwatchConfirmationUITests testApplyNewCancel
     t =    46.09s     Checking `Expect predicate `existsNoRetry == 1` for object "stopwatch.apply" Button`
     t =    46.11s         Checking existence of `"stopwatch.apply" Button`
     t =    46.28s Checking existence of `"Not saved yet" StaticText`
-    t =    46.35s Press "Routine stopwatch" NavigationBar[0.50, 0.50] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.95] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =    46.35s Press "Routine stopwatch" NavigationBar[0.50, 0.50] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.95] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds
     t =    46.35s     Wait for Dan.Visual-Timer to idle
     t =    46.35s     Find the "Routine stopwatch" NavigationBar
     t =    46.42s     Check for interrupting elements affecting "Routine stopwatch" NavigationBar
@@ -1033,7 +1033,7 @@ Dynamic Type heading heights: standard=40.33333333333334, AX5=145.33333333333337
     t =    45.30s Find the "Routine stopwatch" NavigationBar
     t =    45.35s Find the CollectionView at {{0.0, 62.0}, {402.0, 812.0}}
     t =    45.38s Find the "1. Alice, Target 1m 0s · Actual 2s · 58s under target, Template duration: 5s (shortest allowed)" StaticText
-    t =    45.43s Press Target Application 'Dan.Visual-Timer'[0.50, 0.60] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.45] with velocity of 250.00 pixels per second, and then hold for 0.1 seconds 
+    t =    45.43s Press Target Application 'Dan.Visual-Timer'[0.50, 0.60] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.45] with velocity of 250.00 pixels per second, and then hold for 0.1 seconds
     t =    45.43s     Wait for Dan.Visual-Timer to idle
     t =    45.44s     Find the Target Application 'Dan.Visual-Timer'
     t =    45.47s     Check for interrupting elements affecting "Turn Timer" Application
@@ -1045,7 +1045,7 @@ Dynamic Type heading heights: standard=40.33333333333334, AX5=145.33333333333337
     t =    45.64s         Find the Target Application 'Dan.Visual-Timer'
     t =    46.59s     Wait for Dan.Visual-Timer to idle
     t =    46.60s Find the "1. Alice, Target 1m 0s · Actual 2s · 58s under target, Template duration: 5s (shortest allowed)" StaticText
-    t =    46.72s Press Target Application 'Dan.Visual-Timer'[0.50, 0.60] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.45] with velocity of 250.00 pixels per second, and then hold for 0.1 seconds 
+    t =    46.72s Press Target Application 'Dan.Visual-Timer'[0.50, 0.60] for 0.1 seconds, then drag to Target Application 'Dan.Visual-Timer'[0.50, 0.45] with velocity of 250.00 pixels per second, and then hold for 0.1 seconds
     t =    46.72s     Wait for Dan.Visual-Timer to idle
     t =    46.72s     Find the Target Application 'Dan.Visual-Timer'
     t =    46.76s     Check for interrupting elements affecting "Turn Timer" Application

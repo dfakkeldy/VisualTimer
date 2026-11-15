@@ -1,3 +1,4 @@
+import UniformTypeIdentifiers
 import CloudKit
 import XCTest
 import SwiftUI
@@ -5,6 +6,12 @@ import SwiftUI
 
 @MainActor
 final class Visual_TimerTests: XCTestCase {
+
+    func testTemplateFileExtensionMatchesImportPickerType() throws {
+        let registered = try XCTUnwrap(UTType(filenameExtension: "turntimer"))
+        XCTAssertTrue(registered.conforms(to: .turnTimerTemplate))
+        XCTAssertTrue(registered.conforms(to: .json))
+    }
 
     // MARK: - Cloud sync scheduling
 

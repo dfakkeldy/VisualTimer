@@ -534,7 +534,7 @@ SwiftEmitModule normal x86_64 Emitting\ module\ for\ TurnTimerWidgets (in target
 
 SwiftCompile normal x86_64 (in target 'TurnTimerWidgets' from project 'Visual Timer')
     cd <REPO>
-    
+
 
 SwiftCompile normal x86_64 Compiling\ Theme.swift <REPO>/Visual\ Timer/Theme.swift (in target 'TurnTimerWidgets' from project 'Visual Timer')
 
@@ -893,11 +893,11 @@ SwiftEmitModule normal x86_64 Emitting\ module\ for\ Visual_Timer (in target 'Vi
 
 SwiftCompile normal x86_64 (in target 'Visual Timer' from project 'Visual Timer')
     cd <REPO>
-    
+
 
 <REPO>/Visual Timer/GameViewModel.swift:34:116: warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  32 |     var isReplica: Bool { isLiveSession && live?.owner == false }
- 33 | 
+ 33 |
  34 |     func enableLiveSync(directory: URL? = nil, transport: (any LiveRoutineTransport)? = nil, clock: RoutineClock = RoutineClock()) {
     |                                                                                                                    `- warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  35 |         guard live == nil, transport != nil || WatchTemplateConnectivity.supportsLiveRoutine else { return }
@@ -921,7 +921,7 @@ SwiftCompile normal x86_64 (in target 'Visual Timer' from project 'Visual Timer'
 
 <REPO>/Visual Timer/GameRecord.swift:103:5: note: calls to initializer 'init(documentsDirectory:fileManager:)' from outside of its actor context are implicitly asynchronous
 101 |     }
-102 | 
+102 |
 103 |     init(documentsDirectory: URL? = nil, fileManager: FileManager = .default) {
     |     `- note: calls to initializer 'init(documentsDirectory:fileManager:)' from outside of its actor context are implicitly asynchronous
 104 |         self.fileManager = fileManager
@@ -935,7 +935,7 @@ SwiftCompile normal x86_64 (in target 'Visual Timer' from project 'Visual Timer'
 192 |     static var bootSession: String {
 193 |         var length = 0
     :
-236 | 
+236 |
 237 |     init(directory: URL? = nil, transport: any LiveRoutineTransport,
 238 |          clock: RoutineClock = RoutineClock()) {
     |                                `- warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
@@ -1077,7 +1077,7 @@ SwiftCompile normal x86_64 <REPO>/Visual\ Timer/TemplateImportExport.swift (in t
 
 <REPO>/Visual Timer/StopwatchRecording.swift:67:17: note: calls to static method 'newestFirst' from outside of its actor context are implicitly asynchronous
  65 |     var totalSeconds: TimeInterval { measurements.reduce(0) { $0 + $1.seconds } }
- 66 | 
+ 66 |
  67 |     static func newestFirst(_ lhs: Self, _ rhs: Self) -> Bool {
     |                 `- note: calls to static method 'newestFirst' from outside of its actor context are implicitly asynchronous
  68 |         lhs.startedAt == rhs.startedAt ? lhs.id.uuidString < rhs.id.uuidString : lhs.startedAt > rhs.startedAt
@@ -1228,7 +1228,7 @@ SwiftCompile normal x86_64 <REPO>/Visual\ Timer/PlayerEditView.swift (in target 
 192 |     static var bootSession: String {
 193 |         var length = 0
     :
-236 | 
+236 |
 237 |     init(directory: URL? = nil, transport: any LiveRoutineTransport,
 238 |          clock: RoutineClock = RoutineClock()) {
     |                                `- warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
@@ -1245,7 +1245,7 @@ SwiftCompile normal x86_64 <REPO>/Visual\ Timer/PlayerEditView.swift (in target 
 
 <REPO>/Visual Timer/GameViewModel.swift:34:116: warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  32 |     var isReplica: Bool { isLiveSession && live?.owner == false }
- 33 | 
+ 33 |
  34 |     func enableLiveSync(directory: URL? = nil, transport: (any LiveRoutineTransport)? = nil, clock: RoutineClock = RoutineClock()) {
     |                                                                                                                    `- warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  35 |         guard live == nil, transport != nil || WatchTemplateConnectivity.supportsLiveRoutine else { return }
@@ -1339,7 +1339,7 @@ SwiftCompile normal x86_64 <REPO>/Visual\ Timer/HistoryAccessPolicy.swift (in ta
 
 <REPO>/Visual Timer/GameViewModel.swift:34:116: warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  32 |     var isReplica: Bool { isLiveSession && live?.owner == false }
- 33 | 
+ 33 |
  34 |     func enableLiveSync(directory: URL? = nil, transport: (any LiveRoutineTransport)? = nil, clock: RoutineClock = RoutineClock()) {
     |                                                                                                                    `- warning: call to main actor-isolated initializer 'init()' in a synchronous nonisolated context [#ActorIsolatedCall]
  35 |         guard live == nil, transport != nil || WatchTemplateConnectivity.supportsLiveRoutine else { return }
@@ -1363,7 +1363,7 @@ SwiftCompile normal x86_64 <REPO>/Visual\ Timer/HistoryAccessPolicy.swift (in ta
 
 <REPO>/Visual Timer/GameRecord.swift:103:5: note: calls to initializer 'init(documentsDirectory:fileManager:)' from outside of its actor context are implicitly asynchronous
 101 |     }
-102 | 
+102 |
 103 |     init(documentsDirectory: URL? = nil, fileManager: FileManager = .default) {
     |     `- note: calls to initializer 'init(documentsDirectory:fileManager:)' from outside of its actor context are implicitly asynchronous
 104 |         self.fileManager = fileManager
@@ -1498,7 +1498,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ Visual_Timer_Watch_Watch_App
 
 SwiftCompile normal arm64 (in target 'Visual Timer Watch Watch AppTests' from project 'Visual Timer')
     cd <REPO>
-    
+
 
 SwiftExplicitDependencyGeneratePcm arm64 <REPO>/.build/DerivedData/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-1OC8IMYKEECTZFRBRITHGWEMF.pcm
 
@@ -1518,7 +1518,7 @@ SwiftEmitModule normal arm64 Emitting\ module\ for\ Visual_Timer_Watch_Watch_App
 
 SwiftCompile normal arm64 (in target 'Visual Timer Watch Watch AppUITests' from project 'Visual Timer')
     cd <REPO>
-    
+
 
 SwiftDriverJobDiscovery normal arm64 Emitting module for Visual_Timer_Watch_Watch_AppUITests (in target 'Visual Timer Watch Watch AppUITests' from project 'Visual Timer')
 
