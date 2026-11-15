@@ -1,0 +1,29 @@
+{
+  "title": "Test - Visual Timer",
+  "result": "Passed",
+  "startTime": 1794706942.577,
+  "finishTime": 1794707528.672,
+  "passedTests": 243,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "totalTestCount": 243,
+  "statistics": [
+    {
+      "subtitle": "2 test runs",
+      "title": "1 test ran with dynamic parameters"
+    },
+    {
+      "subtitle": "1 test run",
+      "title": "1 test collected performance metrics"
+    }
+  ],
+  "runtimeWarnings": [
+    "This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.",
+    "Type \"com.fakkeldy.turntimer.template\" was expected to be declared and exported in the Info.plist of Visual Timer.app, but it was not found."
+  ],
+  "sourceCommit": "3febb3abc5adc64a2f390f7b547031b5d920a266",
+  "captureTestCommit": "db6cc1c",
+  "unitTestExecutions": 228,
+  "uiTestExecutions": 16,
+  "note": "xcresult counts 243 unique cases; the launch-layout case executes in two configurations, for 244 executions."
+}

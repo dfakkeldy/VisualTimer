@@ -1,1 +1,10 @@
-Visual countdowns, editable starter templates and reusable rounds for game turns and everyday routines. Save one custom template for free, with a one-time Pro unlock for extra templates, sharing, export and private iCloud sync.
+New in Turn Timer 1.1:
+
+- Measure routine steps with a stopwatch on iPhone and iPad. Save recordings, compare times with targets and apply measured durations to a template.
+- Review sessions as a timeline with pauses, or see totals by name in Share, Average and Turns views.
+- Join and control a live routine from your paired iPhone or Apple Watch while connected. Update both apps to use this feature.
+- Drag the idle iPhone timer rim to set its duration and opt in to local completion alerts.
+- Return to started quick timers, playing sessions and unsaved template edits after closing the iPhone app.
+- Updated timer controls, sequence progress and editor round colours.
+
+Stopwatch recordings stay on the device where you save them. An unfinished stopwatch recording is not restored after restarting the app.

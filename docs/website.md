@@ -1,6 +1,6 @@
 # Website and documentation maintenance
 
-Last audited: 2026-10-24
+v1.1 content preparation: 2026-11-15; publishing remains through main
 
 The live site is [Turn Timer](https://dfakkeldy.github.io/VisualTimer/).
 GitHub Pages serves `main:/docs`; the installable browser timer is at
@@ -68,3 +68,11 @@ historical evidence. Their dates describe when they were prepared; they are not
 live task lists or proof of store configuration. Follow their links to current
 readiness and GitHub records before reusing them. Do not replace old evidence
 with a new date unless it was actually rechecked.
+
+## Version 1.1 preparation
+
+The homepage labels the upcoming Apple features as a preview. Support explains
+the stopwatch, recovery, alerts and paired-Watch boundaries. Privacy describes
+local recordings and live-routine data. Keep 1.0 as the last confirmed public
+version until Apple release evidence establishes 1.1. The separate KinNoKi Labs
+page follow-up is listed in the [handoff](app-store/v1.1-preparation.md).

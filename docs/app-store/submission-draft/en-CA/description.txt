@@ -1,18 +1,24 @@
-Turn Timer makes time visible with a colorful countdown and reusable sequences for game turns, routines and everyday tasks.
+Turn Timer makes time visible with a colourful countdown and reusable sequences for game turns, routines and everyday tasks.
 
 START SIMPLY
-Use the quick visual timer or choose an editable starter: Game Night, Recipe Steps, Plant Watering, Classroom Stations, Meeting Agenda or Morning Routine.
+Use the quick visual timer or choose an editable starter: Game Night, Recipe Steps, Plant Watering, Classroom Stations, Meeting Agenda or Morning Routine. Drag the idle iPhone dial rim to set the time. Turn on local completion alerts if you want a notification when a countdown ends off screen.
 
 BUILD YOUR SEQUENCE
-Give rounds a name, duration, color, sound and emoji. Choose which rounds count as turns, repeat a sequence, pause, skip, restart or do over a turn.
+Give rounds a name, duration, colour, sound and emoji. Choose which rounds count as turns, repeat a sequence, pause, skip, restart or do over a turn. See the next step and time left. Started iPhone quick timers, playing sessions and unsaved template edits can be restored after closing the app.
 
-KEEP THE SETUPS YOU REUSE
-Save custom templates, return to recent session history and import portable .turntimer files without overwriting existing templates.
+MEASURE YOUR ROUTINE
+On iPhone and iPad, use Time this template or Plan a new routine to measure each step with a stopwatch. Pause when you need a break, then save a recording, compare measured times with targets and review dated per-step trends. Apply measured durations and save your template to reuse them. Recordings stay on this device. Unfinished recordings are not restored after an app restart.
+
+REVIEW YOUR SESSIONS
+See turns and pauses on a history timeline, or compare totals by name in Share, Average and Turns views.
+
+USE YOUR APPLE WATCH
+Run quick timers and starter routines on Watch. Join a live routine started on your paired iPhone or Watch and control it from the other device while connected. Both apps need this update. Quick timers and stopwatch recordings stay on the device where you started them.
 
 TURN TIMER PRO
-The quick timer, starter templates, basic playback, five recent history records and one custom saved template are free. A one-time Pro purchase unlocks unlimited saved templates, full history and export, sharing, iCloud template and history sync, and template widgets.
+The quick timer, starter templates, basic playback, five recent history records and one custom saved template are free. A one-time Pro purchase unlocks unlimited saved templates, full history and export, sharing, iCloud template and history sync, and template widgets. Stopwatch recordings do not sync through iCloud.
 
-No subscription, ads or third-party tracking SDKs. Core use does not require an app account. Pro sync uses your private iCloud database through your Apple account.
+No subscription, ads or third-party tracking SDKs. Core use does not require an app account. Pro sync uses your private iCloud database through your Apple account. Completion alerts depend on notification permission and system delivery; this is not a guaranteed background alarm.
 
 Support: https://dfakkeldy.github.io/VisualTimer/support.html
 Privacy: https://dfakkeldy.github.io/VisualTimer/privacy.html

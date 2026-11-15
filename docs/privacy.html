@@ -29,7 +29,7 @@
   </header>
   <main id="main" tabindex="-1" class="container document">
     <section class="hero">
-      <p class="eyebrow">Effective November 8, 2026</p>
+      <p class="eyebrow">Updated November 15, 2026; includes version 1.1 preparation</p>
       <h1>Privacy policy</h1>
       <p class="lede">Turn Timer is designed to work without developer-run accounts, ads, tracking, or analytics SDKs.</p>
     </section>
@@ -39,6 +39,8 @@
 
     <h2>Information stored by the app</h2>
     <p>Turn Timer stores the information needed to run timers and reusable sequences on your device, including timer duration and sound preferences, saved templates, round names, colors, sounds, durations, repeat settings, local session history, and purchase entitlement state. It also stores small on-device snapshots of an in-progress session, a started quick timer, and unsaved template edits so those can be restored after you close the app. Those snapshots stay on the device; KinNoKi Labs does not receive them.</p>
+
+    <p>In version 1.1, explicitly saved stopwatch recordings also stay on the device, including routine and step names, measured times, target durations and recording dates. They do not sync through iCloud or to the Watch or browser app. Unfinished stopwatch recordings remain in memory and are lost when the app restarts.</p>
 
     <h2>Information collected by the developer</h2>
     <p>KinNoKi Labs does not collect timer templates, session history, device analytics, advertising identifiers, or tracking data from Turn Timer. The app does not include third-party analytics SDKs, advertising SDKs, or cross-app tracking.</p>
@@ -53,7 +55,7 @@
     <p>The web app stores templates, preferences, and session history in your browser's local storage. Its service worker caches app files for offline use. It does not send this timer data to a developer-run server or sync it through iCloud. Exported template files go where you choose to save or share them. Clearing site data removes the browser's local copy.</p>
 
     <h2>Widgets and Apple Watch</h2>
-    <p>The Apple app shares template snapshots with its widget extension on the same device and sends saved-template snapshots to the paired Apple Watch through Apple's WatchConnectivity framework. These features do not use a developer-run server.</p>
+    <p>The Apple app shares template snapshots with its widget extension on the same device and sends saved-template snapshots to the paired Apple Watch through Apple's WatchConnectivity framework. Version 1.1 also exchanges live routine plans, playback state and control requests between the paired iPhone and Watch. Each device keeps a local recovery journal and routine device identifier. These features do not use a developer-run server.</p>
 
     <h2>App Store purchases</h2>
     <p>Turn Timer Pro purchases are processed by Apple through StoreKit and the App Store. KinNoKi Labs does not receive your full payment card details.</p>

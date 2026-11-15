@@ -1,5 +1,9 @@
 # Turn Timer Submission Packet
 
+For the current v1.1 copy, screenshots and test results, use the
+[v1.1 preparation handoff](v1.1-preparation.md). The October checklist below
+is historical and does not establish current store state.
+
 Historical planning worksheet. Prepared details and unchecked items below are
 not a current App Store status report. The October 17 source promotion and
 build 77 upload are recorded in [readiness](readiness.md). Recheck the selected candidate

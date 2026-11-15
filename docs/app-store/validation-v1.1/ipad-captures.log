@@ -1,0 +1,195 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -project "Visual Timer.xcodeproj" -scheme "Visual Timer" -destination "platform=iOS Simulator,name=iPad Pro 13-inch (M5)" -derivedDataPath .build/DerivedData -resultBundlePath .build/release-v1.1/ipad-captures.xcresult -parallel-testing-enabled NO -maximum-concurrent-test-simulator-destinations 1 CODE_SIGNING_ALLOWED=NO "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test01TimerReady" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test02TimerPaused" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test04SessionRoutine" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test06Templates" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test08History" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test10SessionDetail" "-only-testing:Visual TimerUITests/DesignCouncilCaptureTests/test13RoutineStopwatch"
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+Writing result bundle at path:
+	<REPO>/.build/release-v1.1/ipad-captures.xcresult
+
+2026-11-15 02:55:47.762623+0100 Visual TimerUITests-Runner[15850:2670968] [Default] Running tests...
+2026-11-15 02:55:48.081143+0100 Visual TimerUITests-Runner[15850:2670968] [UIKit App Config] Update the Info.plist: Launch screens will soon be required.
+objc[15850]: Class UIAccessibilityLoaderWebShared is implemented in both /private/var/run/com.apple.security.cryptexd/mnt/com.apple.iPhoneOS.SimulatorRuntime-v24.2.8117.0.cvrfWY/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 27.2.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108098310) and /private/var/run/com.apple.security.cryptexd/mnt/com.apple.iPhoneOS.SimulatorRuntime-v24.2.8117.0.cvrfWY/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 27.2.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1080cc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-15 02:56:05.905.
+Test Suite 'Visual TimerUITests.xctest' started at 2026-11-15 02:56:05.927.
+Test Suite 'DesignCouncilCaptureTests' started at 2026-11-15 02:56:05.928.
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test01TimerReady]' started.
+    t =     0.01s Start Test at 2026-11-15 02:56:05.934
+    t =     2.17s Set Up
+    t =     2.41s Open Dan.Visual-Timer
+    t =     2.41s     Launch Dan.Visual-Timer
+2026-11-15 02:56:09.342 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:56:09.723 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    53.70s         Setting up automation session
+    t =    55.34s         Wait for Dan.Visual-Timer to idle
+    t =    58.63s Waiting 5.0s for "Play" Button to exist
+    t =    59.70s     Checking `Expect predicate `existsNoRetry == 1` for object "Play" Button`
+    t =    59.71s         Checking existence of `"Play" Button`
+    t =    61.29s Added attachment named '01-timer-ready'
+    t =    61.34s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test01TimerReady]' passed (61.948 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test02TimerPaused]' started.
+    t =     0.01s Start Test at 2026-11-15 02:57:07.907
+    t =     0.13s Set Up
+    t =     0.16s Open Dan.Visual-Timer
+    t =     0.16s     Launch Dan.Visual-Timer
+    t =     0.16s         Terminate Dan.Visual-Timer:16946
+2026-11-15 02:57:09.197 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:57:09.198 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.59s         Setting up automation session
+    t =     7.96s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test02TimerPaused] : This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.
+    t =    19.63s Waiting 5.0s for "Reset" Button to exist
+    t =    20.71s     Checking `Expect predicate `existsNoRetry == 1` for object "Reset" Button`
+    t =    20.77s         Checking existence of `"Reset" Button`
+    t =    22.17s Added attachment named '02-timer-paused'
+    t =    22.18s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test02TimerPaused]' passed (22.538 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test04SessionRoutine]' started.
+    t =     0.00s Start Test at 2026-11-15 02:57:30.447
+    t =     0.11s Set Up
+    t =     0.14s Open Dan.Visual-Timer
+    t =     0.14s     Launch Dan.Visual-Timer
+    t =     0.15s         Terminate Dan.Visual-Timer:17680
+2026-11-15 02:57:31.625 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:57:31.626 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.50s         Setting up automation session
+    t =     6.11s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test04SessionRoutine] : This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.
+    t =    12.73s Added attachment named '04-session-routine'
+    t =    12.74s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test04SessionRoutine]' passed (13.031 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test06Templates]' started.
+    t =     0.00s Start Test at 2026-11-15 02:57:43.479
+    t =     0.14s Set Up
+    t =     0.15s Open Dan.Visual-Timer
+    t =     0.15s     Launch Dan.Visual-Timer
+    t =     0.15s         Terminate Dan.Visual-Timer:18064
+2026-11-15 02:57:44.782 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:57:44.783 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    10.48s         Setting up automation session
+    t =    11.45s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test06Templates] : Type "com.fakkeldy.turntimer.template" was expected to be declared and exported in the Info.plist of Visual Timer.app, but it was not found.
+    t =    18.67s Waiting 5.0s for Button (First Match) to exist
+    t =    19.75s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    19.78s         Checking existence of `Button (First Match)`
+    t =    21.28s Added attachment named '06-templates'
+    t =    21.28s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test06Templates]' passed (21.598 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test08History]' started.
+    t =     0.00s Start Test at 2026-11-15 02:58:05.079
+    t =     0.07s Set Up
+    t =     0.07s Open Dan.Visual-Timer
+    t =     0.07s     Launch Dan.Visual-Timer
+    t =     0.07s         Terminate Dan.Visual-Timer:18616
+2026-11-15 02:58:06.240 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:58:06.241 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     1.39s         Setting up automation session
+    t =     5.46s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test08History] : This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.
+    t =    13.85s Waiting 5.0s for Button (First Match) to exist
+    t =    14.93s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    14.95s         Checking existence of `Button (First Match)`
+    t =    18.27s Added attachment named '08-history'
+    t =    18.28s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test08History]' passed (18.851 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test10SessionDetail]' started.
+    t =     0.00s Start Test at 2026-11-15 02:58:23.935
+    t =     0.27s Set Up
+    t =     0.28s Open Dan.Visual-Timer
+    t =     0.28s     Launch Dan.Visual-Timer
+    t =     0.28s         Terminate Dan.Visual-Timer:21307
+2026-11-15 02:58:33.463 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:58:33.464 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    11.72s         Setting up automation session
+    t =    19.15s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test10SessionDetail] : This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.
+    t =    26.07s Waiting 5.0s for Button (First Match) to exist
+    t =    27.15s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =    27.16s         Checking existence of `Button (First Match)`
+    t =    28.41s Tap Button (First Match)
+    t =    28.42s     Wait for Dan.Visual-Timer to idle
+    t =    28.66s     Find the Button (First Match)
+    t =    28.87s     Check for interrupting elements affecting "Family Game Night, 6:30 AM, 9 min · 5 rounds · went back once" Button
+    t =    30.22s         Wait for com.apple.springboard to idle
+    t =    31.81s     Synthesize event
+    t =    32.83s     Wait for Dan.Visual-Timer to idle
+    t =    36.78s Added attachment named '10-session-detail'
+    t =    36.78s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test10SessionDetail]' passed (37.199 seconds).
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test13RoutineStopwatch]' started.
+    t =     0.00s Start Test at 2026-11-15 02:59:01.133
+    t =     0.12s Set Up
+    t =     0.12s Open Dan.Visual-Timer
+    t =     0.12s     Launch Dan.Visual-Timer
+    t =     0.12s         Terminate Dan.Visual-Timer:22080
+2026-11-15 02:59:02.347 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: debugger version lookup failed for path '<nil>': noURL
+2026-11-15 02:59:02.347 xcodebuild[13976:2658366] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.06s         Setting up automation session
+    t =     7.89s         Wait for Dan.Visual-Timer to idle
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test13RoutineStopwatch] : This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.
+<unknown>:0: warning: -[Visual_TimerUITests.DesignCouncilCaptureTests test13RoutineStopwatch] : Type "com.fakkeldy.turntimer.template" was expected to be declared and exported in the Info.plist of Visual Timer.app, but it was not found.
+    t =    22.97s Checking existence of `"Time this template" Button`
+    t =    24.49s Find the "Time this template" Button
+    t =    24.67s Checking existence of `"Time this template" Button`
+    t =    24.74s Find the "Time this template" Button
+    t =    25.07s Tap "Time this template" Button
+    t =    25.07s     Wait for Dan.Visual-Timer to idle
+    t =    25.08s     Find the "Time this template" Button
+    t =    25.14s     Check for interrupting elements affecting "Time this template" Button
+    t =    25.45s         Wait for com.apple.springboard to idle
+    t =    25.57s     Synthesize event
+    t =    25.96s     Wait for Dan.Visual-Timer to idle
+    t =    26.81s Checking existence of `"stopwatch.start" Button`
+    t =    27.13s Swipe up Target Application 'Dan.Visual-Timer'
+    t =    27.13s     Wait for Dan.Visual-Timer to idle
+    t =    27.29s     Find the Target Application 'Dan.Visual-Timer'
+    t =    27.62s     Check for interrupting elements affecting "Turn Timer" Application
+    t =    27.70s         Wait for com.apple.springboard to idle
+    t =    27.73s     Synthesize event
+    t =    28.16s     Wait for Dan.Visual-Timer to idle
+    t =    28.99s Checking existence of `"stopwatch.start" Button`
+    t =    29.08s Find the "stopwatch.start" Button
+    t =    29.29s Checking existence of `"stopwatch.start" Button`
+    t =    29.40s Find the "stopwatch.start" Button
+    t =    31.22s Tap "stopwatch.start" Button
+    t =    31.22s     Wait for Dan.Visual-Timer to idle
+    t =    31.24s     Find the "stopwatch.start" Button
+    t =    31.36s     Check for interrupting elements affecting "stopwatch.start" Button
+    t =    31.43s         Wait for com.apple.springboard to idle
+    t =    31.47s     Synthesize event
+    t =    31.78s     Wait for Dan.Visual-Timer to idle
+    t =    32.19s Waiting 5.0s for "Pause" Button to exist
+    t =    33.23s     Checking `Expect predicate `existsNoRetry == 1` for object "Pause" Button`
+    t =    33.31s         Checking existence of `"Pause" Button`
+    t =    35.06s Checking existence of `"stopwatch.elapsed" StaticText`
+    t =    47.19s Tap "Pause" Button
+    t =    47.20s     Wait for Dan.Visual-Timer to idle
+    t =    47.22s     Find the "Pause" Button
+    t =    47.71s     Check for interrupting elements affecting "Pause" Button
+    t =    48.00s         Wait for com.apple.springboard to idle
+    t =    48.18s     Synthesize event
+    t =    48.67s     Wait for Dan.Visual-Timer to idle
+    t =    49.06s Waiting 5.0s for "Resume" Button to exist
+    t =    50.13s     Checking `Expect predicate `existsNoRetry == 1` for object "Resume" Button`
+    t =    50.15s         Checking existence of `"Resume" Button`
+    t =    50.49s Added attachment named '13-routine-stopwatch'
+    t =    50.49s Tear Down
+Test Case '-[Visual_TimerUITests.DesignCouncilCaptureTests test13RoutineStopwatch]' passed (50.849 seconds).
+Test Suite 'DesignCouncilCaptureTests' passed at 2026-11-15 02:59:51.983.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 226.014 (226.054) seconds
+Test Suite 'Visual TimerUITests.xctest' passed at 2026-11-15 02:59:51.990.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 226.014 (226.063) seconds
+Test Suite 'Selected tests' passed at 2026-11-15 02:59:51.990.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 226.014 (226.085) seconds
+2026-11-15 03:00:30.460 xcodebuild[13976:2658366] [MT] IDETestOperationsObserverDebug: 361.669 elapsed -- Testing started completed.
+2026-11-15 03:00:30.462 xcodebuild[13976:2658366] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-15 03:00:30.462 xcodebuild[13976:2658366] [MT] IDETestOperationsObserverDebug: 361.670 sec, +361.670 sec -- end
+
+Test session results, code coverage, and logs:
+	<REPO>/.build/release-v1.1/ipad-captures.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
