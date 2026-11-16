@@ -114,31 +114,6 @@ struct TimerVisualView: View {
     }
 }
 
-/// Deliberately has no interpolated animatable data: wall-clock samples describe
-/// the exact wedge, including pause/resume and a newly replenished round.
-struct RemainingTimerWedge: Shape {
-    let elapsedFraction: Double
-
-    func path(in rect: CGRect) -> Path {
-        let fraction = min(max(elapsedFraction, 0), 1)
-        guard fraction < 1 else { return Path() }
-        if fraction == 0 { return Path(ellipseIn: rect) }
-
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        var path = Path()
-        path.move(to: center)
-        path.addArc(
-            center: center,
-            radius: min(rect.width, rect.height) / 2,
-            startAngle: .degrees(Theme.Rotation.trimOriginOffset + fraction * 360),
-            endAngle: .degrees(Theme.Rotation.trimOriginOffset + 360),
-            clockwise: false
-        )
-        path.closeSubpath()
-        return path
-    }
-}
-
 #Preview("Coloured glass · partial countdown") {
     let start = Date()
     let progress = TimerVisualProgress(totalDuration: 25)

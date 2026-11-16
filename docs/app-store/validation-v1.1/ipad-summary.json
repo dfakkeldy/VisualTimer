@@ -1,0 +1,14 @@
+{
+  "title": "Test - Visual Timer",
+  "result": "Passed",
+  "startTime": 1794707666.077,
+  "finishTime": 1794708031.139,
+  "passedTests": 7,
+  "failedTests": 0,
+  "skippedTests": 0,
+  "totalTestCount": 7,
+  "runtimeWarnings": [
+    "This method can lead to UI unresponsiveness if called on the main thread. Consider using the asynchronous activate/deactivate API instead for calls from the main thread.",
+    "Type \"com.fakkeldy.turntimer.template\" was expected to be declared and exported in the Info.plist of Visual Timer.app, but it was not found."
+  ]
+}

@@ -1,5 +1,7 @@
 import SwiftUI
 
+/// One past session: the short answer first (when, how long, what happened),
+/// then the session as one vertical timeline, each round as tall as its share.
 struct SessionDetailView: View {
 
     let record: GameRecord
@@ -11,47 +13,41 @@ struct SessionDetailView: View {
         self.record = record
         self._history = ObservedObject(wrappedValue: history)
         self._proAccess = ObservedObject(wrappedValue: proAccess)
+        self.sessionTimeline = SessionTimeline(record: record)
     }
+
+    /// Folded once: the record never changes while this screen is open.
+    private let sessionTimeline: SessionTimeline
 
     @State private var showDeleteConfirmation = false
     @State private var showExporter = false
     @State private var requestedProFeature: ProFeature?
+    /// The timeline draws itself downward once, on first appearance.
+    @State private var revealed = false
+    /// Which picture of the totals this person last chose.
+    @AppStorage(SessionTotalsStyle.storageKey) private var totalsStyle = SessionTotalsStyle.pie
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Grows the fixed totals height with Dynamic Type, so larger text never clips.
+    @ScaledMetric(relativeTo: .subheadline) private var totalsScale: CGFloat = 1
+    /// Grows the timeline's breaks and label room with Dynamic Type.
+    @ScaledMetric(relativeTo: .caption) private var timelineScale: CGFloat = 1
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // Header
-                headerSection
-                    .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-                    .padding(.top, 16)
-                    .padding(.bottom, 12)
-
-                Divider()
-                    .background(Theme.ColorValue.textSecondary.opacity(0.3))
-                    .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-
-                // Event timeline
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(record.session.events.enumerated()), id: \.offset) { _, event in
-                        eventRow(event)
-                    }
+            VStack(alignment: .leading, spacing: 24) {
+                summary
+                if sessionTimeline.totals.count > 1 {
+                    totalsSection
                 }
-                .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-                .padding(.vertical, 12)
-
-                Divider()
-                    .background(Theme.ColorValue.textSecondary.opacity(0.3))
-                    .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-
-                // Footer stats
-                footerSection
-                    .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-                    .padding(.vertical, 16)
+                timeline
+                deleteButton
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .background(Theme.ColorValue.appBackground)
         .navigationTitle(record.gameTitle)
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -67,23 +63,15 @@ struct SessionDetailView: View {
                 }
                 .accessibilityLabel(Theme.Label.export)
             }
-            ToolbarItem(placement: .destructiveAction) {
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: Theme.Symbol.delete)
-                }
-                .accessibilityLabel(Theme.Label.delete)
-            }
         }
-        .alert("Delete Session", isPresented: $showDeleteConfirmation) {
+        .alert("Delete this session?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
                 history.deleteRecord(id: record.id)
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Delete \"\(record.gameTitle)\" from history?")
+            Text("“\(record.gameTitle)” is removed from History. This can't be undone.")
         }
         .sheet(isPresented: $showExporter) {
             if let url = history.exportURL(for: record) {
@@ -95,101 +83,600 @@ struct SessionDetailView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Summary
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(record.gameTitle)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-            Text("Played \(playedAtFull.string(from: record.playedAt))")
-                .font(.subheadline)
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-        }
-    }
-
-    // MARK: - Event Rows
-
-    private func eventRow(_ event: SessionEvent) -> some View {
-        HStack(spacing: 12) {
-            // Elapsed timestamp
-            Text(formatTimestamp(event))
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(Theme.ColorValue.textSecondary)
-                .frame(width: 60, alignment: .trailing)
-
-            // Icon
-            Image(systemName: event.iconName)
-                .font(.caption)
-                .foregroundStyle(eventIconColor(event))
-                .frame(width: 20)
-
-            // Label
-            Text(event.label)
-                .font(.caption)
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-
-            Spacer()
-        }
-        .padding(.vertical, 6)
-    }
-
-    private func eventIconColor(_ event: SessionEvent) -> Color {
-        switch event {
-        case .gameStarted: return .green
-        case .roundStarted: return .blue
-        case .roundFinished: return .orange
-        case .skipped: return .yellow
-        case .doOver: return .purple
-        case .restartTimer: return .mint
-        case .paused: return .gray
-        case .resumed: return .green
-        case .gameEnded: return .red
-        }
-    }
-
-    private func formatTimestamp(_ event: SessionEvent) -> String {
-        guard let first = record.session.events.first?.timestamp else { return "0:00" }
-        let delta = event.timestamp.timeIntervalSince(first)
-        let total = Int(max(delta, 0))
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
-    }
-
-    // MARK: - Footer
-
-    private var footerSection: some View {
+    private var summary: some View {
         let session = record.session
-        return VStack(alignment: .leading, spacing: 6) {
-            Text("Summary")
-                .font(.headline)
-                .foregroundStyle(Theme.ColorValue.textPrimary)
-            Text("Total time: \(formatElapsed(session.totalElapsedSeconds))")
+        let paused = sessionTimeline.items.reduce(0) { $0 + $1.pausedSeconds }
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(whenText)
                 .font(.subheadline)
                 .foregroundStyle(Theme.ColorValue.textSecondary)
-            Text([
-                TurnTimerCountText.label(for: session.roundCount, singular: "round"),
-                TurnTimerCountText.label(for: session.skipCount, singular: "skip"),
-                TurnTimerCountText.label(for: session.doOverCount, singular: "do-over"),
-                TurnTimerCountText.label(for: session.pauseCount, singular: "pause"),
-            ].joined(separator: " · "))
-                .font(.subheadline)
-                .foregroundStyle(Theme.ColorValue.textSecondary)
+
+            HStack(alignment: .top, spacing: 28) {
+                stat(TimerText.units(Int(session.totalElapsedSeconds)), "total")
+                if session.pauseCount > 0 {
+                    stat(TimerText.units(paused), session.pauseCount == 1 ? "paused once" : "paused \(session.pauseCount) times")
+                }
+                if session.skipCount > 0 {
+                    stat("\(session.skipCount)", "skipped")
+                }
+            }
         }
     }
 
-    private func formatElapsed(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let m = total / 60
-        let s = total % 60
-        return String(format: "%d:%02d", m, s)
+    /// "Saturday, Nov 7 · 6:30 – 6:39 AM"
+    private var whenText: String {
+        let start = record.session.events.first?.timestamp ?? record.playedAt
+        let end = start.addingTimeInterval(TimeInterval(sessionTimeline.span))
+        let day = start.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        let times = (start..<max(end, start)).formatted(.interval.hour().minute())
+        return "\(day) · \(times)"
     }
 
-    private var playedAtFull: DateFormatter = {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f
-    }()
+    private func stat(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.title3.weight(.semibold).monospacedDigit())
+                .foregroundStyle(Theme.ColorValue.textPrimary)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Totals
+
+    private var totalsSection: some View {
+        let timeline = sessionTimeline
+        let entries = timeline.totals.map { total in
+            SessionTotalEntry(
+                id: total.name,
+                label: [total.emoji, total.name].filter { !$0.isEmpty }.joined(separator: " "),
+                color: total.turns.first.flatMap { timeline.color(for: timeline.items[$0], in: record) }
+                    ?? Theme.ColorValue.textTertiary,
+                seconds: total.seconds,
+                turnCount: total.turnCount,
+                averageSeconds: total.averageSeconds,
+                turns: total.turns.map { index in
+                    SessionTotalEntry.Turn(
+                        seconds: timeline.items[index].length ?? 0,
+                        isDimmed: timeline.items[index].outcome.dimsRound,
+                        pass: timeline.passStarts.filter { $0 <= index }.count,
+                        isCutShort: wentBackTarget(after: index, in: timeline.items) != nil
+                    )
+                }
+            )
+        }
+        let sum = max(entries.reduce(0) { $0 + $1.seconds }, 1)
+        return VStack(alignment: .leading, spacing: 12) {
+            // Side by side when they fit; the switch drops below at large text.
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    totalsHeading
+                    Spacer(minLength: 12)
+                    totalsPicker.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    totalsHeading
+                    totalsPicker
+                }
+            }
+            Group {
+                switch totalsStyle {
+                case .pie:
+                    SessionTotalsPie(entries: entries, totalSeconds: sum, revealed: revealed)
+                case .bars:
+                    SessionTotalsBars(entries: entries, revealed: revealed)
+                case .turns:
+                    SessionTotalsTurns(entries: entries, revealed: revealed)
+                }
+            }
+            // One height for all three, so switching never moves the timeline.
+            .frame(height: Theme.HistoryTotals.contentHeight(names: entries.count) * totalsScale, alignment: .top)
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: Theme.AnimationValue.stateTransitionDuration), value: totalsStyle)
+    }
+
+    private var totalsHeading: some View {
+        Text("By name")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+    }
+
+    private var totalsPicker: some View {
+        Picker("Show totals as", selection: $totalsStyle) {
+            ForEach(SessionTotalsStyle.allCases) { style in
+                Text(style.title).tag(style)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    // MARK: - Timeline
+
+    private typealias Style = Theme.HistoryTimeline
+
+    /// The session top to bottom on one spine, each round as tall as its share.
+    private var timeline: some View {
+        let timeline = sessionTimeline
+        let items = timeline.items
+        let roundIndices = items.indices.filter { items[$0].length != nil }
+        let total = max(Double(roundIndices.count) * Style.heightPerRound, Style.minimumTotalHeight)
+        let trueHeights = timeline.heights(total: total, minimum: 0)
+        return VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Timeline")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                if timeline.hasRounds {
+                    legend
+                }
+            }
+            .padding(.bottom, 14)
+
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    if item.length != nil {
+                        if let pass = passNumber(at: index, firstRound: roundIndices.first) {
+                            passHeader(pass, isFirst: index == roundIndices.first)
+                        }
+                        roundRow(
+                            item,
+                            trueHeight: CGFloat(trueHeights[index] ?? 0),
+                            gapAbove: (index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap) * timelineScale,
+                            wentBackTo: wentBackTarget(after: index, in: items)
+                        )
+                        // Every turn's start sits in the break above it, so each
+                        // clock time is printed once.
+                        .padding(.top, (index == roundIndices.first || passNumber(at: index, firstRound: roundIndices.first) != nil ? Style.clockBreak : Style.turnGap) * timelineScale)
+                    } else if item.outcome == .sessionEnd {
+                        finishRow(item)
+                    }
+                }
+            }
+            .mask(alignment: .top) {
+                Rectangle().scaleEffect(x: 1, y: revealed ? 1 : 0, anchor: .top)
+            }
+        }
+        .onAppear {
+            guard !revealed else { return }
+            if reduceMotion {
+                revealed = true
+            } else {
+                withAnimation(.easeOut(duration: Style.revealDuration)) { revealed = true }
+            }
+        }
+    }
+
+    /// "Round 2" when a new pass through the sequence starts at this item;
+    /// nil when the sequence ran only once.
+    private func passNumber(at index: Int, firstRound: Int?) -> Int? {
+        let starts = sessionTimeline.passStarts
+        guard !starts.isEmpty else { return nil }
+        if index == firstRound { return 1 }
+        return starts.firstIndex(of: index).map { $0 + 2 }
+    }
+
+    private func passHeader(_ pass: Int, isFirst: Bool) -> some View {
+        Text("Round \(pass) of \(sessionTimeline.passStarts.count + 1)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Theme.ColorValue.textSecondary)
+            .padding(.top, isFirst ? 0 : Style.passGap)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// The name of the round someone went back to, when that happened right
+    /// after this round.
+    private func wentBackTarget(after index: Int, in items: [SessionTimeline.Item]) -> String? {
+        let next = index + 1
+        guard items.indices.contains(next), items[next].outcome == .wentBack else { return nil }
+        return items[next].wentBackTo
+    }
+
+    private var legend: some View {
+        let hasPauses = sessionTimeline.items.contains { !$0.pauses.isEmpty }
+        let hasFaded = sessionTimeline.items.contains { $0.outcome.dimsRound }
+        var key = hasPauses ? "Height is time, pauses included. Hatched is paused." : "Height is time."
+        if hasFaded { key += " Faded was skipped or restarted." }
+        return HStack(alignment: .center, spacing: 8) {
+            TimelineSpineSegment(
+                color: Theme.ColorValue.textSecondary,
+                trueHeight: Style.legendSwatchHeight,
+                pauses: hasPauses ? [0.35...0.7] : [],
+                isDimmed: false,
+                roundsTop: true,
+                roundsBottom: true
+            )
+            .frame(width: Style.spineColumnWidth, height: Style.legendSwatchHeight)
+            Text(key)
+                .font(.caption)
+                .foregroundStyle(Theme.ColorValue.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func roundRow(_ item: SessionTimeline.Item, trueHeight: CGFloat, gapAbove: CGFloat, wentBackTo: String?) -> some View {
+        let color = sessionTimeline.color(for: item, in: record) ?? Theme.ColorValue.textTertiary
+        let dimmed = item.outcome.dimsRound
+        let pauses = sessionTimeline.pauseFractions(of: item)
+        let pauseYs = pauseLabelOffsets(pauses, trueHeight: trueHeight, hasNote: item.outcomeNote != nil)
+        let wentBackRoom: CGFloat = wentBackTo == nil ? 0 : Style.wentBackLabelHeight * timelineScale
+        let labelsEnd: CGFloat = max(pauseYs.last.map { $0 + Style.pauseLabelSpacing * timelineScale } ?? 0,
+                                     CGFloat(Style.minimumRowHeight) * timelineScale)
+        let rowHeight = max(trueHeight, labelsEnd + wentBackRoom)
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if !item.emoji.isEmpty {
+                    Text(item.emoji).accessibilityHidden(true)
+                }
+                Text(item.name)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(dimmed ? Theme.ColorValue.textSecondary : Theme.ColorValue.textPrimary)
+                Text(TimerText.units(item.length ?? 0))
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+            if let note = item.outcomeNote {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+            }
+        }
+        .padding(.top, Style.rowTopPadding)
+        .padding(.leading, Style.labelInset)
+        .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .topLeading)
+        .overlay(alignment: .topLeading) {
+            // The start time, centred on the break above this turn.
+            Text(clockText(offset: item.startOffset))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.ColorValue.textTertiary)
+                .padding(.leading, Style.labelInset)
+                .alignmentGuide(.top) { d in d[VerticalAlignment.center] + gapAbove / 2 }
+        }
+        .overlay(alignment: .topLeading) {
+            pauseLabels(item, offsets: pauseYs)
+        }
+        .overlay(alignment: .bottomLeading) {
+            // The moment it happened: the foot of this turn, beside the spine.
+            if let wentBackTo {
+                HStack(spacing: 6) {
+                    Image(systemName: Style.wentBackSymbol)
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                    Text("went back to \(wentBackTo)")
+                        .foregroundStyle(Theme.ColorValue.textSecondary)
+                }
+                .font(.caption)
+                .padding(.leading, Style.labelInset)
+                .padding(.bottom, Style.wentBackBottomSpace)
+                .accessibilityHidden(true)
+            }
+        }
+        .padding(.leading, Style.spineColumnWidth)
+        .background(alignment: .leading) {
+            TimelineSpineSegment(
+                color: color,
+                trueHeight: trueHeight,
+                pauses: pauses,
+                isDimmed: dimmed,
+                roundsTop: true,
+                roundsBottom: true
+            )
+            .frame(width: Style.spineColumnWidth)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(accessibilityDetail(item, wentBackTo: wentBackTo))
+    }
+
+    /// Where each "paused 45s" sits: level with its hatched band, never over
+    /// the turn's name or note, and never on top of the label before it.
+    private func pauseLabelOffsets(_ pauses: [ClosedRange<Double>], trueHeight: CGFloat, hasNote: Bool) -> [CGFloat] {
+        let floor: CGFloat = (hasNote ? Style.pauseLabelMinimumY : Style.pauseLabelMinimumYNoNote) * timelineScale
+        let spacing: CGFloat = Style.pauseLabelSpacing * timelineScale
+        var result: [CGFloat] = []
+        for pause in pauses {
+            let middle: CGFloat = trueHeight * CGFloat((pause.lowerBound + pause.upperBound) / 2)
+            let lowest: CGFloat = result.last.map { $0 + spacing } ?? floor
+            result.append(max(middle - Style.pauseLabelHalfHeight * timelineScale, lowest))
+        }
+        return result
+    }
+
+    private func pauseLabels(_ item: SessionTimeline.Item, offsets: [CGFloat]) -> some View {
+        let durations = item.pauses.map { $0.count }
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(offsets.enumerated()), id: \.offset) { index, y in
+                Text("paused \(TimerText.units(durations[index]))")
+                    .font(.caption)
+                    .foregroundStyle(Theme.ColorValue.textSecondary)
+                    .offset(x: Style.labelInset, y: y)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    /// The spine's end: one quiet mark, no louder than the turns before it.
+    private func finishRow(_ item: SessionTimeline.Item) -> some View {
+        let endedEarly = sessionTimeline.items.contains { $0.outcome == .endedEarly }
+        let rest = "\(clockText(offset: item.startOffset)) · \(TimerText.units(Int(record.session.totalElapsedSeconds)))"
+        return (Text(endedEarly ? "Ended" : "Finished").foregroundStyle(Theme.ColorValue.textPrimary)
+                + Text(" · \(rest)").foregroundStyle(Theme.ColorValue.textSecondary))
+            .font(.body)
+            .frame(minHeight: Style.finishDiscSize)
+            .padding(.leading, Style.labelInset)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, Style.spineColumnWidth)
+            .background(alignment: .topLeading) {
+                TimelineFinishMark(endedEarly: endedEarly)
+                    .frame(width: Style.finishDiscSize, height: Style.finishDiscSize)
+                    .frame(width: Style.spineColumnWidth)
+            }
+            .accessibilityElement(children: .combine)
+            .padding(.top, Style.turnGap)
+    }
+
+    /// What the hidden marks show, said aloud: share, pauses, went back.
+    private func accessibilityDetail(_ item: SessionTimeline.Item, wentBackTo: String?) -> String {
+        var parts: [String] = []
+        if let percent = sessionTimeline.percent(of: item) { parts.append("\(percent) percent of the session") }
+        for pause in item.pauses { parts.append("paused \(TimerText.units(pause.count))") }
+        if let wentBackTo { parts.append("then went back to \(wentBackTo)") }
+        return parts.joined(separator: ", ")
+    }
+
+    private func clockText(offset: Int) -> String {
+        let start = record.session.events.first?.timestamp ?? record.playedAt
+        return start.addingTimeInterval(TimeInterval(offset)).formatted(date: .omitted, time: .shortened)
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive) {
+            showDeleteConfirmation = true
+        } label: {
+            Label("Delete session", systemImage: Theme.Symbol.delete)
+                .font(.subheadline)
+        }
+        .padding(.top, Style.deleteTopPadding)
+        .accessibilityLabel(Theme.Label.delete)
+    }
+}
+
+// MARK: - Timeline model
+
+/// Folds a session's raw events into one item per round played.
+struct SessionTimeline {
+    enum Outcome {
+        case finished, skipped, wentBack, restarted, endedEarly, sessionEnd
+
+        /// Rounds that didn't run their course are drawn quieter.
+        var dimsRound: Bool { self == .skipped || self == .restarted }
+    }
+
+    struct Item {
+        let name: String
+        let emoji: String
+        let startOffset: Int
+        let length: Int?
+        let outcome: Outcome
+        let note: String?
+        /// Paused stretches inside this round, in seconds from the session start.
+        var pauses: [Range<Int>] = []
+        /// What happened to the round, without its pauses: "Skipped", "Cut short".
+        var outcomeNote: String? = nil
+        /// Every pause pressed in this round, even a repeated one.
+        var pauseCount = 0
+
+        /// For a "went back" moment, the round gone back to.
+        var wentBackTo: String? = nil
+
+        var pausedSeconds: Int { pauses.reduce(0) { $0 + $1.count } }
+    }
+
+    let items: [Item]
+    /// Seconds from the first event to the last: the timeline's full width.
+    let span: Int
+    /// Item indices where a new pass through the sequence begins: the first
+    /// round's name comes up again (not as a "went back" redo). Empty when
+    /// the sequence ran once.
+    let passStarts: [Int]
+
+    /// Palette slots for rounds saved without a colour, skipping saved ones.
+    private let fallbackColorIndex: [String: Int]
+
+    /// True when there is at least one round with a length to draw.
+    var hasRounds: Bool { span > 0 && items.contains { $0.length != nil } }
+
+    init(record: GameRecord) {
+        let events = record.session.events
+        guard let origin = events.first?.timestamp else {
+            items = []
+            span = 0
+            fallbackColorIndex = [:]
+            passStarts = []
+            return
+        }
+        func offset(_ date: Date) -> Int { Int(max(date.timeIntervalSince(origin), 0)) }
+
+        var result: [Item] = []
+        var open: (name: String, emoji: String, start: Date, pauses: [Range<Int>], pausedAt: Date?, pauseCount: Int)?
+
+        func endPause(at date: Date) {
+            guard let pausedAt = open?.pausedAt else { return }
+            let lower = offset(pausedAt)
+            open?.pauses.append(lower..<max(offset(date), lower))
+            open?.pausedAt = nil
+        }
+
+        func close(at date: Date, _ outcome: Outcome, note: String? = nil) {
+            endPause(at: date)
+            guard let round = open else { return }
+            var parts: [String] = []
+            if let note { parts.append(note) }
+            if round.pauseCount > 0 { parts.append(round.pauseCount == 1 ? "1 pause" : "\(round.pauseCount) pauses") }
+            result.append(Item(
+                name: round.name,
+                emoji: round.emoji,
+                startOffset: offset(round.start),
+                length: Int(max(date.timeIntervalSince(round.start), 0)),
+                outcome: outcome,
+                note: parts.isEmpty ? nil : parts.joined(separator: " · "),
+                pauses: round.pauses,
+                outcomeNote: note,
+                pauseCount: round.pauseCount
+            ))
+            open = nil
+        }
+
+        for event in events {
+            switch event {
+            case .roundStarted(let name, let emoji, let date):
+                close(at: date, .finished)
+                open = (name, emoji, date, [], nil, 0)
+            case .roundFinished(_, let date):
+                close(at: date, .finished)
+            case .skipped(_, let date):
+                close(at: date, .skipped, note: "Skipped")
+            case .doOver(let previous, let date):
+                close(at: date, .finished, note: "Cut short")
+                result.append(Item(name: "Went back to \(previous)", emoji: "", startOffset: offset(date), length: nil, outcome: .wentBack, note: nil, wentBackTo: previous))
+            case .restartTimer(_, let date):
+                close(at: date, .restarted, note: "Restarted")
+            case .paused(let date):
+                open?.pauseCount += 1
+                if open != nil, open?.pausedAt == nil { open?.pausedAt = date }
+            case .resumed(let date):
+                endPause(at: date)
+            case .gameStarted:
+                break
+            case .gameEnded(let date):
+                close(at: date, .endedEarly, note: "Session ended here")
+                result.append(Item(name: "Finished", emoji: "", startOffset: offset(date), length: nil, outcome: .sessionEnd, note: nil))
+            }
+        }
+        items = result
+        let lastEnd = result.map { $0.startOffset + ($0.length ?? 0) }.max() ?? 0
+        span = max(offset(events.last?.timestamp ?? origin), lastEnd)
+        let paletteCount = Theme.ColorValue.timerPalette.count
+        let taken = Set((record.roundColors ?? [:]).values.compactMap { color -> Int? in
+            if case .palette(let index) = color { return (0..<paletteCount).contains(index) ? index : 0 }
+            return nil
+        })
+        var free = (0..<paletteCount).filter { !taken.contains($0) }
+        if free.isEmpty { free = Array(0..<paletteCount) }
+        var fallback: [String: Int] = [:]
+        for item in result where item.length != nil
+            && record.color(forRound: item.name) == nil
+            && fallback[item.name] == nil {
+            fallback[item.name] = free[fallback.count % free.count]
+        }
+        fallbackColorIndex = fallback
+
+        var starts: [Int] = []
+        let roundIndices = result.indices.filter { result[$0].length != nil }
+        if let first = roundIndices.first {
+            for index in roundIndices.dropFirst()
+            where result[index].name == result[first].name
+                && result[index - 1].outcome != .wentBack
+                && result[index - 1].outcome != .restarted {
+                starts.append(index)
+            }
+        }
+        passStarts = starts
+    }
+
+    // MARK: Totals
+
+    /// One name's share of the session: every turn it took, added up.
+    struct Total: Identifiable, Equatable {
+        let name: String
+        let emoji: String
+        let seconds: Int
+        /// Indices into `items`, in the order the turns ran.
+        let turns: [Int]
+        /// Turns taken, not counting attempts that were restarted.
+        let turnCount: Int
+        var id: String { name }
+        var averageSeconds: Int { turnCount == 0 ? seconds : seconds / turnCount }
+    }
+
+    /// Each name once, in the order it first ran.
+    var totals: [Total] {
+        var order: [String] = []
+        var byName: [String: (emoji: String, seconds: Int, turns: [Int], count: Int)] = [:]
+        for (index, item) in items.enumerated() {
+            guard let length = item.length else { continue }
+            if byName[item.name] == nil {
+                order.append(item.name)
+                byName[item.name] = (item.emoji, 0, [], 0)
+            }
+            byName[item.name]?.seconds += length
+            byName[item.name]?.turns.append(index)
+            // A restarted attempt is part of the turn that follows it.
+            if item.outcome != .restarted { byName[item.name]?.count += 1 }
+        }
+        return order.compactMap { name in
+            byName[name].map { Total(name: name, emoji: $0.emoji, seconds: $0.seconds, turns: $0.turns, turnCount: $0.count) }
+        }
+    }
+
+    // MARK: Layout
+
+    /// Where a round sits on the timeline, as fractions of the whole session.
+    struct Placement: Equatable {
+        let start: Double
+        let width: Double
+    }
+
+    /// Nil for events (went back, finished), which have no length, and for
+    /// sessions with no measurable time to divide.
+    func placement(of item: Item) -> Placement? {
+        guard let length = item.length, span > 0 else { return nil }
+        let total = Double(span)
+        let start = min(Double(item.startOffset) / total, 1)
+        return Placement(start: start, width: min(Double(length) / total, 1 - start))
+    }
+
+    /// A position on the timeline, 0 at the start and 1 at the end.
+    func fraction(at offset: Int) -> Double {
+        guard span > 0 else { return 0 }
+        return min(max(Double(offset) / Double(span), 0), 1)
+    }
+
+    /// Each round's height on a vertical timeline, by item index: its share
+    /// of `total`, never below `minimum`.
+    func heights(total: Double, minimum: Double) -> [Int: Double] {
+        var result: [Int: Double] = [:]
+        for (index, item) in items.enumerated() {
+            guard let placement = placement(of: item) else { continue }
+            result[index] = max(placement.width * total, minimum)
+        }
+        return result
+    }
+
+    /// Paused stretches as fractions of the round itself, 0 at its start.
+    func pauseFractions(of item: Item) -> [ClosedRange<Double>] {
+        guard let length = item.length, length > 0 else { return [] }
+        let total = Double(length)
+        return item.pauses.map { pause in
+            let lower = min(max(Double(pause.lowerBound - item.startOffset) / total, 0), 1)
+            let upper = min(max(Double(pause.upperBound - item.startOffset) / total, lower), 1)
+            return lower...upper
+        }
+    }
+
+    /// A round's share of the session as a whole percent, e.g. 18.
+    func percent(of item: Item) -> Int? {
+        placement(of: item).map { Int(($0.width * 100).rounded()) }
+    }
+
+    /// The round's own colour, or a steady palette colour for records saved
+    /// before History kept colours.
+    func color(for item: Item, in record: GameRecord) -> Color? {
+        guard item.length != nil else { return nil }
+        if let color = record.color(forRound: item.name) { return color }
+        guard let index = fallbackColorIndex[item.name] else { return nil }
+        return Theme.ColorValue.timerPalette[index]
+    }
 }

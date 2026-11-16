@@ -6,42 +6,79 @@ starter templates for common timed sessions.
 
 ## Status
 
-October 17 release checkpoint (main upload receipt checked October 20): nightly
-build **1.0 (75)** has upload, processing and
-internal-distribution receipts; weekly build **1.0 (76)** has upload, processing
-and external-distribution receipts. The October 17 Main promotion included that
-Weekly payload
-([PR #114](https://github.com/dfakkeldy/VisualTimer/pull/114)). The automatic
-main App Store Connect upload completed with build **1.0 (77)** on October 17
-at 18:05:26 UTC ([receipt](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375)).
-Submission and automatic-release controls were both false. Current App Store
-review/live state is unverified; public release stays manual. The
-[readiness ledger](docs/app-store/readiness.md) records exact SHAs, CI,
-blockers and the required `nightly` → `weekly` → `main` ladder.
-[Submission materials](docs/app-store/submission-packet.md) are drafts. No
-promotion, upload or submission is authorized by this documentation update.
+**v1.1 is in preparation**, based on nightly `3febb3a`. It adds routine
+stopwatch measurements, history timelines and totals, live paired iPhone/Watch
+routine control, iPhone alerts and recovery, and updated timer/editor controls.
+See the [v1.1 submission handoff](docs/app-store/v1.1-preparation.md) for the
+release comparison, screenshots, tests and remaining checks. This is not a
+claim that 1.1 is available on the App Store. Source version settings remain
+1.0 pending an authorized release version change.
+
+Documentation audited 2026-11-08. The [browser timer](https://dfakkeldy.github.io/VisualTimer/app/)
+is live and installable. Turn Timer **1.0** is live on the
+[App Store](https://apps.apple.com/ca/app/turn-timer/id6771073144) and free.
+The Apple app includes the quick timer, sequences, Pro, CloudKit sync, widgets,
+and embedded Watch companion in source promoted through `weekly` to `main` on
+October 17. Main upload **1.0 (77)** succeeded; public version 1.0 was confirmed
+on 2026-11-08. Early builds remain available on
+[TestFlight](https://testflight.apple.com/join/s7w4YGWU). See the
+[readiness ledger](docs/app-store/readiness.md) for dated receipts and remaining
+verification, and [Roadmap](Roadmap.md) for the current priorities.
 
 Useful docs:
 
 - [Architecture](Architecture.md)
+- [Stopwatch templates](docs/stopwatch-templates.md)
 - [Roadmap](Roadmap.md)
 - [App Store readiness](docs/app-store/readiness.md)
 - [Fastlane release docs](fastlane/README.md)
-- [Branch and worktree cleanup map](docs/repo-cleanup.md)
 - [Public devlog](docs/guides/devlog.md)
+- [Website and documentation maintenance](docs/website.md)
 
 ## Current Scope
 
-- **Quick timer** - Start a standalone visual countdown with the existing timer
-  controls.
+- **Quick timer** - Start a standalone visual countdown. Drag the idle dial's
+  rim to set the duration, then tap the dial to start or pause. A started
+  (running or paused) quick timer is restored after an app close; snapshots
+  older than four hours, or malformed files, are discarded.
 - **Starter templates** - Begin from Game Night, Recipe Steps, Plant Watering,
   Classroom Stations, Meeting Agenda, or a 40-minute Morning Routine.
 - **Template editor** - Rename a template, edit rounds, set colors, choose
-  sounds, add emoji, and decide whether a round counts as a turn.
+  sounds, add emoji, and decide whether a round counts as a turn. Unsaved
+  edits survive an app close as a draft. Opening another template card while
+  edits are unsaved asks before replacing them.
+- **Routine stopwatch (iPhone/iPad)** - Time this template measures one pass
+  through enabled rounds; Plan a new routine accepts names without durations.
+  Start counts up; Next completes a step; Finish & review opens comparison;
+  Finish early keeps the current step's time so far. Pause excludes paused
+  time. Save a recording on this device, then Apply durations and save the
+  template to keep them. Review shows target/actual comparison bars and dated
+  per-step trends without scoring faster or slower as success. Free history
+  shows the five most recent recordings across routines; Pro uses the existing
+  full-history limit. Recordings do not sync to iCloud, Apple Watch, or the
+  web app. An unfinished recording does not survive an app restart. See
+  [stopwatch templates](docs/stopwatch-templates.md).
 - **Sequence playback** - Run rounds in order, repeat the sequence, skip,
-  restart, or do over a turn.
+  restart, or do over a turn. Captions show clock time ("Ends …"), session
+  time left, and "Step N of M"; "Next" previews the following round for
+  routines as well as turns. End is visible during a session and confirms
+  before saving the partial record. A playing session is restored after an
+  app close; after four hours it comes back paused where it was saved.
 - **History** - Review completed timer sessions, with recent sessions free and
-  full local history, export, and iCloud sync available with Pro.
+  full local history, export, and iCloud sync available with Pro. Session
+  detail is a proportional vertical timeline: one coloured block per turn,
+  hatched pause stretches with durations, round headings when the sequence
+  repeats, a "went back to …" marker, and a Finished/Ended end marker. A By
+  name switch offers Share (ring of each name's total time), Average (typical
+  turn and turn count), and Turns (one block per turn on a shared scale); the
+  choice is remembered. New records may store each round's colour
+  (`roundColors`); older records omit the field and use fallback palette
+  colours on the timeline and the History list ribbon. Display only; no
+  history storage or format change.
+- **Completion alerts (iPhone)** - Opt-in local notification when a countdown
+  ends off screen. An Alerts capsule sits beside Start; Settings has a matching
+  switch. The app reads the real notification permission and opens iOS Settings
+  when alerts are denied. This is not a background-alarm guarantee.
 - **Turn Timer Pro** - Unlock unlimited saved templates, full history/export,
   iCloud sync, sharing, widgets, and advanced customization with a one-time
   StoreKit purchase. The app shows StoreKit's localized price and has no
@@ -60,37 +97,66 @@ Useful docs:
   (`Dan.Visual-Timer.watchkitapp`) with quick timer and starter playback. Pro
   saved templates are sent to the paired Watch as full snapshots through
   WatchConnectivity; revoking Pro clears Watch templates without deleting the
-  iPhone library. Signed TestFlight now includes the Watch companion; physical
-  paired-Watch acceptance is not yet verified. Watch timers show live remaining
-  time and keep running while you move between screens. On screen, a finished
-  timer plays the selected sound with a haptic.
-  If you allow alerts, a local notification covers completion while the app
-  is off screen ([plan](docs/watch-quality-plan.md)). None of this has been
-  tested on a physical Watch.
+  iPhone library. A running routine can be joined and controlled from the
+  paired iPhone or Watch: the device that starts it stays the sole authority,
+  and connected controls use acknowledged commands. Quick timers and stopwatch
+  recordings stay on the device that created them. Both devices need this
+  update; mixed-version live payloads fail closed with guidance to update.
+  Joined routine playback is restored after an app close from device-local
+  `LiveRoutine.json`. A Watch quick timer is not restored after the Watch app
+  is terminated. Signed TestFlight now includes the Watch companion;
+  physical paired-Watch acceptance is not yet verified. Watch timers show live
+  remaining time and keep running while you move between screens. The Watch
+  dial uses the same emptying pie as the phone; tap it to start or pause.
+  Template rows show duration-weighted colour ribbons. A session screen shows
+  Next, time left, and End with confirmation. On screen, a finished timer plays
+  the selected sound with a haptic. If you allow alerts, a local notification
+  covers completion while the app is off screen
+  ([plan](docs/watch-quality-plan.md)). None of this has been tested on a
+  physical Watch.
 - **Installable web app** - Run the same core timer, starter templates,
   `.turntimer` import/export, and local history in a responsive React PWA.
 
-These scope bullets describe implemented source, not signed-device acceptance
-or App Store live state. Production sync, saved Watch-template transfer and
-timer lock/background behavior still need the focused checks in the readiness
-ledger. No background-alarm guarantee is implied.
+These scope bullets describe implemented source, not signed-device acceptance.
+Public App Store 1.0 availability is recorded in Status and the readiness
+ledger. None of the iPhone alerts, rim drag, session restore, History session
+timeline, routine stopwatch, Watch dial-tap, or live iPhone/Watch routine
+control has been verified on a physical iPhone or Watch.
+Production sync, saved Watch-template transfer, live iPhone/Watch routine
+control, and timer lock/background behavior still need the focused checks in
+the readiness ledger. No background-alarm guarantee is implied.
 
 ## Core Features
 
 - **Visual pie countdown** - A circular timer depletes clockwise from the
   12 o'clock position using SwiftUI drawing and animation. The iOS dial adds
   glasslike lighting and a completion ripple while preserving the quick timer's
-  colour cycle and each round's chosen colour. Controls use Liquid Glass on
+  colour cycle and each round's chosen colour. On the idle quick timer, dragging
+  the rim sets duration. Controls use Liquid Glass on
   iOS 26+, with material fallbacks on iOS 18 and accessibility alternatives for
   reduced motion, reduced transparency, and increased contrast.
+- **On-device snapshots** - A playing session, a started quick timer, unsaved
+  template edits, and live iPhone/Watch routine playback are stored as small
+  files in Application Support (`ActiveSession.json`, `QuickTimer.json`
+  (iPhone only),
+  `TemplateDraft.json`, `LiveRoutine.json`, and `RoutineDeviceID`). Malformed
+  snapshot and journal files are discarded rather than restored.
+- **Stopwatch recordings** - Explicitly saved measurements are JSON files in
+  Application Support (`StopwatchRecordings/<id>.json`). They stay on the
+  device and are not CloudKit records. Malformed files are kept for recovery
+  while readable neighbours still load. Unfinished recordings are memory-only.
+- **Opt-in iPhone alerts** - `TimerAlertScheduler` schedules one local
+  notification for the running countdown's finish date when the user has
+  enabled alerts and iOS allows them. Pause, skip, end, and reset cancel it.
 - **Custom sounds** - Built-in tones are generated programmatically as 16-bit
   PCM WAV files. The chosen sound plays when a countdown reaches zero.
 - **Sleep prevention** - The screen stays awake while a timer is running and
   returns to normal sleep behavior when paused or reset.
 - **Silent-switch override** - The audio session uses playback behavior so the
   finish sound can play even when the hardware silent switch is engaged.
-- **State machines** - Timer and sequence transitions are guarded so playback
-  remains predictable across play, pause, skip, restart, and completion.
+- **State machines** - Timer, sequence, and stopwatch transitions are guarded
+  so playback remains predictable across play, pause, skip, restart, Next,
+  Finish, and completion.
 - **StoreKit Pro unlock** - `turntimer.pro.unlock` is configured in
   `TurnTimer.storekit` for local testing. Free users keep starter templates and
   one custom saved template; Pro unlocks additional saved templates, full
@@ -105,24 +171,15 @@ ledger. No background-alarm guarantee is implied.
   shared App Group container `group.Dan.Visual-Timer`; widgets never read the
   app's Documents directory directly.
 
-## Product Roadmap
+## Product direction
 
-Turn Timer is planned as a free timer with a one-time Pro unlock (no
-subscription; the store price is set in App Store Connect). The
-core timer, built-in starter templates, and one custom saved template remain
-free. Pro value is built around reuse and portability: unlimited templates,
-history/export, iCloud sync, sharing, widgets, and Apple Watch convenience.
+The quick timer, six starters, and one custom saved template are free on Apple
+platforms. Pro is a one-time purchase for reuse and portability, including
+unlimited saved templates, history/export, iCloud sync, sharing, widgets, and
+advanced customization. The app displays StoreKit's localized price. The web
+client stores its data in the browser and has no StoreKit purchase gate.
 
-- Additional saved templates.
-- Full local history and history export.
-- iCloud sync for saved templates.
-- iCloud sync for history.
-- Shared templates for families, classrooms, kitchens, meetings, and game
-  nights.
-- Home Screen and Lock Screen widgets for one-tap template starts.
-
-See [Roadmap](Roadmap.md) for the current release phases, staged branch work,
-and the next ten App Store steps.
+See [Roadmap](Roadmap.md) for implemented features and remaining work.
 
 ## Architecture
 
@@ -136,10 +193,12 @@ status, data formats, sync boundaries, and release-engineering notes.
 |---|---|---|
 | Timer core | `TimerViewModel`, `TimerState`, `TimerSound`, `SoundManager` | Countdown state, audio, sleep prevention |
 | Sequence core | `GameViewModel`, `GameSequence`, `Round` | Ordered playback, repeats, turn progress |
+| Live routine | `LiveRoutineSession`, `LiveRoutineController`, `WatchTemplateConnectivity` | iPhone/Watch playback; starting device is authority; device-local journal |
 | Templates | `GameEditorViewModel`, `StarterTemplateLibrary`, `TemplateLibraryStore`, `TemplateDocumentCodec`, `GameFileParser` | Template editing, starter data, local save/load, import/export |
+| Stopwatch | `StopwatchViewModel`, `StopwatchSession`, `StopwatchRecordingStore`, `StopwatchWorkspace` | Guarded step timing, device-local recordings, review/Apply |
 | Sync | `TemplateCloudSyncEngine`, `HistoryCloudSyncEngine`, CloudKit mappers, `UbiquitousSettingsStore` | Pro iCloud template/history sync and lightweight settings sync |
 | Widgets | `WidgetSnapshotStore`, `TurnTimerDeepLink`, `TurnTimerWidgets` | App Group snapshots, widget timelines, and template launch URLs |
-| History | `HistoryViewModel`, session models and views | Completed session storage and review |
+| History | `HistoryViewModel`, `SessionTimeline`, session views | Completed session storage, review, proportional timeline and By name totals |
 | Monetization | `ProAccessViewModel`, `ProFeature`, access policies | StoreKit purchase state and Pro feature gates |
 | Views | `MainTabView`, `GamePlaybackView`, `GameEditorView`, timer/editor components | SwiftUI layout and user interaction |
 | Theme | `Theme` | Shared colors, symbols, labels, dimensions, and animation values |
@@ -175,7 +234,10 @@ back down into `weekly` and `nightly`.
 Release automation runs from the default-branch workflow, then checks out the
 selected train branch before building. The workflow restores the default-branch
 `fastlane` configuration after checkout so signing and distribution policy stay
-centralized while the app code comes from the selected train.
+centralized while the app code comes from the selected train. Fastlane reads
+each target's `PRODUCT_BUNDLE_IDENTIFIER` from that checked-out Xcode project
+before calling `match`, so a Watch identifier change on `nightly` is not
+overwritten by hardcoded IDs from `main`.
 
 Scheduled trains still check on that daily and Monday cadence. They compare
 effective app build inputs with the last successful platform/channel delivery
@@ -203,9 +265,11 @@ The public website is served from `main` at `docs/`. The site root is
 `docs/devlog.html`. Weekly devlog automation opens a PR against `main`; it does
 not publish social posts automatically.
 
-The installable web app (`web/` and the committed `docs/app/` package) lives on
-`nightly` and `weekly` until that tree is promoted to `main`. GitHub Pages does
-not host `/app/` until `docs/app/` exists on `main`.
+The installable [web app](https://dfakkeldy.github.io/VisualTimer/app/) is live
+at `/VisualTimer/app/`. Its source is `web/`; `make web-pages` regenerates the
+committed `docs/app/` package. Pages serves the copy on `main`. Ordinary docs
+and website changes target `nightly` and reach the live site after the normal
+promotion ladder. See [website maintenance](docs/website.md).
 
 ## Getting Started
 
@@ -245,11 +309,9 @@ StoreKit, CloudKit, widgets, and watch features remain Apple-platform features.
 See [`web/README.md`](web/README.md) for the web architecture and support
 details.
 
-Until `docs/app/` is promoted to `main`, run the PWA locally with the commands
-above. `make web-pages` regenerates the committed `docs/app/` package on this
-branch and leaves the existing homepage, devlog, support, and privacy routes
-intact. It does not publish a live GitHub Pages `/app/` URL while Pages still
-reads `main`.
+`make web-pages` rebuilds only `docs/app/`; it leaves the homepage, devlog,
+support, and privacy routes intact. Commit a regenerated package when changing
+the web client so the source and deployed assets stay together.
 
 ## CloudKit and Widget Setup
 

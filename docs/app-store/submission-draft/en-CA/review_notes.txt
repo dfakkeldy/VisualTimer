@@ -8,3 +8,7 @@ Widgets use App Group group.Dan.Visual-Timer and open the iPhone/iPad app for pl
 
 Support: https://dfakkeldy.github.io/VisualTimer/support.html
 Privacy: https://dfakkeldy.github.io/VisualTimer/privacy.html
+
+Version 1.1: In Templates, choose Time this template, or Plan a new routine. Start the stopwatch, use Next to move through steps, then Finish & review. Save recording keeps the measurement locally; Apply durations changes the editor, and Save keeps the template. Finish early preserves the current step's elapsed time. Recordings do not sync, and an unfinished recording does not survive an app restart. History session detail provides Timeline and By name views.
+
+For paired Watch live routines, update both apps. Start a routine on one device, join from the other and use connected controls. Quick timers and stopwatch recordings do not join. Physical paired-device acceptance must be completed on the selected release candidate before submission.

@@ -23,8 +23,6 @@ struct TemplateSyncStatusView: View {
                 }
                 .accessibilityLabel("Refresh sync")
             }
-            .padding(.horizontal, Theme.Dimension.screenHorizontalPadding)
-            .padding(.bottom, 4)
         }
     }
 

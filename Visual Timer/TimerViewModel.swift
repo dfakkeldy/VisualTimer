@@ -52,8 +52,10 @@ final class TimerViewModel: ObservableObject {
         return palette[timerColorIndex % palette.count]
     }
 
-    /// Called exactly once when the timer transitions to `.finished`,
-    /// before the automatic reset to `.notStarted`.
+    /// Returns true when a routine controller owns this countdown sample.
+    var liveTick: (() -> Bool)?
+
+    /// Called once for a completed countdown.
     var onFinish: (() -> Void)?
 
     // MARK: - Persistence
@@ -150,6 +152,31 @@ final class TimerViewModel: ObservableObject {
         state = .notStarted
     }
 
+    /// Puts back a countdown saved before the app was closed. Allowed only from
+    /// `.notStarted`, so it never interrupts a timer in progress. A restored
+    /// running timer resumes ticking; one that ran out while closed finishes on
+    /// its next tick, through the normal completion path.
+    func restore(totalDuration: Int, progress: TimerVisualProgress, state restoredState: TimerState, color: Color?) {
+        guard case .notStarted = state else { return }
+        endCountdown()
+        timerColorOverride = color
+        self.totalDuration = max(Theme.TimerMechanic.minimumDuration, totalDuration)
+        visualProgress = progress
+        timeRemaining = progress.remainingSeconds()
+        switch restoredState {
+        case .running:
+            state = .running
+#if !os(watchOS)
+            UIApplication.shared.isIdleTimerDisabled = true
+#endif
+            beginCountdown()
+        case .paused:
+            state = .paused
+        case .notStarted, .finished:
+            state = .notStarted
+        }
+    }
+
     /// Adjusts the timer duration and persists the new value so it
     /// becomes the default for future launches. Only permitted before
     /// the timer starts, so the running or paused timer is never disrupted.
@@ -160,6 +187,17 @@ final class TimerViewModel: ObservableObject {
         timeRemaining = clampedDuration
         visualProgress = TimerVisualProgress(totalDuration: clampedDuration)
         savedDuration = clampedDuration
+    }
+
+    /// Refreshes local rendering without committing replica expiry.
+    func updateLiveDisplay(_ progress: TimerVisualProgress) {
+        if let oldFinish = visualProgress.finishDate, let newFinish = progress.finishDate {
+            if abs(oldFinish.timeIntervalSince(newFinish)) > 0.5 { visualProgress = progress }
+        } else if visualProgress.isRunning != progress.isRunning { visualProgress = progress }
+        timeRemaining = progress.remainingSeconds()
+#if !os(watchOS)
+        UIApplication.shared.isIdleTimerDisabled = state == .running && timeRemaining > 0
+#endif
     }
 
     // MARK: - Countdown Engine
@@ -186,6 +224,7 @@ final class TimerViewModel: ObservableObject {
     @discardableResult
     func refreshCountdown(at date: Date = Date()) -> Bool {
         guard case .running = state else { return false }
+        if liveTick?() == true { return false }
         timeRemaining = visualProgress.remainingSeconds(at: date)
 
         if timeRemaining == 0 {

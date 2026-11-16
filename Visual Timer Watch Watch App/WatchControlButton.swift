@@ -9,13 +9,14 @@ struct WatchControlButton: View {
     let systemImage: String
     let accessibilityID: String
     let isProminent: Bool
+    var tint: Color? = nil
     let action: () -> Void
 
     var body: some View {
         if isProminent {
-            button.buttonStyle(.borderedProminent)
+            button.buttonStyle(.borderedProminent).tint(tint)
         } else {
-            button.buttonStyle(.bordered)
+            button.buttonStyle(.bordered).tint(tint)
         }
     }
 
@@ -26,7 +27,9 @@ struct WatchControlButton: View {
                     .font(.title3)
                     .accessibilityHidden(true)
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption2.weight(.semibold))
+                    // On tinted glass the label stays white, so it reads as live.
+                    .foregroundStyle(isProminent || tint == nil ? AnyShapeStyle(.primary) : AnyShapeStyle(.white))
                     .lineLimit(1)
                     .minimumScaleFactor(Theme.Watch.Dimension.captionMinimumScale)
             }

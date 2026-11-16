@@ -1,0 +1,51 @@
+{
+  "devicesAndConfigurations" : [
+    {
+      "device" : {
+        "architecture" : "arm64",
+        "deviceId" : "0E0E2D41-839C-4D4B-8810-E6A2D47A6477",
+        "deviceName" : "Turn Timer v1.1 Watch",
+        "modelName" : "Apple Watch Series 11",
+        "osBuildNumber" : "24S118",
+        "osVersion" : "27.2",
+        "platform" : "watchOS Simulator"
+      },
+      "expectedFailures" : 0,
+      "failedTests" : 1,
+      "passedTests" : 0,
+      "skippedTests" : 0,
+      "testPlanConfiguration" : {
+        "configurationId" : "1",
+        "configurationName" : "Test Scheme Action"
+      }
+    }
+  ],
+  "environmentDescription" : "Visual Timer Watch Watch App · Built with macOS 27.2",
+  "expectedFailures" : 0,
+  "failedTests" : 1,
+  "finishTime" : 1794708425.399,
+  "passedTests" : 0,
+  "result" : "Failed",
+  "runtimeWarnings" : [
+
+  ],
+  "skippedTests" : 0,
+  "startTime" : 1794708156.127,
+  "statistics" : [
+
+  ],
+  "testFailures" : [
+    {
+      "failureText" : "The test runner crashed before establishing connection: Visual Timer Watch Watch AppUITests-Runner at main",
+      "targetName" : "Visual Timer Watch Watch AppUITests",
+      "testIdentifier" : 1,
+      "testIdentifierString" : "Visual Timer Watch Watch AppUITests-Runner (40051) encountered an error",
+      "testName" : "Visual Timer Watch Watch AppUITests-Runner (40051) encountered an error"
+    }
+  ],
+  "title" : "Test - Visual Timer Watch Watch App",
+  "topInsights" : [
+
+  ],
+  "totalTestCount" : 1
+}

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB1234010000000000000001 /* LiveRoutineSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1234020000000000000001; };
 		EE5501040000000000000001 /* WatchTemplateConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5501050000000000000001 /* WatchTemplateConnectivity.swift */; };
 		EE5501010000000000000001 /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CC56FE2C2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = CC56FE2B2FBA5ABC00918D5A /* Visual Timer Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -129,6 +130,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AB1234020000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/LiveRoutineSession.swift"; sourceTree = "<group>"; };
 		EE5501050000000000000001 /* WatchTemplateConnectivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Visual Timer/WatchTemplateConnectivity.swift"; sourceTree = "<group>"; };
 		CC56F6C12FBA1C2200918D5A /* Visual Timer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Visual Timer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC56F6CE2FBA1C2400918D5A /* Visual TimerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Visual TimerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -680,6 +682,7 @@
 				EE0001020000000000000001 /* Theme.swift in Sources */,
 				EE0001030000000000000001 /* Round.swift in Sources */,
 				EE0001040000000000000001 /* GameViewModel.swift in Sources */,
+				AB1234010000000000000001 /* LiveRoutineSession.swift in Sources */,
 				EE0001050000000000000001 /* StarterTemplateLibrary.swift in Sources */,
 				EE0001060000000000000001 /* SoundManager.swift in Sources */,
 				EE0001070000000000000001 /* UbiquitousSettingsStore.swift in Sources */,

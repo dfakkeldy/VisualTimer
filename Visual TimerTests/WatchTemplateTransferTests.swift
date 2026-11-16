@@ -120,7 +120,8 @@ final class WatchTemplateTransferTests: XCTestCase {
             templateLibrary: library,
             widgetSnapshotStore: WidgetSnapshotStore(containerURLProvider: { directory }),
             watchTemplateStore: WatchTemplateStore(containerURLProvider: { directory }),
-            watchTemplatePublisher: { snapshots.append($0) }
+            watchTemplatePublisher: { snapshots.append($0) },
+            draftDirectory: directory
         )
         editor.refreshSavedTemplates()
         XCTAssertTrue(try XCTUnwrap(snapshots.last).isEmpty)

@@ -1,13 +1,21 @@
-External beta candidate for Turn Timer 1.0.
+Turn Timer 1.1 candidate testing. This text does not confirm external distribution.
 
 Please test:
 - Quick visual timer start, pause, resume, reset, and finish sound behavior.
-- Starter templates and custom saved template creation/editing.
+- Drag the idle quick timer's rim to set duration.
+- Close the app during a playing session or a started quick timer; reopen and confirm it restores (stale after ~4 hours).
+- Opt-in completion alert: Alerts capsule beside Start, and the Settings switch; denied permission should offer iOS Settings.
+- Visible End during a session, with confirmation that the partial session is saved.
+- Starter templates and custom saved template creation/editing; unsaved editor edits after an app close.
 - Sequence playback, repeat, skip, restart, and do-over behavior.
 - Template import/export without overwriting existing templates.
 - Recent history and Pro-gated history/export behavior.
+- History session detail: proportional vertical timeline (turns, pauses, went-back, Finished/Ended) and By name totals (Share / Average / Turns).
+- Routine stopwatch: Time this template or Plan a new routine; Next / Finish & review / Finish early; Pause excludes paused time; save recordings on this device; Apply durations then save the template; comparison bars and dated per-step trends. Recordings do not sync to iCloud, Watch, or the web app. An unfinished recording does not survive an app restart.
 - Pro unlock and Restore Purchases in TestFlight sandbox if available.
 - iCloud template/history sync after the production CloudKit schema is deployed.
 - Home Screen/Lock Screen widgets and watch playback where installed.
+- Watch: tap the dial to start/pause; End confirmation.
+- Live iPhone/Watch routine: start a sequence on one device, join and control it from the other; conflict/replace prompt if both run independently; recovery after relaunch. Quick timers and stopwatch recordings stay on this device. Both apps need this update.
 
 Report install, launch, sync, purchase, widget, and watch issues with screenshots when possible.

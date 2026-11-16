@@ -136,6 +136,18 @@ final class SoundManager: ObservableObject {
         scheduleBeeps(remaining: Playback.beepCount)
     }
 
+    /// Plays one beep of `sound` so a person can hear a choice before keeping it.
+    func playPreview(_ sound: TimerSound) {
+        guard let url = generateWAV(for: sound) else { return }
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.volume = Playback.volume
+            audioPlayer?.play()
+        } catch {
+            print("Failed to create audio player: \(error)")
+        }
+    }
+
     // MARK: - Beep Sequencing
 
     /// Recursively schedules playback of one beep, then dispatches the

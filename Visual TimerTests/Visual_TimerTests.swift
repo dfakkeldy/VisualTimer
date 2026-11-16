@@ -1,9 +1,17 @@
+import UniformTypeIdentifiers
 import CloudKit
 import XCTest
 import SwiftUI
 @testable import Visual_Timer
 
+@MainActor
 final class Visual_TimerTests: XCTestCase {
+
+    func testTemplateFileExtensionMatchesImportPickerType() throws {
+        let registered = try XCTUnwrap(UTType(filenameExtension: "turntimer"))
+        XCTAssertTrue(registered.conforms(to: .turnTimerTemplate))
+        XCTAssertTrue(registered.conforms(to: .json))
+    }
 
     // MARK: - Cloud sync scheduling
 
@@ -239,7 +247,7 @@ final class Visual_TimerTests: XCTestCase {
     }
 
     func testGameEditorViewModel_applyStarterTemplateReplacesCurrentDraft() {
-        let editor = GameEditorViewModel()
+        let editor = GameEditorViewModel(draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
 
         editor.addRound()
         editor.applyStarterTemplate(StarterTemplateLibrary.templates[1])
@@ -399,7 +407,7 @@ final class Visual_TimerTests: XCTestCase {
         name: Bad Round
         time: nope
         """.write(to: url, atomically: true, encoding: .utf8)
-        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory))
+        let editor = GameEditorViewModel(templateLibrary: TemplateLibraryStore(documentsDirectory: directory), draftDirectory: directory)
         editor.gameTitle = "Current Draft"
         editor.rounds = [Round(name: "Keep Me", durationSeconds: 30, orderIndex: 0)]
         editor.roundCount = 3
@@ -417,7 +425,7 @@ final class Visual_TimerTests: XCTestCase {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let templateLibrary = TemplateLibraryStore(documentsDirectory: directory)
-        let editor = GameEditorViewModel(templateLibrary: templateLibrary)
+        let editor = GameEditorViewModel(templateLibrary: templateLibrary, draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
         editor.gameTitle = "Inactive Routine"
         editor.rounds = [Round(name: "Hidden", durationSeconds: 30, isActive: false, orderIndex: 0)]
 
@@ -571,7 +579,8 @@ final class Visual_TimerTests: XCTestCase {
         )
         let viewModel = GameEditorViewModel(
             templateLibrary: templateLibrary,
-            widgetSnapshotStore: snapshotStore
+            widgetSnapshotStore: snapshotStore,
+            draftDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         )
 
         viewModel.refreshSavedTemplates()
@@ -1254,7 +1263,7 @@ final class Visual_TimerTests: XCTestCase {
         XCTAssertEqual(store.loadAll().count, 1)
     }
 
-    func testGameViewModelLoadGameAbandonsActiveSessionWithoutSavingHistory() throws {
+    func testGameViewModelLoadGameSavesActiveSessionToHistory() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
 
@@ -1266,14 +1275,64 @@ final class Visual_TimerTests: XCTestCase {
             onHistoryRecordSaved: { savedIDs.append($0.id) }
         )
 
-        gameViewModel.loadGame(makeSingleRoundGame(title: "Abandoned"))
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Interrupted"))
         gameViewModel.startGame()
         gameViewModel.loadGame(makeSingleRoundGame(title: "Replacement"))
 
-        XCTAssertTrue(store.loadAll().isEmpty)
-        XCTAssertTrue(savedIDs.isEmpty)
+        let records = store.loadAll()
+        XCTAssertEqual(records.map(\.gameTitle), ["Interrupted"])
+        XCTAssertEqual(savedIDs, records.map(\.id))
+        XCTAssertTrue(records.first?.session.events.contains {
+            if case .gameEnded = $0 { return true }
+            return false
+        } ?? false)
         assertGamePhase(gameViewModel, is: .ready)
         XCTAssertEqual(gameViewModel.gameSequence?.title, "Replacement")
+    }
+
+    func testGameViewModelLoadGameRecordsNothingWhenNoSessionIsInProgress() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+
+        // Loaded but never started.
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Never Started"))
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Finished"))
+        XCTAssertTrue(store.loadAll().isEmpty)
+
+        // Finished: already saved once, so the next load must not save again.
+        gameViewModel.startGame()
+        gameViewModel.handleTimerFinished()
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Next"))
+        XCTAssertEqual(store.loadAll().map(\.gameTitle), ["Finished"])
+    }
+
+    func testGameViewModelLoadingEmptyGameLeavesSessionRunning() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = HistoryStore(documentsDirectory: directory)
+        let gameViewModel = GameViewModel(
+            timerViewModel: TimerViewModel(),
+            historyStore: store
+        )
+        var emptyGame = GameSequence(title: "Inactive")
+        emptyGame.rounds = [
+            Round(name: "Muted", durationSeconds: 30, isActive: false, orderIndex: 0),
+        ]
+
+        gameViewModel.loadGame(makeSingleRoundGame(title: "Running"))
+        gameViewModel.startGame()
+        gameViewModel.loadGame(emptyGame)
+
+        assertGamePhase(gameViewModel, is: .playing)
+        XCTAssertEqual(gameViewModel.gameSequence?.title, "Running")
+        XCTAssertTrue(store.loadAll().isEmpty)
     }
 
     func testGameViewModelRejectsGameWithNoActiveRounds() {
@@ -1367,7 +1426,7 @@ final class Visual_TimerTests: XCTestCase {
         gameViewModel.loadGame(routine)
         gameViewModel.startGame()
 
-        XCTAssertEqual(gameViewModel.roundProgressText, "Round 1 of 2")
+        XCTAssertEqual(gameViewModel.roundProgressText, "Step 1 of 2")
         XCTAssertEqual(gameViewModel.countingPlayerCount, 0)
     }
 

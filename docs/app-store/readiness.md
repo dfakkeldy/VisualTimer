@@ -1,9 +1,31 @@
 # App Store Readiness
 
-Release checkpoint: 2026-10-17 UTC; historical main upload receipt checked
-2026-10-20. Status: **preparation in progress; submission on hold**.
-Account details and tester identities belong in the private release ledger, not
-this public repository.
+Current preparation: [v1.1 handoff](v1.1-preparation.md), 2026-11-15. The
+receipts below remain historical evidence for 1.0. New source is ahead of the
+weekly/main release trains; do not reuse the old candidate-parity statement
+as v1.1 acceptance.
+
+Documentation audit: 2026-11-08 (public App Store listing). The table below
+preserves the October 17 release receipts, with the historical main upload
+checked October 20. Main upload **1.0 (77)** succeeded. Public App Store
+version **1.0** was confirmed live and free on 2026-11-08. The earlier
+"submission on hold" wording described an old preparation session, not a live
+store status.
+
+Current source checkpoint from the 2026-10-24 documentation pass: `nightly`
+`0599f744d4a3ff36aed183c66c8b2fa300dafa4a` and `main`
+`8aeab7eb5cabc38b0f61c517a69f467786fa62bd`. Nightly
+[CI 39504562374](https://github.com/dfakkeldy/VisualTimer/actions/runs/39504562374)
+passed. The public homepage, browser app, support, and privacy routes returned
+HTTPS 200 on October 24. Pages serves `main:/docs`; a Nightly documentation
+merge alone does not publish new website content. This 2026-11-08 pass
+rechecked only the public App Store listing, not those website routes or CI
+jobs. Listing-pass source: `nightly`
+`3a49c9c3b6ab57b0a135547256a720e0a2d9c671`.
+
+Account details and tester identities belong in the private release ledger,
+not this public repository. This ledger records evidence and remaining release
+work; it does not authorize a promotion or store action.
 
 ## Dated release evidence
 
@@ -15,8 +37,8 @@ this public repository.
 | Native CI | [39053772715](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053772715): exact #114 head `f4b626663d82d04dee5f5a9dbc7e4c65e62cc889`. Web job passed. Native gate passed: 115 unit tests, 6 iOS UI tests, Watch control test with five fresh cycles, release-control checks. |
 | Internal delivery | [39052587053](https://github.com/dfakkeldy/VisualTimer/actions/runs/39052587053), 17 Oct: source `c253fec98aefbf70a69b4914fc8f73f21715dbde`, 115 unit tests; receipts confirm **1.0 (75)** uploaded, processed and distributed internally. Match installed `match AppStore Dan.Visual-Timer.watchkitapp`. |
 | External delivery | [39053761895](https://github.com/dfakkeldy/VisualTimer/actions/runs/39053761895), 17 Oct: source `a6f18e7ccdc4a799c73f80dfa2ea42c286c0fd3a`, 115 unit tests; receipts confirm **1.0 (76)** uploaded, processed and distributed to External testers at 17:39 UTC. Same Watch App Store profile installed. |
-| Main upload | [39055266912](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375) completed successfully after #114: **1.0 (77)** uploaded on 17 Oct at 18:05:26 UTC. `submit_for_review=false` and `automatic_release=false`. This historical upload does not establish a current selected build, App Review decision, public release or physical-device acceptance. |
-| App Store review / live | Current App Store version, selected build, review approval, release setting and territory availability remain unverified. Beta distribution does not establish store approval. The 17 Oct nightly and weekly jobs ran with `APP_STORE_SUBMIT_FOR_REVIEW=false` and `APP_STORE_AUTOMATIC_RELEASE=false`. Public release stays manual. |
+| Main upload | [39055266912](https://github.com/dfakkeldy/VisualTimer/actions/runs/39055266912/job/117461910375) completed successfully after #114: **1.0 (77)** uploaded on 17 Oct at 18:05:26 UTC. `submit_for_review=false` and `automatic_release=false`. This historical upload does not by itself establish a current selected build, App Review decision, public release or physical-device acceptance. Public listing is recorded in the App Store review / live row. |
+| App Store review / live | Public listing confirmed 2026-11-08. iTunes lookup id 6771073144 returned trackName Turn Timer, trackId 6771073144, bundleId `Dan.Visual-Timer`, version 1.0, price 0.0 / Free, `currentVersionReleaseDate` 2026-10-29T10:09:42Z, `releaseDate` 2026-10-29T07:00:00Z. Store pages returned HTTP 200 for [Canada](https://apps.apple.com/ca/app/turn-timer/id6771073144) and [United States](https://apps.apple.com/us/app/turn-timer/id6771073144); US page copy showed Free. This confirms public availability of 1.0. App Review decision dates, App Store Connect selected-build identity, rating counts, and a full territory list were not read. The 17 Oct nightly and weekly jobs ran with `APP_STORE_SUBMIT_FOR_REVIEW=false` and `APP_STORE_AUTOMATIC_RELEASE=false`. |
 | Public URLs | [Support](https://dfakkeldy.github.io/VisualTimer/support.html) and [Privacy](https://dfakkeldy.github.io/VisualTimer/privacy.html) returned HTTPS 200 on 17 Oct. |
 | Assets | iOS default/dark/tinted and watch icon PNGs exist. No native store screenshot set is committed; `web/docs/design/` images describe the web app. |
 
@@ -50,12 +72,13 @@ automatic release are separate controls, default false. The 17 Oct nightly and
 weekly delivery jobs ran with both flags false. Live repository variable values
 were not re-read after the #114 merge. See [Fastlane](../../fastlane/README.md).
 
-This preparation includes scoped source repairs, documentation and draft assets. Do not backport
-features directly to weekly/main, promote, dispatch a release, upload, submit,
-refresh signing, change protections/pipelines, set prices, or accept legal
-answers/agreements without exact authorization. Documentation PRs stay drafts.
+Ordinary documentation and website maintenance targets `nightly` in a ready
+PR after relevant validation. Promotions, release dispatches, uploads,
+submissions, signing changes, prices, and legal declarations need their own
+authorization. Do not treat historical preparation holds as a requirement to
+keep ordinary maintenance PRs in draft.
 
-## Blockers before choosing a candidate
+## Candidate-specific verification still requiring evidence
 
 1. **In-app privacy link:** Settings now exposes the existing HTTPS policy URL
    (`settings.privacy-policy`). The URL returned HTTP 200 on 6 Oct. Verify the
@@ -96,12 +119,13 @@ answers/agreements without exact authorization. Documentation PRs stay drafts.
    blockers, then capture that build. Do not describe current features using
    old August main images.
 
-The roughly 50 open RW issues are an audit backlog, not 50 verified current
-blockers. Current source already normalizes imported durations/repeat counts/
-palette indices; cancels final-round timers; includes timestamp reasons; maps
-widget signing; and configures StoreKit testing. Reproduce critical reports on
-the selected SHA. Prioritize crashes, timing, purchase/restore, data loss and
-unusable layout over cosmetic work.
+The June issue audit closed the old bug backlog after checking the fixing
+PRs against source and hosted CI. As of October 24, the repository has no open
+issues; open engineering PRs remain separate from that count. Use the live
+[issues](https://github.com/dfakkeldy/VisualTimer/issues) and
+[pull requests](https://github.com/dfakkeldy/VisualTimer/pulls) instead of the
+old "roughly 50 open RW issues" count. New reports still require reproduction
+on the selected SHA.
 
 ## Privacy and capabilities
 
@@ -136,10 +160,11 @@ unusable layout over cosmetic work.
   confirmation remains for export/territories, content rights, updated
   age/social-media questionnaire and DSA status. No declaration was submitted.
 
-## Prepared packet and pending ASC read
+## Historical packet and future store reconciliation
 
-[Submission packet](submission-packet.md) contains copy-ready metadata and
-IAP/review notes. [Screenshot plan](../marketing/screenshot-plan.md) gives
+[Submission packet](submission-packet.md) retains the October 6 metadata and
+IAP/review drafts. Its unchecked fields describe preparation at that date and
+are not a current list of missing store configuration. [Screenshot plan](../marketing/screenshot-plan.md) gives
 current sizes and fixtures. [Acceptance](signed-device-smoke.md) keeps focused
 release checks; no result is pre-filled.
 
@@ -149,9 +174,9 @@ export answers, agreements/DSA and release settings. Resolve only consequential
 choices with the owner. Helper project dates/prices are planning data, not store
 configuration or authorization.
 
-Apple currently requires Xcode 26+ / corresponding SDK 26+ for these platforms;
-iOS 18 meets the current iOS 13 minimum. Inspect updated age questions and
-September social-media questions in ASC.
+The October 6 requirements review referenced Xcode/SDK 26 and updated age
+questions. Recheck the current requirements and questionnaire for a future
+submission rather than treating that dated review as current policy.
 [Upcoming requirements](https://developer.apple.com/news/upcoming-requirements/)
 
 Continuation validation on 6 Oct ran one serial, resource-gated iOS regression

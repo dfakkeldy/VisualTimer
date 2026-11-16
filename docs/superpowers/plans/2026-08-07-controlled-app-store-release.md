@@ -15,7 +15,7 @@
 - Do not change app code, pricing, IAP strategy, availability, or ownership in this repository hotfix.
 - App Store upload must not submit for App Review unless explicitly opted in.
 - Public release must remain manual.
-- Run every Apple build or test through `/Users/dfakkeldy/.claude/bin/xcode-build-slot.sh -- <command>`.
+- Run every Apple build or test through the local single-build wrapper (`xcode-build-slot.sh -- <command>`).
 
 ---
 
@@ -240,8 +240,8 @@ Text("Pro unlocks unlimited templates, full history export, iCloud template sync
 - [x] **Step 3: Verify the iOS and watch schemes without bypassing the build-slot policy**
 
 ```bash
-/Users/dfakkeldy/.claude/bin/xcode-build-slot.sh -- xcodebuild test -project "Visual Timer.xcodeproj" -scheme "Visual Timer" -destination "platform=iOS Simulator,id=<discovered-udid>" -resultBundlePath "<timestamped-path>" CODE_SIGNING_ALLOWED=NO
-/Users/dfakkeldy/.claude/bin/xcode-build-slot.sh -- xcodebuild build -project "Visual Timer.xcodeproj" -scheme "Visual Timer Watch Watch App" -destination "generic/platform=watchOS Simulator" CODE_SIGNING_ALLOWED=NO
+xcode-build-slot.sh -- xcodebuild test -project "Visual Timer.xcodeproj" -scheme "Visual Timer" -destination "platform=iOS Simulator,id=<discovered-udid>" -resultBundlePath "<timestamped-path>" CODE_SIGNING_ALLOWED=NO
+xcode-build-slot.sh -- xcodebuild build -project "Visual Timer.xcodeproj" -scheme "Visual Timer Watch Watch App" -destination "generic/platform=watchOS Simulator" CODE_SIGNING_ALLOWED=NO
 ```
 
 Expected: both wrapper-controlled commands exit 0; the iOS result bundle reports no test failures.

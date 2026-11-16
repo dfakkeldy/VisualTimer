@@ -1,10 +1,12 @@
 # Fastlane Release Docs
 
-Re-checked: 2026-10-06 UTC
+Metadata preparation updated: 2026-11-15. Lane configuration is unchanged. Live release receipts and store state
+are tracked separately in [readiness](../docs/app-store/readiness.md).
 
 Fastlane owns Turn Timer's archive, signing-profile sync, TestFlight upload, and
-App Store upload lanes. App Store copy is prepared outside automation in
-`docs/app-store/submission-draft/en-CA/`. The app-store lane skips metadata and
+App Store upload lanes. The v1.1 App Store text is in `fastlane/metadata/en-CA/`, mirrored in
+`docs/app-store/submission-draft/en-CA/` for the submission packet. These are
+review drafts; locale and selected-build acceptance remain with Dan. The app-store lane skips metadata and
 screenshots, so a binary upload does not apply those drafts.
 
 ## Local Tooling
@@ -73,13 +75,17 @@ If a separately authorized release needs changed entitlements, the workflow
 accepts `refresh_signing_profiles=true`. This regenerates profiles and is not a
 read-only preparation step; obtain exact authorization before using it.
 
-Current known app identifiers:
+Known app identifiers (match fetches the subset present on the train project):
 
 - `Dan.Visual-Timer`
 - `Dan.Visual-Timer.watchkitapp` (embedded paired Watch companion)
 - `Dan.Visual-Timer-Watch` and `Dan.Visual-Timer-Watch.watchkitapp` (older
-  watch-only identities, kept in `Matchfile` for existing records)
+  watch-only identities, kept for existing records)
 - `Dan.Visual-Timer.TurnTimerWidgets`
+
+Release trains read identifiers from the checked-out Xcode project rather than
+stamping the controller branch's Watch ID onto every train. A missing App Store
+profile requires the authorized signing-resource step described above.
 
 Automation comes from the default-branch workflow ref for every channel. Keep
 source/automation SHAs distinct and follow internal nightly → external weekly →
