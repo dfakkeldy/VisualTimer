@@ -23,3 +23,9 @@ failure or the new failure attachments work.
 A follow-up on an authorized Watch host must reproduce the initial navigation
 failure, exercise both attachment branches, and verify any resulting fix with
 a failing-before and passing-after regression. Keep the PR draft until then.
+
+The branch is now updated with nightly `030cb96`. Nightly already includes
+these diagnostics and a guarded second root tap plus longer polling waits.
+The merge keeps nightly's Watch test unchanged. The remaining PR diff is this
+blocker record; neither the inherited retry nor the diagnostics were validated
+on a Watch during this task.
